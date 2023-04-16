@@ -42,6 +42,10 @@ class Battle:
             await self.player2.choose("default")
         return done, winner
 
+    async def close(self):
+        await self.player1.logout()
+        await self.player2.logout()
+
     async def run_episode(self) -> str:
         while True:
             try:

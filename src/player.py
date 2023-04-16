@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+import asyncio
 import json
 from logging import Logger
 import requests
@@ -31,15 +31,20 @@ class Player:
         self.logger.info(f"\n{self.username.upper()} -> SERVER:\n{message}")
         await self.websocket.send(message)
 
-    async def receive_message(self) -> str:
-        response = await self.websocket.recv()
-        self.logger.info(f"\nSERVER -> {self.username.upper()}:\n{response}")
-        return response
+    async def receive_message(self) -> str | None:
+        try:
+            response = await asyncio.wait_for(self.websocket.recv(), timeout=10)
+            self.logger.info(f"\nSERVER -> {self.username.upper()}:\n{response}")
+            return response
+        except asyncio.TimeoutError:
+            self.logger.warning("receive_message timed out")
+            return None
 
-    async def find_message(self, message_type: str) -> list[str]:
-        start_time = datetime.now()
-        while (datetime.now() - start_time) < timedelta(seconds=10):
+    async def find_message(self, message_type: str) -> list[str] | None:
+        while True:
             message = await self.receive_message()
+            if not message:
+                return None
             split_message = message.split("|")
             match message_type:
                 case "login":
@@ -78,8 +83,6 @@ class Player:
                 case "leave":
                     if self.room in split_message[0] and split_message[1] == "deinit":
                         return split_message
-        self.logger.error("find_message timed out")
-        raise TimeoutError
 
     async def login(self):
         split_message = await self.find_message("login")
@@ -98,9 +101,11 @@ class Player:
         await self.send_message(f"/trn {self.username},0,{assertion}")
 
     async def forfeit_games(self):
-        # The first games message is always empty, so this is here to pass by that message.
         await self.find_message("games")
         split_message = await self.find_message("games")
+        # If the second games message isn't found, then there are no games to forfeit
+        if not split_message:
+            return
         games = json.loads(split_message[2])["games"]
         if games:
             battle_rooms = list(games.keys())
@@ -158,3 +163,6 @@ class Player:
         self.room = None
         self.request = None
         self.observations = None
+
+    async def logout(self):
+        await self.send_message("/logout")

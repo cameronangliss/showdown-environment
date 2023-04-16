@@ -18,10 +18,11 @@ async def main():
     player2 = Player(config["username2"], config["password2"], logger)
     battle = Battle(player1, player2, logger)
     await battle.setup()
-    for i in range(1000):
+    for i in range(10):
         winner = await battle.run_episode()
         time = datetime.now().strftime("%H:%M:%S")
         print(f"{time}: {winner} wins game {i + 1}")
+    await battle.close()
 
 
 if __name__ == "__main__":
