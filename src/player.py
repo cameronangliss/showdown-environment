@@ -117,6 +117,12 @@ class Player:
             if prev_room:
                 await self.join(prev_room)
 
+    async def setup(self):
+        self.room = None
+        await self.connect()
+        await self.login()
+        await self.forfeit_games()
+
     async def challenge(self, opponent: Player, battle_format: str = "gen9randombattle", team: str | None = None):
         await self.send_message(f"/utm {team}")
         await self.send_message(f"/challenge {opponent.username}, {battle_format}")

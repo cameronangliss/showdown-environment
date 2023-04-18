@@ -12,14 +12,8 @@ class Battle:
         self.logger = logger
 
     async def setup(self):
-        self.player1.room = None
-        self.player2.room = None
-        await self.player1.connect()
-        await self.player2.connect()
-        await self.player1.login()
-        await self.player2.login()
-        await self.player1.forfeit_games()
-        await self.player2.forfeit_games()
+        await self.player1.setup()
+        await self.player2.setup()
 
     async def reset(self):
         while True:
