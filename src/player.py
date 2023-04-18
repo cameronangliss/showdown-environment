@@ -33,7 +33,7 @@ class Player:
 
     async def receive_message(self) -> str | None:
         try:
-            response = await asyncio.wait_for(self.websocket.recv(), timeout=10)
+            response = await asyncio.wait_for(self.websocket.recv(), timeout=5)
             self.logger.info(f"\nSERVER -> {self.username.upper()}:\n{response}")
             return response
         except asyncio.TimeoutError:
