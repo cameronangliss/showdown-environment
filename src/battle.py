@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from logging import Logger
-import websockets
+from websockets.exceptions import ConnectionClosedError
 
 from player import Player
 
@@ -29,7 +29,7 @@ class Battle:
         await self.player2.join(room)
         await self.player1.timer_on()
 
-    async def step(self) -> tuple[bool, str]:
+    async def step(self) -> tuple[bool, str | None]:
         done, winner = await self.player1.observe()
         if not done:
             done, winner = await self.player2.observe()
@@ -41,16 +41,17 @@ class Battle:
         await self.player1.logout()
         await self.player2.logout()
 
-    async def run_episode(self) -> str:
+    async def run_episode(self) -> str | None:
         while True:
             try:
                 await self.reset()
                 done = False
+                winner = None
                 while not done:
                     done, winner = await self.step()
                 await self.player1.leave()
                 await self.player2.leave()
                 return winner
-            except websockets.exceptions.ConnectionClosedError:
+            except ConnectionClosedError:
                 self.logger.error("Connection closed unexpectedly")
                 await self.setup()

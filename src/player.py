@@ -6,7 +6,7 @@ import json
 from logging import Logger
 import requests
 from typing import Any
-import websockets
+import websockets.client as ws
 
 
 @dataclass
@@ -14,7 +14,7 @@ class Player:
     username: str
     password: str
     logger: Logger
-    websocket: Any | None = None
+    websocket: ws.WebSocketClientProtocol | None = None
     room: str | None = None
     request: dict[str, Any] | None = None
     observations: list[str] | None = None
@@ -22,7 +22,7 @@ class Player:
     async def connect(self):
         while True:
             try:
-                self.websocket = await websockets.connect("wss://sim3.psim.us/showdown/websocket")
+                self.websocket = await ws.connect("wss://sim3.psim.us/showdown/websocket")
                 break
             except TimeoutError:
                 self.logger.error("Connection attempt failed, retrying now")
@@ -31,14 +31,20 @@ class Player:
         room = self.room or ""
         message = f"{room}|{message}"
         self.logger.info(f"{self.username.upper()} -> SERVER:\n{message}")
-        await self.websocket.send(message)
+        if self.websocket:
+            await self.websocket.send(message)
+        else:
+            raise RuntimeError("Cannot send message without established websocket")
 
     async def receive_message(self) -> str:
-        response = await asyncio.wait_for(self.websocket.recv(), timeout=5)
+        if self.websocket:
+            response = str(await asyncio.wait_for(self.websocket.recv(), timeout=5))
+        else:
+            raise RuntimeError("Cannot receive message without established websocket")
         self.logger.info(f"SERVER -> {self.username.upper()}:\n{response}")
         return response
 
-    async def find_message(self, message_type: str) -> list[str] | None:
+    async def find_message(self, message_type: str) -> list[str]:
         while True:
             message = await self.receive_message()
             split_message = message.split("|")
@@ -77,7 +83,7 @@ class Player:
                     if "t:" in split_message:
                         return split_message
                 case "leave":
-                    if self.room in split_message[0] and split_message[1] == "deinit":
+                    if self.room and self.room in split_message[0] and split_message[1] == "deinit":
                         return split_message
 
     async def login(self):
@@ -146,7 +152,7 @@ class Player:
     async def timer_on(self):
         await self.send_message("/timer on")
 
-    async def observe(self) -> tuple[bool, str]:
+    async def observe(self) -> tuple[bool, str | None]:
         split_message = await self.find_message("request")
         if "win" in split_message:
             i = split_message.index("win")
@@ -159,7 +165,7 @@ class Player:
             return False, None
 
     async def choose(self, choice: str):
-        rqid = self.request["rqid"]
+        rqid = self.request["rqid"] if self.request else ""
         await self.send_message(f"/choose {choice}|{rqid}")
 
     async def leave(self):
