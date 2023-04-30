@@ -11,7 +11,10 @@ async def main():
     with open("config.json") as f:
         config = json.load(f)
     logging.basicConfig(
-        level=logging.INFO, filename="debug.log", filemode="w", format="%(asctime)s - %(levelname)s - %(message)s"
+        level=logging.INFO,
+        filename="debug.log",
+        filemode="w",
+        format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s\n%(message)s\n",
     )
     logger = logging.getLogger()
     player1 = Player(config["username1"], config["password1"], logger)

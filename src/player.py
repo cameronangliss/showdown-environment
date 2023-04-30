@@ -28,13 +28,13 @@ class Player:
     async def send_message(self, message: str):
         room = self.room or ""
         message = f"{room}|{message}"
-        self.logger.info(f"\n{self.username.upper()} -> SERVER:\n{message}")
+        self.logger.info(f"{self.username.upper()} -> SERVER:\n{message}")
         await self.websocket.send(message)
 
     async def receive_message(self) -> str | None:
         try:
             response = await asyncio.wait_for(self.websocket.recv(), timeout=5)
-            self.logger.info(f"\nSERVER -> {self.username.upper()}:\n{response}")
+            self.logger.info(f"SERVER -> {self.username.upper()}:\n{response}")
             return response
         except asyncio.TimeoutError:
             self.logger.warning("receive_message timed out")
