@@ -31,20 +31,14 @@ class Player:
         self.logger.info(f"{self.username.upper()} -> SERVER:\n{message}")
         await self.websocket.send(message)
 
-    async def receive_message(self) -> str | None:
-        try:
-            response = await asyncio.wait_for(self.websocket.recv(), timeout=5)
-            self.logger.info(f"SERVER -> {self.username.upper()}:\n{response}")
-            return response
-        except asyncio.TimeoutError:
-            self.logger.warning("receive_message timed out")
-            return None
+    async def receive_message(self) -> str:
+        response = await asyncio.wait_for(self.websocket.recv(), timeout=5)
+        self.logger.info(f"SERVER -> {self.username.upper()}:\n{response}")
+        return response
 
     async def find_message(self, message_type: str) -> list[str] | None:
         while True:
             message = await self.receive_message()
-            if not message:
-                return None
             split_message = message.split("|")
             match message_type:
                 case "login":
@@ -102,20 +96,21 @@ class Player:
 
     async def forfeit_games(self):
         await self.find_message("games")
-        split_message = await self.find_message("games")
-        # If the second games message isn't found, then there are no games to forfeit
-        if not split_message:
-            return
-        games = json.loads(split_message[2])["games"]
-        if games:
-            battle_rooms = list(games.keys())
-            prev_room = self.room
-            for room in battle_rooms:
-                await self.join(room)
-                await self.send_message("/forfeit")
-                await self.leave()
-            if prev_room:
-                await self.join(prev_room)
+        try:
+            split_message = await self.find_message("games")
+        except asyncio.TimeoutError:
+            self.logger.info("Second updatesearch message not received. This should mean the user just logged in.")
+        else:
+            games = json.loads(split_message[2])["games"]
+            if games:
+                battle_rooms = list(games.keys())
+                prev_room = self.room
+                for room in battle_rooms:
+                    await self.join(room)
+                    await self.send_message("/forfeit")
+                    await self.leave()
+                if prev_room:
+                    await self.join(prev_room)
 
     async def setup(self):
         self.room = None
