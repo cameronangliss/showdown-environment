@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 import json
 from logging import Logger
 import requests
+from typing import Any
 import websockets
 
 
+@dataclass
 class Player:
-    def __init__(self, username: str, password: str, logger: Logger):
-        self.username = username
-        self.password = password
-        self.room = None
-        self.request = None
-        self.observations = None
-        self.websocket = None
-        self.logger = logger
+    username: str
+    password: str
+    logger: Logger
+    websocket: Any | None = None
+    room: str | None = None
+    request: dict[str, Any] | None = None
+    observations: list[str] | None = None
 
     async def connect(self):
         while True:

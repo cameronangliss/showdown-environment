@@ -1,15 +1,16 @@
 import asyncio
+from dataclasses import dataclass
 from logging import Logger
 import websockets
 
 from player import Player
 
 
+@dataclass
 class Battle:
-    def __init__(self, player1: Player, player2: Player, logger: Logger):
-        self.player1 = player1
-        self.player2 = player2
-        self.logger = logger
+    player1: Player
+    player2: Player
+    logger: Logger
 
     async def setup(self):
         await self.player1.setup()
