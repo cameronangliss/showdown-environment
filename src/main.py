@@ -14,7 +14,7 @@ async def main():
         level=logging.INFO,
         filename="debug.log",
         filemode="w",
-        format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s\n%(message)s\n",
+        format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s()\n%(message)s\n",
     )
     logger = logging.getLogger()
     player1 = Player(config["username1"], config["password1"], logger)
