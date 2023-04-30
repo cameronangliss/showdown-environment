@@ -95,6 +95,7 @@ class Player:
         await self.send_message(f"/trn {self.username},0,{assertion}")
 
     async def forfeit_games(self):
+        # The first games message is always empty, so this is here to pass by that message.
         await self.find_message("games")
         try:
             split_message = await self.find_message("games")
@@ -121,9 +122,11 @@ class Player:
     async def challenge(self, opponent: Player, battle_format: str = "gen9randombattle", team: str | None = None):
         await self.send_message(f"/utm {team}")
         await self.send_message(f"/challenge {opponent.username}, {battle_format}")
+        # Waiting for confirmation that challenge was sent
         await self.find_message("challenge")
 
     async def accept(self, opponent: Player, team: str | None = None) -> str:
+        # Waiting for confirmation that challenge was received
         await self.find_message("accept")
         await self.send_message(f"/utm {team}")
         await self.send_message(f"/accept {opponent.username}")
