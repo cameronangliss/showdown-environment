@@ -2,11 +2,22 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from enum import Enum, auto
 import json
 from logging import Logger
 import requests
 from typing import Any
 import websockets.client as ws
+
+
+class MessageType(Enum):
+    LOGIN = auto()
+    GAMES = auto()
+    CHALLENGE = auto()
+    ACCEPT = auto()
+    REQUEST = auto()
+    OBSERVE = auto()
+    LEAVE = auto()
 
 
 @dataclass
@@ -44,18 +55,18 @@ class Player:
         self.logger.info(f"SERVER -> {self.username.upper()}:\n{response}")
         return response
 
-    async def find_message(self, message_type: str) -> list[str]:
+    async def find_message(self, message_type: MessageType) -> list[str]:
         while True:
             message = await self.receive_message()
             split_message = message.split("|")
             match message_type:
-                case "login":
+                case MessageType.LOGIN:
                     if split_message[1] == "challstr":
                         return split_message
-                case "games":
+                case MessageType.GAMES:
                     if split_message[1] == "updatesearch":
                         return split_message
-                case "challenge":
+                case MessageType.CHALLENGE:
                     if split_message[1] == "popup":
                         # too many games or challenges in too short a period of time cause a popup
                         raise RuntimeError(split_message[2])
@@ -65,29 +76,29 @@ class Player:
                         and "wants to battle!" in split_message[4]
                     ):
                         return split_message
-                case "accept":
+                case MessageType.ACCEPT:
                     if (
                         split_message[1] == "pm"
                         and split_message[3] == f" {self.username}"
                         and "wants to battle!" in split_message[4]
                     ):
                         return split_message
-                case "request":
+                case MessageType.REQUEST:
                     if (
                         "win" in split_message
                         or "tie" in split_message
                         or (split_message[1] == "request" and split_message[2])
                     ):
                         return split_message
-                case "observe":
+                case MessageType.OBSERVE:
                     if "t:" in split_message:
                         return split_message
-                case "leave":
+                case MessageType.LEAVE:
                     if self.room and self.room in split_message[0] and split_message[1] == "deinit":
                         return split_message
 
     async def login(self):
-        split_message = await self.find_message("login")
+        split_message = await self.find_message(MessageType.LOGIN)
         client_id = split_message[2]
         challstr = split_message[3]
         response = requests.post(
@@ -104,9 +115,9 @@ class Player:
 
     async def forfeit_games(self):
         # The first games message is always empty, so this is here to pass by that message.
-        await self.find_message("games")
+        await self.find_message(MessageType.GAMES)
         try:
-            split_message = await self.find_message("games")
+            split_message = await self.find_message(MessageType.GAMES)
         except asyncio.TimeoutError:
             self.logger.info("Second updatesearch message not received. This should mean the user just logged in.")
         else:
@@ -131,16 +142,16 @@ class Player:
         await self.send_message(f"/utm {team}")
         await self.send_message(f"/challenge {opponent.username}, {battle_format}")
         # Waiting for confirmation that challenge was sent
-        await self.find_message("challenge")
+        await self.find_message(MessageType.CHALLENGE)
 
     async def accept(self, opponent: Player, team: str | None = None) -> str:
         # Waiting for confirmation that challenge was received
-        await self.find_message("accept")
+        await self.find_message(MessageType.ACCEPT)
         await self.send_message(f"/utm {team}")
         await self.send_message(f"/accept {opponent.username}")
         # The first games message is always empty, so this is here to pass by that message.
-        await self.find_message("games")
-        split_message = await self.find_message("games")
+        await self.find_message(MessageType.GAMES)
+        split_message = await self.find_message(MessageType.GAMES)
         games = json.loads(split_message[2])["games"]
         room = list(games.keys())[0]
         return room
@@ -153,7 +164,7 @@ class Player:
         await self.send_message("/timer on")
 
     async def observe(self) -> tuple[bool, str | None]:
-        split_message = await self.find_message("request")
+        split_message = await self.find_message(MessageType.REQUEST)
         if "win" in split_message:
             i = split_message.index("win")
             return True, split_message[i + 1].strip()
@@ -161,7 +172,7 @@ class Player:
             return True, None
         else:
             self.request = json.loads(split_message[2])
-            self.observations = await self.find_message("observe")
+            self.observations = await self.find_message(MessageType.OBSERVE)
             return False, None
 
     async def choose(self, choice: str):
@@ -171,7 +182,7 @@ class Player:
     async def leave(self):
         await self.send_message(f"/leave {self.room}")
         # gets rid of all messages having to do with the room being left
-        await self.find_message("leave")
+        await self.find_message(MessageType.LEAVE)
         self.room = None
         self.request = None
         self.observations = None
