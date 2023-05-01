@@ -29,29 +29,22 @@ class Battle:
         await self.player2.join(room)
         await self.player1.timer_on()
 
-    async def step(self) -> tuple[bool, str | None]:
-        done, winner = await self.player1.observe()
-        if not done:
-            done, winner = await self.player2.observe()
-            await self.player1.choose("default")
-            await self.player2.choose("default")
-        return done, winner
-
     async def close(self):
         await self.player1.logout()
         await self.player2.logout()
 
-    async def run_episode(self) -> str | None:
+    async def run_episode(self) -> str:
         while True:
             try:
                 await self.reset()
-                done = False
-                winner = None
-                while not done:
-                    done, winner = await self.step()
-                await self.player1.leave()
-                await self.player2.leave()
-                return winner
+                while True:
+                    try:
+                        await self.player1.step()
+                        await self.player2.step()
+                    except SystemExit as e:
+                        await self.player1.leave()
+                        await self.player2.leave()
+                        return str(e).strip()
             except ConnectionClosedError:
                 self.logger.error("Connection closed unexpectedly")
                 await self.setup()

@@ -6,8 +6,11 @@ from enum import Enum, auto
 import json
 from logging import Logger
 import requests
+import torch
 from typing import Any
 import websockets.client as ws
+
+from nn import NN
 
 
 class MessageType(Enum):
@@ -27,8 +30,7 @@ class Player:
     logger: Logger
     websocket: ws.WebSocketClientProtocol | None = None
     room: str | None = None
-    request: dict[str, Any] | None = None
-    observations: list[str] | None = None
+    nn: NN = NN(10, 100, 10)
 
     async def connect(self):
         while True:
@@ -49,7 +51,7 @@ class Player:
 
     async def receive_message(self) -> str:
         if self.websocket:
-            response = str(await asyncio.wait_for(self.websocket.recv(), timeout=5))
+            response = str(await asyncio.wait_for(self.websocket.recv(), timeout=10))
         else:
             raise RuntimeError("Cannot receive message without established websocket")
         self.logger.info(f"SERVER -> {self.username.upper()}:\n{response}")
@@ -84,11 +86,13 @@ class Player:
                     ):
                         return split_message
                 case MessageType.REQUEST:
-                    if (
-                        "win" in split_message
-                        or "tie" in split_message
-                        or (split_message[1] == "request" and split_message[2])
-                    ):
+                    if "win" in split_message:
+                        winner_index = split_message.index("win") + 1
+                        winner = split_message[winner_index]
+                        raise SystemExit(winner)
+                    elif "tie" in split_message:
+                        raise SystemExit("None")
+                    elif split_message[1] == "request" and split_message[2]:
                         return split_message
                 case MessageType.OBSERVE:
                     if "t:" in split_message:
@@ -132,12 +136,6 @@ class Player:
                 if prev_room:
                     await self.join(prev_room)
 
-    async def setup(self):
-        self.room = None
-        await self.connect()
-        await self.login()
-        await self.forfeit_games()
-
     async def challenge(self, opponent: Player, battle_format: str = "gen9randombattle", team: str | None = None):
         await self.send_message(f"/utm {team}")
         await self.send_message(f"/challenge {opponent.username}, {battle_format}")
@@ -163,21 +161,15 @@ class Player:
     async def timer_on(self):
         await self.send_message("/timer on")
 
-    async def observe(self) -> tuple[bool, str | None]:
+    async def observe(self) -> tuple[Any, list[str]]:
         split_message = await self.find_message(MessageType.REQUEST)
-        if "win" in split_message:
-            i = split_message.index("win")
-            return True, split_message[i + 1].strip()
-        elif "tie" in split_message:
-            return True, None
-        else:
-            self.request = json.loads(split_message[2])
-            self.observations = await self.find_message(MessageType.OBSERVE)
-            return False, None
+        request = json.loads(split_message[2])
+        observations = await self.find_message(MessageType.OBSERVE)
+        return request, observations
 
-    async def choose(self, choice: str):
-        rqid = self.request["rqid"] if self.request else ""
-        await self.send_message(f"/choose {choice}|{rqid}")
+    async def choose(self, choice: str | None, rqid: int):
+        if choice:
+            await self.send_message(f"/choose {choice}|{rqid}")
 
     async def leave(self):
         await self.send_message(f"/leave {self.room}")
@@ -189,3 +181,57 @@ class Player:
 
     async def logout(self):
         await self.send_message("/logout")
+
+    async def setup(self):
+        self.room = None
+        await self.connect()
+        await self.login()
+        await self.forfeit_games()
+
+    @staticmethod
+    def get_valid_choices(request: Any, observations: list[str]) -> tuple[list[int], list[str]]:
+        switches = [f"switch {n}" for n in range(1, 7)]
+        valid_switch_ids = [
+            i + 4
+            for i, pokemon in enumerate(request["side"]["pokemon"])
+            if not pokemon["active"] and pokemon["condition"] != "0 fnt"
+        ]
+        valid_switches = [switches[valid_id - 4] for valid_id in valid_switch_ids]
+        if "wait" in request:
+            return [], []
+        elif "forceSwitch" in request:
+            if "Revival Blessing" in observations:
+                dead_switch_ids = [
+                    i + 4
+                    for i, pokemon in enumerate(request["side"]["pokemon"])
+                    if not pokemon["active"] and pokemon["condition"] == "0 fnt"
+                ]
+                dead_switches = [switches[dead_id - 4] for dead_id in dead_switch_ids]
+                return dead_switch_ids, dead_switches
+            else:
+                return valid_switch_ids, valid_switches
+        elif "active" in request:
+            moves = [f"move {n}" for n in range(1, 5)]
+            valid_move_ids = [
+                i
+                for i, move in enumerate(request["active"][0]["moves"])
+                if ("disabled" not in move) or (not move["disabled"])
+            ]
+            valid_moves = [moves[valid_id] for valid_id in valid_move_ids]
+            if "trapped" in request["active"][0] or "maybeTrapped" in request["active"][0]:
+                return valid_move_ids, valid_moves
+            else:
+                return valid_move_ids + valid_switch_ids, valid_moves + valid_switches
+        else:
+            raise RuntimeError("Unknown request format encountered")
+
+    async def step(self):
+        request, observations = await self.observe()
+        if "wait" not in request:
+            inputs = torch.rand(self.nn.input_dim)
+            outputs = self.nn.forward(inputs)
+            valid_choice_ids, valid_choices = Player.get_valid_choices(request, observations)
+            valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(valid_choice_ids))
+            max_output_id = torch.argmax(valid_outputs)
+            choice = valid_choices[max_output_id]
+            await self.choose(choice, request["rqid"])
