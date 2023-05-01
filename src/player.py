@@ -51,7 +51,7 @@ class Player:
 
     async def receive_message(self) -> str:
         if self.websocket:
-            response = str(await asyncio.wait_for(self.websocket.recv(), timeout=10))
+            response = str(await self.websocket.recv())
         else:
             raise RuntimeError("Cannot receive message without established websocket")
         self.logger.info(f"SERVER -> {self.username.upper()}:\n{response}")
@@ -141,6 +141,9 @@ class Player:
         await self.send_message(f"/challenge {opponent.username}, {battle_format}")
         # Waiting for confirmation that challenge was sent
         await self.find_message(MessageType.CHALLENGE)
+
+    async def cancel(self, opponent: Player):
+        await self.send_message(f"/cancelchallenge {opponent.username}")
 
     async def accept(self, opponent: Player, team: str | None = None) -> str:
         # Waiting for confirmation that challenge was received
