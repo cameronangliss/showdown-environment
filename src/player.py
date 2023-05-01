@@ -215,7 +215,7 @@ class Player:
             valid_move_ids = [
                 i
                 for i, move in enumerate(request["active"][0]["moves"])
-                if ("disabled" not in move) or (not move["disabled"])
+                if not ("disabled" in move and move["disabled"])
             ]
             valid_moves = [moves[valid_id] for valid_id in valid_move_ids]
             if "trapped" in request["active"][0] or "maybeTrapped" in request["active"][0]:
