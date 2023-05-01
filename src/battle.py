@@ -23,7 +23,8 @@ class Battle:
                 break
             except RuntimeError as e:
                 self.logger.warning(f"Popup occurred: {str(e)}")
-                await self.player1.cancel(self.player2)
+                if "You are already challenging someone" in str(e):
+                    await self.player1.cancel(self.player2)
                 await asyncio.sleep(5)
         room = await self.player2.accept(self.player1)
         await self.player1.join(room)

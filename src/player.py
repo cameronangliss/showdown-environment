@@ -17,6 +17,7 @@ class MessageType(Enum):
     LOGIN = auto()
     GAMES = auto()
     CHALLENGE = auto()
+    CANCEL = auto()
     ACCEPT = auto()
     REQUEST = auto()
     OBSERVE = auto()
@@ -76,6 +77,13 @@ class Player:
                         split_message[1] == "pm"
                         and split_message[2] == f" {self.username}"
                         and "wants to battle!" in split_message[4]
+                    ):
+                        return split_message
+                case MessageType.CANCEL:
+                    if (
+                        split_message[1] == "pm"
+                        and split_message[2] == f" {self.username}"
+                        and "cancelled the challenge." in split_message[4]
                     ):
                         return split_message
                 case MessageType.ACCEPT:
@@ -144,6 +152,8 @@ class Player:
 
     async def cancel(self, opponent: Player):
         await self.send_message(f"/cancelchallenge {opponent.username}")
+        # Waiting for confirmation that challenge was cancelled
+        await self.find_message(MessageType.CANCEL)
 
     async def accept(self, opponent: Player, team: str | None = None) -> str:
         # Waiting for confirmation that challenge was received
