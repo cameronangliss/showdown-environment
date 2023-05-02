@@ -1,13 +1,12 @@
 import asyncio
 from dataclasses import dataclass
 from logging import Logger
-from websockets.exceptions import ConnectionClosedError
 
-from player import Player
+from player import Player, Observation
 
 
 @dataclass
-class Battle:
+class Env:
     player1: Player
     player2: Player
     logger: Logger
@@ -16,7 +15,7 @@ class Battle:
         await self.player1.setup()
         await self.player2.setup()
 
-    async def reset(self):
+    async def reset(self) -> tuple[Observation, Observation]:
         while True:
             try:
                 await self.player1.challenge(self.player2)
@@ -30,23 +29,19 @@ class Battle:
         await self.player1.join(room)
         await self.player2.join(room)
         await self.player1.timer_on()
+        obs1 = await self.player1.observe()
+        obs2 = await self.player2.observe()
+        return obs1, obs2
+
+    async def step(
+        self, action1: str | None, action2: str | None, rqid1: int, rqid2: int
+    ) -> tuple[Observation, Observation]:
+        await self.player1.choose(action1, rqid1)
+        await self.player2.choose(action2, rqid2)
+        obs1 = await self.player1.observe()
+        obs2 = await self.player2.observe()
+        return obs1, obs2
 
     async def close(self):
         await self.player1.logout()
         await self.player2.logout()
-
-    async def run_episode(self) -> str:
-        while True:
-            try:
-                await self.reset()
-                while True:
-                    try:
-                        await self.player1.step()
-                        await self.player2.step()
-                    except SystemExit as e:
-                        await self.player1.leave()
-                        await self.player2.leave()
-                        return str(e).strip()
-            except ConnectionClosedError:
-                self.logger.error("Connection closed unexpectedly")
-                await self.setup()

@@ -1,9 +1,10 @@
 import asyncio
-from datetime import datetime
 import json
 import logging
 
-from battle import Battle
+from trainer import Trainer
+from model import Model
+from env import Env
 from player import Player
 
 
@@ -19,13 +20,10 @@ async def main():
     logger = logging.getLogger()
     player1 = Player(config["username1"], config["password1"], logger)
     player2 = Player(config["username2"], config["password2"], logger)
-    battle = Battle(player1, player2, logger)
-    await battle.setup()
-    for i in range(10):
-        winner = await battle.run_episode()
-        time = datetime.now().strftime("%H:%M:%S")
-        print(f"{time}: {winner} wins game {i + 1}")
-    await battle.close()
+    model = Model(10, 20, 10)
+    env = Env(player1, player2, logger)
+    trainer = Trainer(model, env)
+    await trainer.train(num_episodes=100)
 
 
 if __name__ == "__main__":

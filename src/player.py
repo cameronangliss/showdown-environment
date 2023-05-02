@@ -6,11 +6,8 @@ from enum import Enum, auto
 import json
 from logging import Logger
 import requests
-import torch
-from typing import Any
+from typing import Any, NamedTuple
 import websockets.client as ws
-
-from nn import NN
 
 
 class MessageType(Enum):
@@ -24,6 +21,11 @@ class MessageType(Enum):
     LEAVE = auto()
 
 
+class Observation(NamedTuple):
+    request: Any
+    split_message: list[str]
+
+
 @dataclass
 class Player:
     username: str
@@ -31,7 +33,6 @@ class Player:
     logger: Logger
     websocket: ws.WebSocketClientProtocol | None = None
     room: str | None = None
-    nn: NN = NN(10, 100, 10)
 
     async def connect(self):
         while True:
@@ -174,15 +175,15 @@ class Player:
     async def timer_on(self):
         await self.send_message("/timer on")
 
-    async def observe(self) -> tuple[Any, list[str]]:
+    async def observe(self) -> Observation:
         split_message = await self.find_message(MessageType.REQUEST)
         request = json.loads(split_message[2])
         observations = await self.find_message(MessageType.OBSERVE)
-        return request, observations
+        return Observation(request, observations)
 
-    async def choose(self, choice: str | None, rqid: int):
-        if choice:
-            await self.send_message(f"/choose {choice}|{rqid}")
+    async def choose(self, action: str | None, rqid: int):
+        if action:
+            await self.send_message(f"/choose {action}|{rqid}")
 
     async def leave(self):
         await self.send_message(f"/leave {self.room}")
@@ -199,52 +200,41 @@ class Player:
         self.room = None
         await self.connect()
         await self.login()
-        await self.forfeit_games()
+        try:
+            await asyncio.wait_for(self.forfeit_games(), timeout=5)
+        except TimeoutError:
+            pass
 
     @staticmethod
-    def get_valid_choices(request: Any, observations: list[str]) -> tuple[list[int], list[str]]:
-        switches = [f"switch {n}" for n in range(1, 7)]
-        valid_switch_ids = [
-            i + 4
-            for i, pokemon in enumerate(request["side"]["pokemon"])
+    def get_action_space(obs: Observation) -> list[tuple[int, str]]:
+        switch_actions = list(enumerate([f"switch {n}" for n in range(1, 7)], start=4))
+        valid_switches = [
+            switch_actions[i]
+            for i, pokemon in enumerate(obs.request["side"]["pokemon"])
             if not pokemon["active"] and pokemon["condition"] != "0 fnt"
         ]
-        valid_switches = [switches[valid_id - 4] for valid_id in valid_switch_ids]
-        if "wait" in request:
-            return [], []
-        elif "forceSwitch" in request:
-            if "Revival Blessing" in observations:
-                dead_switch_ids = [
-                    i + 4
-                    for i, pokemon in enumerate(request["side"]["pokemon"])
+        if "wait" in obs.request:
+            return []
+        elif "forceSwitch" in obs.request:
+            if "Revival Blessing" in obs.split_message:
+                dead_switches = [
+                    switch_actions[i]
+                    for i, pokemon in enumerate(obs.request["side"]["pokemon"])
                     if not pokemon["active"] and pokemon["condition"] == "0 fnt"
                 ]
-                dead_switches = [switches[dead_id - 4] for dead_id in dead_switch_ids]
-                return dead_switch_ids, dead_switches
+                return dead_switches
             else:
-                return valid_switch_ids, valid_switches
-        elif "active" in request:
-            moves = [f"move {n}" for n in range(1, 5)]
-            valid_move_ids = [
-                i
-                for i, move in enumerate(request["active"][0]["moves"])
+                return valid_switches
+        elif "active" in obs.request:
+            move_switches = list(enumerate([f"move {n}" for n in range(1, 5)]))
+            valid_moves = [
+                move_switches[i]
+                for i, move in enumerate(obs.request["active"][0]["moves"])
                 if not ("disabled" in move and move["disabled"])
             ]
-            valid_moves = [moves[valid_id] for valid_id in valid_move_ids]
-            if "trapped" in request["active"][0] or "maybeTrapped" in request["active"][0]:
-                return valid_move_ids, valid_moves
+            if "trapped" in obs.request["active"][0] or "maybeTrapped" in obs.request["active"][0]:
+                return valid_moves
             else:
-                return valid_move_ids + valid_switch_ids, valid_moves + valid_switches
+                return valid_moves + valid_switches
         else:
             raise RuntimeError("Unknown request format encountered")
-
-    async def step(self):
-        request, observations = await self.observe()
-        if "wait" not in request:
-            inputs = torch.rand(self.nn.input_dim)
-            outputs = self.nn.forward(inputs)
-            valid_choice_ids, valid_choices = Player.get_valid_choices(request, observations)
-            valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(valid_choice_ids))
-            max_output_id = torch.argmax(valid_outputs)
-            choice = valid_choices[max_output_id]
-            await self.choose(choice, request["rqid"])
