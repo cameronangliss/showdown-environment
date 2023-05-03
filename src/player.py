@@ -16,14 +16,13 @@ class MessageType(Enum):
     CHALLENGE = auto()
     CANCEL = auto()
     ACCEPT = auto()
-    REQUEST = auto()
     OBSERVE = auto()
     LEAVE = auto()
 
 
 class Observation(NamedTuple):
     request: Any
-    split_message: list[str]
+    protocol: list[str]
 
 
 @dataclass
@@ -94,17 +93,10 @@ class Player:
                         and "wants to battle!" in split_message[4]
                     ):
                         return split_message
-                case MessageType.REQUEST:
-                    if "win" in split_message:
-                        winner_index = split_message.index("win") + 1
-                        winner = split_message[winner_index]
-                        raise SystemExit(winner)
-                    elif "tie" in split_message:
-                        raise SystemExit("None")
-                    elif split_message[1] == "request" and split_message[2]:
-                        return split_message
                 case MessageType.OBSERVE:
-                    if "t:" in split_message:
+                    is_request = split_message[1] == "request" and split_message[2]
+                    is_protocol = "start\n" in split_message or split_message[1] == "\n"
+                    if is_request or is_protocol:
                         return split_message
                 case MessageType.LEAVE:
                     if self.room and self.room in split_message[0] and split_message[1] == "deinit":
@@ -176,10 +168,14 @@ class Player:
         await self.send_message("/timer on")
 
     async def observe(self) -> Observation:
-        split_message = await self.find_message(MessageType.REQUEST)
-        request = json.loads(split_message[2])
-        observations = await self.find_message(MessageType.OBSERVE)
-        return Observation(request, observations)
+        split_message = await self.find_message(MessageType.OBSERVE)
+        if split_message[1] == "request":
+            request = json.loads(split_message[2])
+            protocol = await self.find_message(MessageType.OBSERVE)
+            return Observation(request, protocol)
+        else:
+            protocol = split_message
+            return Observation(None, protocol)
 
     async def choose(self, action: str | None, rqid: int):
         if action:
@@ -216,7 +212,7 @@ class Player:
         if "wait" in obs.request:
             return []
         elif "forceSwitch" in obs.request:
-            if "Revival Blessing" in obs.split_message:
+            if "Revival Blessing" in obs.protocol:
                 dead_switches = [
                     switch_actions[i]
                     for i, pokemon in enumerate(obs.request["side"]["pokemon"])

@@ -55,15 +55,20 @@ class Trainer:
     async def run_episode(self) -> str:
         try:
             obs1, obs2 = await self.env.reset()
-            while True:
+            done = False
+            while not done:
                 action1 = self.get_action(obs1)
                 action2 = self.get_action(obs2)
-                obs1, obs2 = await self.env.step(action1, action2, obs1.request["rqid"], obs2.request["rqid"])
+                obs1, obs2, done = await self.env.step(action1, action2, obs1.request["rqid"], obs2.request["rqid"])
                 # self.q_learning_update(state, action, reward, next_state, done)
-        except SystemExit as e:
+            try:
+                winner_id = obs1.protocol.index("win")
+                winner = obs1.protocol[winner_id + 1].strip()
+            except ValueError:
+                winner = "None"
             await self.env.player1.leave()
             await self.env.player2.leave()
-            return str(e).strip()
+            return winner
         except ConnectionClosedError:
             self.env.logger.error("Connection closed unexpectedly")
             await self.env.setup()

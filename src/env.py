@@ -35,12 +35,13 @@ class Env:
 
     async def step(
         self, action1: str | None, action2: str | None, rqid1: int, rqid2: int
-    ) -> tuple[Observation, Observation]:
+    ) -> tuple[Observation, Observation, bool]:
         await self.player1.choose(action1, rqid1)
         await self.player2.choose(action2, rqid2)
         obs1 = await self.player1.observe()
         obs2 = await self.player2.observe()
-        return obs1, obs2
+        done = "win" in obs1.protocol or "tie" in obs1.protocol
+        return obs1, obs2, done
 
     async def close(self):
         await self.player1.logout()
