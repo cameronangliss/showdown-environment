@@ -48,13 +48,13 @@ class Player:
         if self.websocket:
             await self.websocket.send(message)
         else:
-            raise RuntimeError("Cannot send message without established websocket")
+            raise ConnectionError("Cannot send message without established websocket")
 
     async def receive_message(self) -> str:
         if self.websocket:
             response = str(await self.websocket.recv())
         else:
-            raise RuntimeError("Cannot receive message without established websocket")
+            raise ConnectionError("Cannot receive message without established websocket")
         self.logger.info(f"SERVER -> {self.username.upper()}:\n{response}")
         return response
 
@@ -71,7 +71,10 @@ class Player:
                         return split_message
                 case MessageType.CHALLENGE:
                     if split_message[1] == "popup":
-                        # too many games or challenges in too short a period of time cause a popup
+                        # Popups encountered in the past:
+                        # 1. Due to high load, you are limited to 12 battles and team validations every 3 minutes.
+                        # 2. You challenged less than 10 seconds after your last challenge! It's cancelled in case it's a misclick.
+                        # 3. You are already challenging someone. Cancel that challenge before challenging someone else.
                         raise RuntimeError(split_message[2])
                     elif (
                         split_message[1] == "pm"
@@ -221,7 +224,7 @@ class Player:
                 return dead_switches
             else:
                 return valid_switches
-        elif "active" in obs.request:
+        else:
             move_switches = list(enumerate([f"move {n}" for n in range(1, 5)]))
             valid_moves = [
                 move_switches[i]
@@ -232,5 +235,3 @@ class Player:
                 return valid_moves
             else:
                 return valid_moves + valid_switches
-        else:
-            raise RuntimeError("Unknown request format encountered")
