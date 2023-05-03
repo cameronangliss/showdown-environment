@@ -125,8 +125,8 @@ class Player:
         # The first games message is always empty, so this is here to pass by that message.
         await self.find_message(MessageType.GAMES)
         try:
-            split_message = await self.find_message(MessageType.GAMES)
-        except asyncio.TimeoutError:
+            split_message = await asyncio.wait_for(self.find_message(MessageType.GAMES), timeout=5)
+        except TimeoutError:
             self.logger.info("Second updatesearch message not received. This should mean the user just logged in.")
         else:
             games = json.loads(split_message[2])["games"]
@@ -185,24 +185,14 @@ class Player:
             await self.send_message(f"/choose {action}|{rqid}")
 
     async def leave(self):
-        await self.send_message(f"/leave {self.room}")
-        # gets rid of all messages having to do with the room being left
-        await self.find_message(MessageType.LEAVE)
-        self.room = None
-        self.request = None
-        self.observations = None
+        if self.room:
+            await self.send_message(f"/leave {self.room}")
+            # gets rid of all messages having to do with the room being left
+            await self.find_message(MessageType.LEAVE)
+            self.room = None
 
     async def logout(self):
         await self.send_message("/logout")
-
-    async def setup(self):
-        self.room = None
-        await self.connect()
-        await self.login()
-        try:
-            await asyncio.wait_for(self.forfeit_games(), timeout=5)
-        except TimeoutError:
-            pass
 
     @staticmethod
     def get_action_space(obs: Observation) -> list[tuple[int, str]]:

@@ -12,20 +12,25 @@ class Env:
     logger: Logger
 
     async def setup(self):
-        await self.player1.setup()
-        await self.player2.setup()
+        self.player1.room = None
+        self.player2.room = None
+        await self.player1.connect()
+        await self.player2.connect()
+        await self.player1.login()
+        await self.player2.login()
+        await self.player1.forfeit_games()
+        await self.player2.forfeit_games()
 
     async def reset(self) -> tuple[Observation, Observation]:
+        await self.player1.leave()
+        await self.player2.leave()
         while True:
             try:
                 await self.player1.challenge(self.player2)
                 break
             except RuntimeError as e:
                 self.logger.warning(e)
-                if (
-                    str(e)
-                    == "You are already challenging someone. Cancel that challenge before challenging someone else."
-                ):
+                if "You are already challenging someone" in str(e):
                     await self.player1.cancel(self.player2)
                 await asyncio.sleep(5)
         room = await self.player2.accept(self.player1)
@@ -47,5 +52,7 @@ class Env:
         return obs1, obs2, done
 
     async def close(self):
+        await self.player1.leave()
+        await self.player2.leave()
         await self.player1.logout()
         await self.player2.logout()
