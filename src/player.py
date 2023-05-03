@@ -203,7 +203,7 @@ class Player:
             if not pokemon["active"] and pokemon["condition"] != "0 fnt"
         ]
         if "wait" in obs.request:
-            return []
+            action_space = []
         elif "forceSwitch" in obs.request:
             if "Revival Blessing" in obs.protocol:
                 dead_switches = [
@@ -211,17 +211,18 @@ class Player:
                     for i, pokemon in enumerate(obs.request["side"]["pokemon"])
                     if not pokemon["active"] and pokemon["condition"] == "0 fnt"
                 ]
-                return dead_switches
+                action_space = dead_switches
             else:
-                return valid_switches
+                action_space = valid_switches
         else:
-            move_switches = list(enumerate([f"move {n}" for n in range(1, 5)]))
+            move_actions = list(enumerate([f"move {n}" for n in range(1, 5)]))
             valid_moves = [
-                move_switches[i]
+                move_actions[i]
                 for i, move in enumerate(obs.request["active"][0]["moves"])
                 if not ("disabled" in move and move["disabled"])
             ]
             if "trapped" in obs.request["active"][0] or "maybeTrapped" in obs.request["active"][0]:
-                return valid_moves
+                action_space = valid_moves
             else:
-                return valid_moves + valid_switches
+                action_space = valid_moves + valid_switches
+        return action_space
