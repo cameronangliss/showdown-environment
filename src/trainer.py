@@ -49,8 +49,6 @@ class Trainer:
                 max_output_id = int(torch.argmax(valid_outputs).item())
                 action = actions[max_output_id]
             return action
-        else:
-            return None
 
     async def run_episode(self) -> str:
         try:
@@ -63,11 +61,10 @@ class Trainer:
                 # self.q_learning_update(state, action, reward, next_state, done)
             try:
                 winner_id = obs1.protocol.index("win")
-                winner = obs1.protocol[winner_id + 1].strip()
             except ValueError:
                 winner = "None"
-            await self.env.player1.leave()
-            await self.env.player2.leave()
+            else:
+                winner = obs1.protocol[winner_id + 1].strip()
             return winner
         except ConnectionClosedError:
             self.env.logger.error("Connection closed unexpectedly")
