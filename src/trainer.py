@@ -19,34 +19,34 @@ class Trainer:
     epsilon: float = 0.1  # Exploration rate
 
     @staticmethod
-    def get_action_space(obs: Observation) -> list[int]:
-        valid_switches = [
+    def get_valid_action_ids(obs: Observation) -> list[int]:
+        valid_switch_ids = [
             i + 4
             for i, pokemon in enumerate(obs.request["side"]["pokemon"])
             if not pokemon["active"] and pokemon["condition"] != "0 fnt"
         ]
         if "wait" in obs.request:
-            action_space = []
+            valid_action_ids = []
         elif "forceSwitch" in obs.request:
             if "Revival Blessing" in obs.protocol:
-                dead_switches = [switches for switches in range(4, 10) if switches not in valid_switches]
-                action_space = dead_switches
+                dead_switch_ids = [switches for switches in range(4, 10) if switches not in valid_switch_ids]
+                valid_action_ids = dead_switch_ids
             else:
-                action_space = valid_switches
+                valid_action_ids = valid_switch_ids
         else:
-            valid_moves = [
+            valid_move_ids = [
                 i
                 for i, move in enumerate(obs.request["active"][0]["moves"])
                 if not ("disabled" in move and move["disabled"])
             ]
             if "trapped" in obs.request["active"][0] or "maybeTrapped" in obs.request["active"][0]:
-                action_space = valid_moves
+                valid_action_ids = valid_move_ids
             else:
-                action_space = valid_moves + valid_switches
-        return action_space
+                valid_action_ids = valid_move_ids + valid_switch_ids
+        return valid_action_ids
 
     def get_action(self, obs: Observation) -> int | None:
-        action_space = Trainer.get_action_space(obs)
+        action_space = Trainer.get_valid_action_ids(obs)
         if action_space:
             if random.random() < self.epsilon:
                 action = random.choice(action_space)
