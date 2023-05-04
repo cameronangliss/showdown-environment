@@ -27,14 +27,16 @@ class Env:
         self.player2.room = None
         await self.player1.connect()
         await self.player2.connect()
-        await self.player1.login(random.choice(self.avatars))
-        await self.player2.login(random.choice(self.avatars))
+        await self.player1.login()
+        await self.player2.login()
         await self.player1.forfeit_games()
         await self.player2.forfeit_games()
 
     async def reset(self, format_str: str) -> tuple[Observation, Observation]:
         await self.player1.leave()
         await self.player2.leave()
+        await self.player1.set_avatar(random.choice(self.avatars))
+        await self.player2.set_avatar(random.choice(self.avatars))
         while True:
             try:
                 await self.player1.challenge(self.player2, format_str)
