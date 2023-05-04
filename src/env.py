@@ -16,8 +16,8 @@ class Env:
         self.player2.room = None
         await self.player1.connect()
         await self.player2.connect()
-        await self.player1.login()
-        await self.player2.login()
+        await self.player1.login("ethan")
+        await self.player2.login("cynthia-gen7")
         await self.player1.forfeit_games()
         await self.player2.forfeit_games()
 

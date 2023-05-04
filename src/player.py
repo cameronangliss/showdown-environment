@@ -105,7 +105,7 @@ class Player:
                     if self.room and self.room in split_message[0] and split_message[1] == "deinit":
                         return split_message
 
-    async def login(self):
+    async def login(self, avatar: str):
         split_message = await self.find_message(MessageType.LOGIN)
         client_id = split_message[2]
         challstr = split_message[3]
@@ -120,6 +120,7 @@ class Player:
         response_json = json.loads(response.text[1:])
         assertion = response_json.get("assertion")
         await self.send_message(f"/trn {self.username},0,{assertion}")
+        await self.send_message(f"/avatar {avatar}")
 
     async def forfeit_games(self):
         # The first games message is always empty, so this is here to pass by that message.
