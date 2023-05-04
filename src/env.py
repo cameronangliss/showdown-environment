@@ -42,7 +42,7 @@ class Env:
         return obs1, obs2
 
     async def step(
-        self, action1: str | None, action2: str | None, rqid1: int, rqid2: int
+        self, action1: int | None, action2: int | None, rqid1: int, rqid2: int
     ) -> tuple[Observation, Observation, bool]:
         await self.player1.choose(action1, rqid1)
         await self.player2.choose(action2, rqid2)

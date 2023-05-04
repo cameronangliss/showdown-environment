@@ -32,6 +32,18 @@ class Player:
     logger: Logger
     websocket: ws.WebSocketClientProtocol | None = None
     room: str | None = None
+    action_space = [
+        "move 1",
+        "move 2",
+        "move 3",
+        "move 4",
+        "switch 1",
+        "switch 2",
+        "switch 3",
+        "switch 4",
+        "switch 5",
+        "switch 6",
+    ]
 
     async def connect(self):
         while True:
@@ -181,9 +193,9 @@ class Player:
             protocol = split_message
             return Observation(None, protocol)
 
-    async def choose(self, action: str | None, rqid: int):
-        if action:
-            await self.send_message(f"/choose {action}|{rqid}")
+    async def choose(self, action: int | None, rqid: int):
+        if action != None:
+            await self.send_message(f"/choose {self.action_space[action]}|{rqid}")
 
     async def leave(self):
         if self.room:
@@ -194,36 +206,3 @@ class Player:
 
     async def logout(self):
         await self.send_message("/logout")
-
-    @staticmethod
-    def get_action_space(obs: Observation) -> list[tuple[int, str]]:
-        switch_actions = list(enumerate([f"switch {n}" for n in range(1, 7)], start=4))
-        valid_switches = [
-            switch_actions[i]
-            for i, pokemon in enumerate(obs.request["side"]["pokemon"])
-            if not pokemon["active"] and pokemon["condition"] != "0 fnt"
-        ]
-        if "wait" in obs.request:
-            action_space = []
-        elif "forceSwitch" in obs.request:
-            if "Revival Blessing" in obs.protocol:
-                dead_switches = [
-                    switch_actions[i]
-                    for i, pokemon in enumerate(obs.request["side"]["pokemon"])
-                    if not pokemon["active"] and pokemon["condition"] == "0 fnt"
-                ]
-                action_space = dead_switches
-            else:
-                action_space = valid_switches
-        else:
-            move_actions = list(enumerate([f"move {n}" for n in range(1, 5)]))
-            valid_moves = [
-                move_actions[i]
-                for i, move in enumerate(obs.request["active"][0]["moves"])
-                if not ("disabled" in move and move["disabled"])
-            ]
-            if "trapped" in obs.request["active"][0] or "maybeTrapped" in obs.request["active"][0]:
-                action_space = valid_moves
-            else:
-                action_space = valid_moves + valid_switches
-        return action_space
