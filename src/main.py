@@ -23,7 +23,7 @@ async def main():
     model = Model(10, 20, 10)
     env = Env(player1, player2, logger)
     trainer = Trainer(model, env)
-    await trainer.train(num_episodes=100)
+    await trainer.train(num_episodes=100, epsilon=0.1, gamma=0.9, alpha=0.01)
 
 
 if __name__ == "__main__":
