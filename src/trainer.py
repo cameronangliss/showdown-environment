@@ -14,7 +14,7 @@ class Trainer:
     model: Model
     env: Env
     gamma: float = 0.9  # Discount factor
-    alpha: float = 0.1  # Learning rate
+    alpha: float = 0.01  # Learning rate
     epsilon: float = 0.1  # Exploration rate
 
     def get_action(self, obs: Observation) -> tuple[int, str] | tuple[None, None]:
@@ -47,7 +47,7 @@ class Trainer:
 
     def update_model(self, obs: Observation, action: int | None, reward: int, next_obs: Observation, done: bool):
         if action:
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01)
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.alpha)
             if done:
                 q_target = torch.tensor(reward)
             else:
