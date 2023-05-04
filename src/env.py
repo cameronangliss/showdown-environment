@@ -1,6 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from logging import Logger
+import random
 
 from player import Player, Observation
 
@@ -10,23 +11,33 @@ class Env:
     player1: Player
     player2: Player
     logger: Logger
+    avatars = [
+        "cynthia-anime",
+        "cynthia-anime2",
+        "cynthia-gen4",
+        "cynthia-gen7",
+        "cynthia-masters",
+        "cynthia-masters2",
+        "cynthia-masters3",
+        "cynthia",
+    ]
 
     async def setup(self):
         self.player1.room = None
         self.player2.room = None
         await self.player1.connect()
         await self.player2.connect()
-        await self.player1.login("cynthia")
-        await self.player2.login("cynthia-gen7")
+        await self.player1.login(random.choice(self.avatars))
+        await self.player2.login(random.choice(self.avatars))
         await self.player1.forfeit_games()
         await self.player2.forfeit_games()
 
-    async def reset(self) -> tuple[Observation, Observation]:
+    async def reset(self, format_str: str) -> tuple[Observation, Observation]:
         await self.player1.leave()
         await self.player2.leave()
         while True:
             try:
-                await self.player1.challenge(self.player2)
+                await self.player1.challenge(self.player2, format_str)
                 break
             except RuntimeError as e:
                 self.logger.warning(e)

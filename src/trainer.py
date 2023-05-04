@@ -86,9 +86,9 @@ class Trainer:
             loss.backward()
             optimizer.step()
 
-    async def run_episode(self) -> str | None:
+    async def run_episode(self, format_str: str) -> str | None:
         try:
-            obs1, obs2 = await self.env.reset()
+            obs1, obs2 = await self.env.reset(format_str)
             done = False
             while not done:
                 action1 = self.get_action(obs1)
@@ -118,8 +118,9 @@ class Trainer:
 
     async def train(self, num_episodes: int):
         await self.env.setup()
+        random_formats = [f"gen{n}randombattle" for n in range(1, 10)]
         for i in range(num_episodes):
-            winner = await self.run_episode()
+            winner = await self.run_episode(random.choice(random_formats))
             time = datetime.now().strftime("%H:%M:%S")
             print(f"{time}: {winner} wins game {i + 1}")
         await self.env.close()

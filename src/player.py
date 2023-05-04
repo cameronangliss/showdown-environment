@@ -87,6 +87,7 @@ class Player:
                         # 1. Due to high load, you are limited to 12 battles and team validations every 3 minutes.
                         # 2. You challenged less than 10 seconds after your last challenge! It's cancelled in case it's a misclick.
                         # 3. You are already challenging someone. Cancel that challenge before challenging someone else.
+                        # 4. The server is restarting. Battles will be available again in a few minutes.
                         raise RuntimeError(split_message[2])
                     elif (
                         split_message[1] == "pm"
@@ -153,7 +154,7 @@ class Player:
                 if prev_room:
                     await self.join(prev_room)
 
-    async def challenge(self, opponent: Player, battle_format: str = "gen9randombattle", team: str | None = None):
+    async def challenge(self, opponent: Player, battle_format: str, team: str | None = None):
         await self.send_message(f"/utm {team}")
         await self.send_message(f"/challenge {opponent.username}, {battle_format}")
         # Waiting for confirmation that challenge was sent
