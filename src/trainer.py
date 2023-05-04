@@ -17,59 +17,76 @@ class Trainer:
     alpha: float = 0.1  # Learning rate
     epsilon: float = 0.1  # Exploration rate
 
-    # Define the Q-learning update function
-    def q_learning_update(self, state, action, reward, next_state, done):
-        optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01)
-        # Compute the Q-value target
-        if done:
-            q_target = reward
-        else:
-            next_q_values = self.model(next_state)
-            q_target = reward + self.gamma * torch.max(next_q_values)
-        # Compute the Q-value estimate
-        q_values = self.model(state)
-        q_estimate = q_values[action]
-        # Compute the TD error and update the Q-value estimate
-        td_error = q_target - q_estimate
-        loss = td_error**2
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-    def get_action(self, obs: Observation) -> str | None:
+    def get_action(self, obs: Observation) -> tuple[int, str] | tuple[None, None]:
         action_space = Player.get_action_space(obs)
         if action_space:
             if random.random() < self.epsilon:
-                _, action = random.choice(action_space)
+                action = random.choice(action_space)
             else:
-                action_ids = list(map(lambda tuple: tuple[0], action_space))
-                actions = list(map(lambda tuple: tuple[1], action_space))
+                action_ids = list(map(lambda action: action[0], action_space))
                 outputs = self.model(obs)
                 valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_ids))
                 max_output_id = int(torch.argmax(valid_outputs).item())
-                action = actions[max_output_id]
+                action = action_space[max_output_id]
             return action
+        else:
+            return None, None
 
-    async def run_episode(self) -> str:
+    def get_rewards(self, obs: Observation) -> tuple[int, int]:
+        if "win" in obs.protocol:
+            i = obs.protocol.index("win")
+            winner = obs.protocol[i + 1].strip()
+            if winner == self.env.player1.username:
+                return 1, -1
+            else:
+                return -1, 1
+        elif "tie" in obs.protocol:
+            return 0, 0
+        else:
+            return 0, 0
+
+    def update_model(self, obs: Observation, action: int | None, reward: int, next_obs: Observation, done: bool):
+        if action:
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01)
+            if done:
+                q_target = torch.tensor(reward)
+            else:
+                next_q_values = self.model(next_obs)
+                q_target = reward + self.gamma * torch.max(next_q_values)
+            q_values = self.model(obs)
+            q_estimate = q_values[action]
+            td_error = q_target - q_estimate
+            loss = td_error**2
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+    async def run_episode(self) -> str | None:
         try:
             obs1, obs2 = await self.env.reset()
             done = False
             while not done:
-                action1 = self.get_action(obs1)
-                action2 = self.get_action(obs2)
-                obs1, obs2, done = await self.env.step(action1, action2, obs1.request["rqid"], obs2.request["rqid"])
-                # self.q_learning_update(state, action, reward, next_state, done)
+                action1_id, action1_str = self.get_action(obs1)
+                action2_id, action2_str = self.get_action(obs2)
+                next_obs1, next_obs2, done = await self.env.step(
+                    action1_str, action2_str, obs1.request["rqid"], obs2.request["rqid"]
+                )
+                reward1, reward2 = self.get_rewards(next_obs1)
+                self.update_model(obs1, action1_id, reward1, next_obs1, done)
+                self.update_model(obs2, action2_id, reward2, next_obs2, done)
+                obs1, obs2 = next_obs1, next_obs2
             try:
                 winner_id = obs1.protocol.index("win")
             except ValueError:
-                winner = "None"
+                winner = None
             else:
                 winner = obs1.protocol[winner_id + 1].strip()
             return winner
         except ConnectionClosedError:
             self.env.logger.error("Connection closed unexpectedly")
             await self.env.setup()
-            return "None"
+            winner = None
+            return winner
 
     async def train(self, num_episodes: int):
         await self.env.setup()
