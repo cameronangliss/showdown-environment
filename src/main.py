@@ -22,6 +22,8 @@ def update_json_file(filename: str):
         r'"\1"\2',
         js_literal,
     )
+    if not os.path.exists("json"):
+        os.makedirs("json")
     with open(f"json/{filename}.json", "w") as file:
         file.write(json_text)
 
@@ -66,6 +68,8 @@ async def main():
     await trainer.train(num_episodes, epsilon, gamma, alpha)
 
     # save progress
+    if not os.path.exists("saves"):
+        os.makedirs("saves")
     torch.save(trainer.model.state_dict(), f"saves/{file_name}.pth")
 
 
