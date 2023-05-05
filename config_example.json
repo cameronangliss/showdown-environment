@@ -2,5 +2,10 @@
     "username1": "",
     "password1": "",
     "username2": "",
-    "password2": ""
+    "password2": "",
+    "model_arch": "",
+    "epsilon": "",
+    "gamma": "",
+    "alpha": "",
+    "num_episodes": ""
 }
