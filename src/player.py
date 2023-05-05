@@ -111,7 +111,7 @@ class Player:
                         return split_message
                 case MessageType.OBSERVE:
                     is_request = split_message[1] == "request" and split_message[2]
-                    is_protocol = "start\n" in split_message or split_message[1] == "\n"
+                    is_protocol = "\n" in split_message
                     if is_request or is_protocol:
                         return split_message
                 case MessageType.LEAVE:
