@@ -7,8 +7,13 @@ from player import Observation
 
 
 class Model(nn.Module):
-    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int) -> None:
+    def __init__(
+        self, epsilon: float, gamma: float, alpha: float, input_dim: int, hidden_dim: int, output_dim: int
+    ) -> None:
         super(Model, self).__init__()
+        self.epsilon = epsilon
+        self.gamma = gamma
+        self.alpha = alpha
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
@@ -51,10 +56,10 @@ class Model(nn.Module):
                 valid_action_ids = valid_move_ids + valid_switch_ids
         return valid_action_ids
 
-    def get_action(self, obs: Observation, epsilon: float) -> int | None:
+    def get_action(self, obs: Observation) -> int | None:
         action_space = Model.get_valid_action_ids(obs)
         if action_space:
-            if random.random() < epsilon:
+            if random.random() < self.epsilon:
                 action = random.choice(action_space)
             else:
                 outputs = self(obs)
@@ -63,23 +68,14 @@ class Model(nn.Module):
                 action = action_space[max_output_id]
             return action
 
-    def update(
-        self,
-        obs: Observation,
-        action: int | None,
-        reward: int,
-        next_obs: Observation,
-        done: bool,
-        gamma: float,
-        alpha: float,
-    ):
+    def update(self, obs: Observation, action: int | None, reward: int, next_obs: Observation, done: bool):
         if action:
-            optimizer = torch.optim.SGD(self.parameters(), lr=alpha)
+            optimizer = torch.optim.SGD(self.parameters(), lr=self.alpha)
             if done:
                 q_target = torch.tensor(reward)
             else:
                 next_q_values: Tensor = self(next_obs)
-                q_target = reward + gamma * torch.max(next_q_values)
+                q_target = reward + self.gamma * torch.max(next_q_values)
             q_values: Tensor = self(obs)
             q_estimate = q_values[action]
             td_error = q_target - q_estimate

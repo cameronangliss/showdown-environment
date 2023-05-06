@@ -3,9 +3,9 @@
     "password1": "",
     "username2": "",
     "password2": "",
-    "model_arch": "",
     "epsilon": "",
     "gamma": "",
     "alpha": "",
+    "model_arch": "[]",
     "num_episodes": ""
 }

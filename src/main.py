@@ -46,13 +46,12 @@ async def main():
     env = Env(player1, player2, logger)
 
     # construct model, load save file if one exists
-    model_arch = json.loads(config["model_arch"])
-    model = Model(*model_arch)
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
     alpha = float(config["alpha"])
-    num_episodes = int(config["num_episodes"])
-    file_name = f"{model_arch}_{epsilon}_{gamma}_{alpha}_{num_episodes}"
+    model_arch = json.loads(config["model_arch"])
+    model = Model(epsilon, gamma, alpha, *model_arch)
+    file_name = f"{model_arch}_{epsilon}_{gamma}_{alpha}"
     if os.path.exists(f"saves/{file_name}.pth"):
         model.load_state_dict(torch.load(f"saves/{file_name}.pth"))
 
@@ -64,8 +63,9 @@ async def main():
     update_json_file("typechart")
 
     # construct and run trainer
+    num_episodes = int(config["num_episodes"])
     trainer = Trainer(model, env)
-    await trainer.train(num_episodes, epsilon, gamma, alpha)
+    await trainer.train(num_episodes)
 
     # save progress
     if not os.path.exists("saves"):
