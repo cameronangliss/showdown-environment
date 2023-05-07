@@ -1,29 +1,95 @@
+import json
 import random
+import re
 import torch
 from torch import Tensor
 import torch.nn as nn
+from typing import Any
 
 from player import Observation
 
 
+with open("json/pokedex.json") as f:
+    pokedex = json.load(f)
+
+
+with open("json/moves.json") as f:
+    movedex = json.load(f)
+
+
+with open("json/typechart.json") as f:
+    typechart = json.load(f)
+
+
+def frac_str_to_float(string: str) -> float:
+    if string == "0 fnt":
+        return 0
+    else:
+        frac_str = re.sub(r"[A-Za-z\s]+", "", string)
+        numerator, denominator = map(float, frac_str.split("/"))
+        return numerator / denominator
+
+
 class Model(nn.Module):
-    def __init__(
-        self, epsilon: float, gamma: float, alpha: float, input_dim: int, hidden_dim: int, output_dim: int
-    ) -> None:
+    def __init__(self, epsilon: float, gamma: float, alpha: float, hidden_dim: int) -> None:
         super(Model, self).__init__()
         self.epsilon = epsilon
         self.gamma = gamma
         self.alpha = alpha
-        self.input_dim = input_dim
+        self.input_dim = 612
         self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
+        self.output_dim = 10
+        self.fc1 = nn.Linear(self.input_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, self.output_dim)
 
-    def process_observation(self, obs: Observation) -> torch.Tensor:
-        return torch.rand(self.input_dim)
+    def process_observation(self, obs: Observation) -> Tensor:
+        if "wait" in obs.request or "forceSwitch" in obs.request:
+            return torch.rand(self.input_dim)
+        else:
+            team_features = sum([Model.process_pokemon(pokemon) for pokemon in obs.request["side"]["pokemon"]], [])
+            types = typechart.keys()
+            opponent_id = "p2" if obs.request["side"]["id"] == "p1" else "p1"
+            opponent_info = [
+                re.sub(r"[\-\’\s]+", "", msg[5:]).lower() for msg in obs.protocol if msg[:3] == f"{opponent_id}a"
+            ]
+            if opponent_info:
+                opponent = opponent_info[0]
+                opponent_details = pokedex[opponent]
+                opponent_base_stats = [stat / 255 for stat in opponent_details["baseStats"].values()]
+                opponent_types = [(1.0 if t in opponent_details["types"] else 0.0) for t in types]
+            else:
+                opponent_base_stats = [0.0] * 6
+                opponent_types = [0.0] * 18
+            return torch.tensor(team_features + opponent_base_stats + opponent_types)
 
-    def forward(self, obs: Observation) -> torch.Tensor:
+    @staticmethod
+    def process_pokemon(pokemon: Any) -> list[float]:
+        if not pokemon:
+            return [0.0] * 98
+        else:
+            name = re.sub(r"[\-\’\s]+", "", pokemon["ident"][4:]).lower()
+            details = pokedex[name]
+            types = typechart.keys()
+            pokemon_types = [float(t in details["types"]) for t in types]
+            moves = pokemon["moves"]
+            moves.extend([None] * (4 - len(moves)))
+            move_features = sum([Model.process_move(move) for move in moves], [])
+            return pokemon_types + move_features
+
+    @staticmethod
+    def process_move(move: str) -> list[float]:
+        if not move:
+            return [0.0] * 20
+        else:
+            formatted_move = re.sub(r"\d+$", "", move)
+            details = movedex[formatted_move]
+            power = details["basePower"] / 250
+            accuracy = 1.0 if details["accuracy"] == True else details["accuracy"] / 100
+            types = typechart.keys()
+            move_types = [float(t in details["type"]) for t in types]
+            return [power, accuracy] + move_types
+
+    def forward(self, obs: Observation) -> Tensor:
         x = self.process_observation(obs)
         x = torch.relu(self.fc1(x))
         x = self.fc2(x)

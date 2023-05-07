@@ -18,7 +18,7 @@ def update_json_file(filename: str):
     i = js_text.index("{")
     js_literal = js_text[i:-1]
     json_text = re.sub(
-        r'(?<![\w\d"])([a-zA-Z0-9_]+)(:)',
+        r"(?<![\w\-\"\s])(\w+)(:)",
         r'"\1"\2',
         js_literal,
     )
@@ -49,9 +49,9 @@ async def main():
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
     alpha = float(config["alpha"])
-    model_arch = json.loads(config["model_arch"])
-    model = Model(epsilon, gamma, alpha, *model_arch)
-    file_name = f"{model_arch}_{epsilon}_{gamma}_{alpha}"
+    hidden_dim = json.loads(config["hidden_dim"])
+    model = Model(epsilon, gamma, alpha, hidden_dim)
+    file_name = f"{epsilon}_{gamma}_{alpha}_{hidden_dim}"
     if os.path.exists(f"saves/{file_name}.pth"):
         model.load_state_dict(torch.load(f"saves/{file_name}.pth"))
 

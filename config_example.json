@@ -6,6 +6,6 @@
     "epsilon": "",
     "gamma": "",
     "alpha": "",
-    "model_arch": "[]",
+    "hidden_dim": "",
     "num_episodes": ""
 }
