@@ -36,7 +36,7 @@ class Model(nn.Module):
         self.epsilon = epsilon
         self.gamma = gamma
         self.alpha = alpha
-        self.input_dim = 612
+        self.input_dim = 620
         self.hidden_dim = hidden_dim
         self.output_dim = 10
         self.fc1 = nn.Linear(self.input_dim, hidden_dim)
@@ -46,11 +46,14 @@ class Model(nn.Module):
         if "wait" in obs.request or "forceSwitch" in obs.request:
             return torch.rand(self.input_dim)
         else:
-            team_features = sum([Model.process_pokemon(pokemon) for pokemon in obs.request["side"]["pokemon"]], [])
+            active_moves = obs.request["active"][0]["moves"]
+            team_features = sum(
+                [Model.process_pokemon(active_moves, pokemon) for pokemon in obs.request["side"]["pokemon"]], []
+            )
             types = typechart.keys()
             opponent_id = "p2" if obs.request["side"]["id"] == "p1" else "p1"
             opponent_info = [
-                re.sub(r"[\-\’\s]+", "", msg[5:]).lower() for msg in obs.protocol if msg[:3] == f"{opponent_id}a"
+                re.sub(r"[\-\.\’\s]+", "", msg[5:]).lower() for msg in obs.protocol if msg[:3] == f"{opponent_id}a"
             ]
             if opponent_info:
                 opponent = opponent_info[0]
@@ -63,18 +66,30 @@ class Model(nn.Module):
             return torch.tensor(team_features + opponent_base_stats + opponent_types)
 
     @staticmethod
-    def process_pokemon(pokemon: Any) -> list[float]:
+    def process_pokemon(active_moves: Any, pokemon: Any) -> list[float]:
         if not pokemon:
             return [0.0] * 98
         else:
-            name = re.sub(r"[\-\’\s]+", "", pokemon["ident"][4:]).lower()
+            name = re.sub(r"[\-\.\’\s]+", "", pokemon["ident"][4:]).lower()
             details = pokedex[name]
             types = typechart.keys()
             pokemon_types = [float(t in details["types"]) for t in types]
             moves = pokemon["moves"]
             moves.extend([None] * (4 - len(moves)))
             move_features = sum([Model.process_move(move) for move in moves], [])
-            return pokemon_types + move_features
+            if pokemon["active"] == True:
+                active_move_ids = [move["id"] for move in active_moves]
+                active_features = []
+                for i in range(4):
+                    if i < len(active_move_ids) and active_move_ids[i] in moves:
+                        active_features += [active_moves[i]["pp"] / active_moves[i]["maxpp"]]
+                        active_features += [float(active_moves[i]["disabled"])]
+                    else:
+                        active_features += [0.0, 0.0]
+                features = pokemon_types + move_features + active_features
+            else:
+                features = pokemon_types + move_features
+            return features
 
     @staticmethod
     def process_move(move: str) -> list[float]:
