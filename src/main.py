@@ -46,12 +46,12 @@ async def main():
     env = Env(player1, player2, logger)
 
     # construct model, load save file if one exists
+    alpha = float(config["alpha"])
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
-    alpha = float(config["alpha"])
     hidden_dims = json.loads(config["hidden_dims"])
-    model = Model(epsilon, gamma, alpha, *hidden_dims)
-    file_name = f"{epsilon}_{gamma}_{alpha}_{hidden_dims}"
+    model = Model(alpha, epsilon, gamma, *hidden_dims)
+    file_name = f"{alpha}_{epsilon}_{gamma}_{hidden_dims}"
     if os.path.exists(f"saves/{file_name}.pth"):
         model.load_state_dict(torch.load(f"saves/{file_name}.pth"))
 

@@ -22,11 +22,11 @@ with open("json/typechart.json") as f:
 
 
 class Model(nn.Module):
-    def __init__(self, epsilon: float, gamma: float, alpha: float, *hidden_dims: int) -> None:
+    def __init__(self, alpha: float, epsilon: float, gamma: float, *hidden_dims: int) -> None:
         super(Model, self).__init__()
+        self.alpha = alpha
         self.epsilon = epsilon
         self.gamma = gamma
-        self.alpha = alpha
         self.input_dim = 662
         self.hidden_dims = hidden_dims
         self.output_dim = 10
