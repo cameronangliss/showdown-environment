@@ -21,75 +21,73 @@ with open("json/typechart.json") as f:
     typechart = json.load(f)
 
 
-def frac_str_to_float(string: str) -> float:
-    if string == "0 fnt":
-        return 0
-    else:
-        frac_str = re.sub(r"[A-Za-z\s]+", "", string)
-        numerator, denominator = map(float, frac_str.split("/"))
-        return numerator / denominator
-
-
 class Model(nn.Module):
     def __init__(self, epsilon: float, gamma: float, alpha: float, hidden_dim: int) -> None:
         super(Model, self).__init__()
         self.epsilon = epsilon
         self.gamma = gamma
         self.alpha = alpha
-        self.input_dim = 620
+        self.input_dim = 662
         self.hidden_dim = hidden_dim
         self.output_dim = 10
         self.fc1 = nn.Linear(self.input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, self.output_dim)
 
     def process_observation(self, obs: Observation) -> Tensor:
-        if "wait" in obs.request or "forceSwitch" in obs.request:
-            return torch.rand(self.input_dim)
+        active_features = Model.process_active(obs)
+        team_features = sum([Model.process_pokemon(pokemon) for pokemon in obs.request["side"]["pokemon"]], [])
+        types = typechart.keys()
+        opponent_id = "p2" if obs.request["side"]["id"] == "p1" else "p1"
+        opponent_info = [
+            re.sub(r"[\-\.\:\’\s]+", "", msg[5:]).lower() for msg in obs.protocol if msg[:3] == f"{opponent_id}a"
+        ]
+        if opponent_info:
+            opponent = opponent_info[0]
+            opponent_details = pokedex[opponent]
+            opponent_base_stats = [stat / 255 for stat in opponent_details["baseStats"].values()]
+            opponent_types = [(1.0 if t in opponent_details["types"] else 0.0) for t in types]
         else:
-            active_moves = obs.request["active"][0]["moves"]
-            team_features = sum(
-                [Model.process_pokemon(active_moves, pokemon) for pokemon in obs.request["side"]["pokemon"]], []
-            )
-            types = typechart.keys()
-            opponent_id = "p2" if obs.request["side"]["id"] == "p1" else "p1"
-            opponent_info = [
-                re.sub(r"[\-\.\’\s]+", "", msg[5:]).lower() for msg in obs.protocol if msg[:3] == f"{opponent_id}a"
-            ]
-            if opponent_info:
-                opponent = opponent_info[0]
-                opponent_details = pokedex[opponent]
-                opponent_base_stats = [stat / 255 for stat in opponent_details["baseStats"].values()]
-                opponent_types = [(1.0 if t in opponent_details["types"] else 0.0) for t in types]
-            else:
-                opponent_base_stats = [0.0] * 6
-                opponent_types = [0.0] * 18
-            return torch.tensor(team_features + opponent_base_stats + opponent_types)
+            opponent_base_stats = [0.0] * 6
+            opponent_types = [0.0] * 18
+        return torch.tensor(active_features + team_features + opponent_base_stats + opponent_types)
 
     @staticmethod
-    def process_pokemon(active_moves: Any, pokemon: Any) -> list[float]:
-        if not pokemon:
-            return [0.0] * 98
+    def process_active(obs: Observation) -> list[float]:
+        if "active" not in obs.request:
+            return [0.0] * 8
         else:
-            name = re.sub(r"[\-\.\’\s]+", "", pokemon["ident"][4:]).lower()
+            active_moves = obs.request["active"][0]["moves"]
+            active_move_ids = [move["id"] for move in active_moves]
+            all_moves = obs.request["side"]["pokemon"][0]["moves"]
+            filtered_move_ids = [
+                all_moves[i] if (i < len(all_moves) and all_moves[i] in active_move_ids) else None for i in range(4)
+            ]
+            filtered_moves = [
+                active_moves[active_move_ids.index(move)] if move in active_move_ids else None
+                for move in filtered_move_ids
+            ]
+            active_feature_lists = [
+                [move["pp"] / move["maxpp"], float(move["disabled"])] if (move and "pp" in move) else [0.0, 0.0]
+                for move in filtered_moves
+            ]
+            active_features = sum(active_feature_lists, [])
+            return active_features
+
+    @staticmethod
+    def process_pokemon(pokemon: Any) -> list[float]:
+        if not pokemon:
+            return [0.0] * 105
+        else:
+            name = re.sub(r"[\-\.\:\’\s]+", "", pokemon["ident"][4:]).lower()
             details = pokedex[name]
+            condition = Model.process_condition(pokemon["condition"])
+            stats = [stat / 1000 for stat in pokemon["stats"].values()]
             types = typechart.keys()
             pokemon_types = [float(t in details["types"]) for t in types]
             moves = pokemon["moves"]
             moves.extend([None] * (4 - len(moves)))
             move_features = sum([Model.process_move(move) for move in moves], [])
-            if pokemon["active"] == True:
-                active_move_ids = [move["id"] for move in active_moves]
-                active_features = []
-                for i in range(4):
-                    if i < len(active_move_ids) and active_move_ids[i] in moves:
-                        active_features += [active_moves[i]["pp"] / active_moves[i]["maxpp"]]
-                        active_features += [float(active_moves[i]["disabled"])]
-                    else:
-                        active_features += [0.0, 0.0]
-                features = pokemon_types + move_features + active_features
-            else:
-                features = pokemon_types + move_features
-            return features
+            return condition + stats + pokemon_types + move_features
 
     @staticmethod
     def process_move(move: str) -> list[float]:
@@ -103,6 +101,15 @@ class Model(nn.Module):
             types = typechart.keys()
             move_types = [float(t in details["type"]) for t in types]
             return [power, accuracy] + move_types
+
+    @staticmethod
+    def process_condition(condition: str) -> list[float]:
+        if condition == "0 fnt":
+            return [0.0, 0.0]
+        else:
+            frac_str = re.sub(r"[A-Za-z\s]+", "", condition)
+            numerator, denominator = map(float, frac_str.split("/"))
+            return [numerator / denominator, denominator]
 
     def forward(self, obs: Observation) -> Tensor:
         x = self.process_observation(obs)
