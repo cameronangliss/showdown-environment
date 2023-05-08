@@ -49,9 +49,9 @@ async def main():
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
     alpha = float(config["alpha"])
-    hidden_dim = json.loads(config["hidden_dim"])
-    model = Model(epsilon, gamma, alpha, hidden_dim)
-    file_name = f"{epsilon}_{gamma}_{alpha}_{hidden_dim}"
+    hidden_dims = json.loads(config["hidden_dims"])
+    model = Model(epsilon, gamma, alpha, *hidden_dims)
+    file_name = f"{epsilon}_{gamma}_{alpha}_{hidden_dims}"
     if os.path.exists(f"saves/{file_name}.pth"):
         model.load_state_dict(torch.load(f"saves/{file_name}.pth"))
 

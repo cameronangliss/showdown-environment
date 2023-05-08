@@ -22,16 +22,26 @@ with open("json/typechart.json") as f:
 
 
 class Model(nn.Module):
-    def __init__(self, epsilon: float, gamma: float, alpha: float, hidden_dim: int) -> None:
+    def __init__(self, epsilon: float, gamma: float, alpha: float, *hidden_dims: int) -> None:
         super(Model, self).__init__()
         self.epsilon = epsilon
         self.gamma = gamma
         self.alpha = alpha
         self.input_dim = 662
-        self.hidden_dim = hidden_dim
+        self.hidden_dims = hidden_dims
         self.output_dim = 10
-        self.fc1 = nn.Linear(self.input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, self.output_dim)
+        layers = []
+        layers.append(nn.Linear(self.input_dim, hidden_dims[0]))
+        for i in range(len(hidden_dims) - 1):
+            layers.append(nn.Linear(hidden_dims[i], hidden_dims[i + 1]))
+        layers.append(nn.Linear(hidden_dims[-1], self.output_dim))
+        self.layers = nn.ModuleList(layers)
+
+    def forward(self, obs: Observation) -> Tensor:
+        x = self.process_observation(obs)
+        for layer in self.layers:
+            x = torch.relu(layer(x))
+        return x
 
     def process_observation(self, obs: Observation) -> Tensor:
         active_features = Model.process_active(obs)
@@ -110,12 +120,6 @@ class Model(nn.Module):
             frac_str = re.sub(r"[A-Za-z\s]+", "", condition)
             numerator, denominator = map(float, frac_str.split("/"))
             return [numerator / denominator, denominator]
-
-    def forward(self, obs: Observation) -> Tensor:
-        x = self.process_observation(obs)
-        x = torch.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
 
     @staticmethod
     def get_valid_action_ids(obs: Observation) -> list[int]:
