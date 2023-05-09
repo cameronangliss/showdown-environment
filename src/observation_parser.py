@@ -89,7 +89,17 @@ class ObservationParser:
     def process_protocol(self, obs: Observation) -> list[float]:
         gens = [f"gen{n}" for n in range(1, 10)]
         gen_features = [float(gen in obs.protocol[0]) for gen in gens]
-        weather_types = ["RainDance", "Sandstorm", "SunnyDay", "Snow", "Hail", "none"]
+        weather_types = [
+            "RainDance",
+            "Sandstorm",
+            "SunnyDay",
+            "Snow",
+            "Hail",
+            "PrimordialSea",
+            "DesolateLand",
+            "DeltaStream",
+            "none",
+        ]
         if "-weather" in obs.protocol:
             weather = obs.protocol[obs.protocol.index("-weather") + 1]
         else:

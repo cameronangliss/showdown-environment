@@ -13,7 +13,7 @@ class Model(nn.Module):
         self.alpha = alpha
         self.epsilon = epsilon
         self.gamma = gamma
-        self.input_dim = 713
+        self.input_dim = 716
         self.hidden_dims = hidden_dims
         self.output_dim = 10
         layers = []
