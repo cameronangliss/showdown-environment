@@ -2,14 +2,15 @@ import asyncio
 import json
 import logging
 import os
-import requests
 import re
+
+import requests
 import torch
 
-from trainer import Trainer
-from model import Model
 from env import Env
+from model import Model
 from player import Player
+from trainer import Trainer
 
 
 def scrape_js_file(filename: str):

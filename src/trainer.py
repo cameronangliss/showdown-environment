@@ -1,10 +1,11 @@
+import random
 from dataclasses import dataclass
 from datetime import datetime
-import random
+
 from websockets.exceptions import ConnectionClosedError
 
-from model import Model
 from env import Env
+from model import Model
 from player import Observation
 
 

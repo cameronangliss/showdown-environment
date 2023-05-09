@@ -1,9 +1,9 @@
 import asyncio
+import random
 from dataclasses import dataclass
 from logging import Logger
-import random
 
-from player import Player, Observation
+from player import Observation, Player
 
 
 @dataclass

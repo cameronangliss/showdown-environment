@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import dataclass
 from enum import Enum, auto
-import json
 from logging import Logger
-import requests
 from typing import Any, NamedTuple
+
+import requests
 import websockets.client as ws
 
 
