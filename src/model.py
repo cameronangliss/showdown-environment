@@ -42,7 +42,11 @@ class Model(nn.Module):
             valid_action_ids = []
         elif "forceSwitch" in obs.request:
             if "Revival Blessing" in obs.protocol:
-                dead_switch_ids = [switches for switches in range(4, 10) if switches not in valid_switch_ids]
+                dead_switch_ids = [
+                    i + 4
+                    for i, pokemon in enumerate(obs.request["side"]["pokemon"])
+                    if not pokemon["active"] and pokemon["condition"] == "0 fnt"
+                ]
                 valid_action_ids = dead_switch_ids
             else:
                 valid_action_ids = valid_switch_ids
