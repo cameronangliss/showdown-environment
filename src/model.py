@@ -27,7 +27,7 @@ class Model(nn.Module):
         self.alpha = alpha
         self.epsilon = epsilon
         self.gamma = gamma
-        self.input_dim = 662
+        self.input_dim = 713
         self.hidden_dims = hidden_dims
         self.output_dim = 10
         layers = []
@@ -38,28 +38,17 @@ class Model(nn.Module):
         self.layers = nn.ModuleList(layers)
 
     def forward(self, obs: Observation) -> Tensor:
-        x = self.process_observation(obs)
+        x = Model.process_observation(obs)
         for layer in self.layers:
             x = torch.relu(layer(x))
         return x
 
-    def process_observation(self, obs: Observation) -> Tensor:
+    @staticmethod
+    def process_observation(obs: Observation) -> Tensor:
         active_features = Model.process_active(obs)
-        team_features = sum([Model.process_pokemon(pokemon) for pokemon in obs.request["side"]["pokemon"]], [])
-        types = typechart.keys()
-        opponent_id = "p2" if obs.request["side"]["id"] == "p1" else "p1"
-        opponent_info = [
-            re.sub(r"[\-\.\:\’\s]+", "", msg[5:]).lower() for msg in obs.protocol if msg[:3] == f"{opponent_id}a"
-        ]
-        if opponent_info:
-            opponent = opponent_info[0]
-            opponent_details = pokedex[opponent]
-            opponent_base_stats = [stat / 255 for stat in opponent_details["baseStats"].values()]
-            opponent_types = [(1.0 if t in opponent_details["types"] else 0.0) for t in types]
-        else:
-            opponent_base_stats = [0.0] * 6
-            opponent_types = [0.0] * 18
-        return torch.tensor(active_features + team_features + opponent_base_stats + opponent_types)
+        side_features = Model.process_side(obs.request["side"])
+        protocol_features = Model.process_protocol(obs)
+        return torch.tensor(active_features + side_features + protocol_features)
 
     @staticmethod
     def process_active(obs: Observation) -> list[float]:
@@ -84,20 +73,25 @@ class Model(nn.Module):
             return active_features
 
     @staticmethod
+    def process_side(side_obj: Any) -> list[float]:
+        side_features = sum([Model.process_pokemon(pokemon) for pokemon in side_obj["pokemon"]], [])
+        return side_features
+
+    @staticmethod
     def process_pokemon(pokemon: Any) -> list[float]:
         if not pokemon:
-            return [0.0] * 105
+            return [0.0] * 111
         else:
             name = re.sub(r"[\-\.\:\’\s]+", "", pokemon["ident"][4:]).lower()
             details = pokedex[name]
-            condition = Model.process_condition(pokemon["condition"])
+            condition_features = Model.process_condition(pokemon["condition"])
             stats = [stat / 1000 for stat in pokemon["stats"].values()]
             types = typechart.keys()
             pokemon_types = [float(t in details["types"]) for t in types]
             moves = pokemon["moves"]
             moves.extend([None] * (4 - len(moves)))
             move_features = sum([Model.process_move(move) for move in moves], [])
-            return condition + stats + pokemon_types + move_features
+            return condition_features + stats + pokemon_types + move_features
 
     @staticmethod
     def process_move(move: str) -> list[float]:
@@ -115,11 +109,42 @@ class Model(nn.Module):
     @staticmethod
     def process_condition(condition: str) -> list[float]:
         if condition == "0 fnt":
-            return [0.0, 0.0]
+            return [0] * 8
+        elif " " in condition:
+            hp_frac, status = condition.split(" ")
         else:
-            frac_str = re.sub(r"[A-Za-z\s]+", "", condition)
-            numerator, denominator = map(float, frac_str.split("/"))
-            return [numerator / denominator, denominator]
+            hp_frac = condition
+            status = None
+        hp_left, max_hp = map(float, hp_frac.split("/"))
+        hp_features = [hp_left / max_hp, max_hp / 1000]
+        status_conditions = ["psn", "tox", "par", "slp", "brn", "frz"]
+        status_features = [float(status == status_condition) for status_condition in status_conditions]
+        return hp_features + status_features
+
+    @staticmethod
+    def process_protocol(obs: Observation) -> list[float]:
+        gens = [f"gen{n}" for n in range(1, 10)]
+        gen_features = [float(gen in obs.protocol[0]) for gen in gens]
+        weather_types = ["RainDance", "Sandstorm", "SunnyDay", "Snow", "Hail", "none"]
+        if "-weather" in obs.protocol:
+            weather = obs.protocol[obs.protocol.index("-weather") + 1]
+        else:
+            weather = None
+        weather_features = [float(weather == weather_type) for weather_type in weather_types]
+        types = typechart.keys()
+        opponent_id = "p2" if obs.request["side"]["id"] == "p1" else "p1"
+        opponent_info = [
+            re.sub(r"[\-\.\:\’\s]+", "", msg[5:]).lower() for msg in obs.protocol if msg[:3] == f"{opponent_id}a"
+        ]
+        if opponent_info:
+            opponent = opponent_info[0]
+            opponent_details = pokedex[opponent]
+            opponent_base_stats = [stat / 255 for stat in opponent_details["baseStats"].values()]
+            opponent_types = [(1.0 if t in opponent_details["types"] else 0.0) for t in types]
+        else:
+            opponent_base_stats = [0.0] * 6
+            opponent_types = [0.0] * 18
+        return gen_features + weather_features + opponent_base_stats + opponent_types
 
     @staticmethod
     def get_valid_action_ids(obs: Observation) -> list[int]:
