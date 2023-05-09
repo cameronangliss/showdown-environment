@@ -3,7 +3,7 @@ import random
 from dataclasses import dataclass
 from logging import Logger
 
-from player import Observation, Player
+from player import Obs, Player
 
 
 @dataclass
@@ -32,7 +32,7 @@ class Env:
         await self.player1.forfeit_games()
         await self.player2.forfeit_games()
 
-    async def reset(self, format_str: str) -> tuple[Observation, Observation]:
+    async def reset(self, format_str: str) -> tuple[Obs, Obs]:
         await self.player1.leave()
         await self.player2.leave()
         await self.player1.set_avatar(random.choice(self.avatars))
@@ -54,9 +54,7 @@ class Env:
         obs2 = await self.player2.observe()
         return obs1, obs2
 
-    async def step(
-        self, action1: int | None, action2: int | None, rqid1: int, rqid2: int
-    ) -> tuple[Observation, Observation, bool]:
+    async def step(self, action1: int | None, action2: int | None, rqid1: int, rqid2: int) -> tuple[Obs, Obs, bool]:
         await self.player1.choose(action1, rqid1)
         await self.player2.choose(action2, rqid2)
         obs1 = await self.player1.observe()

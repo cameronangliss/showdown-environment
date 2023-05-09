@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from observation_parser import ObservationParser
-from player import Observation
+from obs_parser import ObsParser
+from player import Obs
 
 
 class Model(nn.Module):
@@ -23,16 +23,16 @@ class Model(nn.Module):
             layers.append(nn.Linear(hidden_dims[i], hidden_dims[i + 1]))
         layers.append(nn.Linear(hidden_dims[-1], self.output_dim))
         self.layers = nn.ModuleList(layers)
-        self.parser = ObservationParser()
+        self.parser = ObsParser()
 
-    def forward(self, obs: Observation) -> Tensor:
-        x = torch.tensor(self.parser.process_observation(obs))
+    def forward(self, obs: Obs) -> Tensor:
+        x = torch.tensor(self.parser.process_obs(obs))
         for layer in self.layers:
             x = torch.relu(layer(x))
         return x
 
     @staticmethod
-    def get_valid_action_ids(obs: Observation) -> list[int]:
+    def get_valid_action_ids(obs: Obs) -> list[int]:
         valid_switch_ids = [
             i + 4
             for i, pokemon in enumerate(obs.request["side"]["pokemon"])
@@ -58,7 +58,7 @@ class Model(nn.Module):
                 valid_action_ids = valid_move_ids + valid_switch_ids
         return valid_action_ids
 
-    def get_action(self, obs: Observation) -> int | None:
+    def get_action(self, obs: Obs) -> int | None:
         action_space = Model.get_valid_action_ids(obs)
         if action_space:
             if random.random() < self.epsilon:
@@ -70,7 +70,7 @@ class Model(nn.Module):
                 action = action_space[max_output_id]
             return action
 
-    def update(self, obs: Observation, action: int | None, reward: int, next_obs: Observation, done: bool):
+    def update(self, obs: Obs, action: int | None, reward: int, next_obs: Obs, done: bool):
         if action:
             optimizer = torch.optim.SGD(self.parameters(), lr=self.alpha)
             if done:

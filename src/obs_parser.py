@@ -2,10 +2,10 @@ import json
 import re
 from typing import Any
 
-from player import Observation
+from player import Obs
 
 
-class ObservationParser:
+class ObsParser:
     def __init__(self):
         with open("json/pokedex.json") as f:
             self.pokedex = json.load(f)
@@ -14,13 +14,13 @@ class ObservationParser:
         with open("json/typechart.json") as f:
             self.typechart = json.load(f)
 
-    def process_observation(self, obs: Observation) -> list[float]:
+    def process_obs(self, obs: Obs) -> list[float]:
         active_features = self.process_active(obs)
         side_features = self.process_side(obs.request["side"])
         protocol_features = self.process_protocol(obs)
         return active_features + side_features + protocol_features
 
-    def process_active(self, obs: Observation) -> list[float]:
+    def process_active(self, obs: Obs) -> list[float]:
         if "active" not in obs.request:
             return [0.0] * 8
         else:
@@ -86,7 +86,7 @@ class ObservationParser:
         status_features = [float(status == status_condition) for status_condition in status_conditions]
         return hp_features + status_features
 
-    def process_protocol(self, obs: Observation) -> list[float]:
+    def process_protocol(self, obs: Obs) -> list[float]:
         gens = [f"gen{n}" for n in range(1, 10)]
         gen_features = [float(gen in obs.protocol[0]) for gen in gens]
         weather_types = [

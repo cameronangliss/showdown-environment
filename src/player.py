@@ -21,7 +21,7 @@ class MessageType(Enum):
     LEAVE = auto()
 
 
-class Observation(NamedTuple):
+class Obs(NamedTuple):
     request: Any
     protocol: list[str]
 
@@ -187,15 +187,15 @@ class Player:
     async def timer_on(self):
         await self.send_message("/timer on")
 
-    async def observe(self) -> Observation:
+    async def observe(self) -> Obs:
         split_message = await self.find_message(MessageType.OBSERVE)
         if split_message[1] == "request":
             request = json.loads(split_message[2])
             protocol = await self.find_message(MessageType.OBSERVE)
-            return Observation(request, protocol)
+            return Obs(request, protocol)
         else:
             protocol = split_message
-            return Observation(None, protocol)
+            return Obs(None, protocol)
 
     async def choose(self, action: int | None, rqid: int):
         if action != None:
