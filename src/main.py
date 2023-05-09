@@ -65,15 +65,16 @@ async def main():
     player2 = Player(config["username2"], config["password2"], logger)
     env = Env(player1, player2, logger)
 
-    # construct model, load save file if one exists
+    # construct model or load save file if one exists
     alpha = float(config["alpha"])
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
     hidden_dims = json.loads(config["hidden_dims"])
-    model = Model(alpha, epsilon, gamma, *hidden_dims)
     file_name = f"{alpha}_{epsilon}_{gamma}_{hidden_dims}"
     if os.path.exists(f"saves/{file_name}.pth"):
-        model.load_state_dict(torch.load(f"saves/{file_name}.pth"))
+        model = torch.load(f"saves/{file_name}.pth")
+    else:
+        model = Model(alpha, epsilon, gamma, *hidden_dims)
 
     # scrape js files
     scrape_js_file("pokedex")
@@ -93,7 +94,7 @@ async def main():
     # save progress
     if not os.path.exists("saves"):
         os.makedirs("saves")
-    torch.save(trainer.model.state_dict(), f"saves/{file_name}.pth")
+    torch.save(trainer.model, f"saves/{file_name}.pth")
 
 
 if __name__ == "__main__":
