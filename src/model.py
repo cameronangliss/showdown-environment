@@ -33,7 +33,7 @@ class Model(nn.Module):
             x = torch.relu(layer.forward(x))
         return x
 
-    def get_action(self, obs: Observation) -> int | None:
+    def __get_action(self, obs: Observation) -> int | None:
         action_space = obs.get_valid_action_ids()
         if action_space:
             if random.random() < self.epsilon:
@@ -45,7 +45,7 @@ class Model(nn.Module):
                 action = action_space[max_output_id]
             return action
 
-    def update(self, obs: Observation, action: int | None, reward: int, next_obs: Observation, done: bool):
+    def __update(self, obs: Observation, action: int | None, reward: int, next_obs: Observation, done: bool):
         if action:
             optimizer = torch.optim.SGD(self.parameters(), lr=self.alpha)
             if done:
@@ -66,16 +66,16 @@ class Model(nn.Module):
             obs1, obs2 = await self.env.reset(format_str)
             done = False
             while not done:
-                action1 = self.get_action(obs1)
-                action2 = self.get_action(obs2)
+                action1 = self.__get_action(obs1)
+                action2 = self.__get_action(obs2)
                 next_obs1, next_obs2, reward1, reward2, done = await self.env.step(
                     action1,
                     action2,
                     obs1.request["rqid"],
                     obs2.request["rqid"],
                 )
-                self.update(obs1, action1, reward1, next_obs1, done)
-                self.update(obs2, action2, reward2, next_obs2, done)
+                self.__update(obs1, action1, reward1, next_obs1, done)
+                self.__update(obs2, action2, reward2, next_obs2, done)
                 obs1, obs2 = next_obs1, next_obs2
             try:
                 winner_id = obs1.protocol.index("win")
