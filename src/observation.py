@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from functools import reduce
 from typing import Any
 
-from scrape_data import movedex, pokedex, typechart
+from scrape_data import movedex, pokedex, typedex
 
 
 @dataclass
@@ -81,13 +81,13 @@ class Observation:
             details = pokedex[name]
             condition_features = self.process_condition(pokemon["condition"])
             stats = [stat / 1000 for stat in pokemon["stats"].values()]
-            types = typechart.keys()
-            pokemon_types = [float(t in details["types"]) for t in types]
+            types = typedex.keys()
+            type_features = [float(t in details["types"]) for t in types]
             moves = pokemon["moves"]
             moves.extend([None] * (4 - len(moves)))
             move_feature_lists = [self.process_move(move) for move in moves]
             move_features = reduce(Observation.concat_features, move_feature_lists)
-            return condition_features + stats + pokemon_types + move_features
+            return condition_features + stats + type_features + move_features
 
     def process_move(self, move: str) -> list[float]:
         if not move:
@@ -97,7 +97,7 @@ class Observation:
             details = movedex[formatted_move]
             power = details["basePower"] / 250
             accuracy = 1.0 if details["accuracy"] == True else details["accuracy"] / 100
-            types = typechart.keys()
+            types = typedex.keys()
             move_types = [float(t in details["type"]) for t in types]
             return [power, accuracy] + move_types
 
@@ -134,7 +134,7 @@ class Observation:
         else:
             weather = None
         weather_features = [float(weather == weather_type) for weather_type in weather_types]
-        types = typechart.keys()
+        types = typedex.keys()
         opponent_id = "p2" if self.request["side"]["id"] == "p1" else "p1"
         opponent_info = [
             re.sub(r"[\-\.\:\’\s]+", "", msg[5:]).lower() for msg in self.protocol if msg[:3] == f"{opponent_id}a"

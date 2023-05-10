@@ -52,6 +52,5 @@ scrape_js_file("items")
 scrape_ts_file("natures")
 
 movedex = json.load(open("json/moves.json"))
-natures = json.load(open("json/natures.json"))
 pokedex = json.load(open("json/pokedex.json"))
-typechart = json.load(open("json/typechart.json"))
+typedex = json.load(open("json/typechart.json"))
