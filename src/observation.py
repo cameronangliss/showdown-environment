@@ -5,7 +5,7 @@ from typing import Any
 
 import torch
 
-from scrape_data import movedex, pokedex, typedex
+from dex import dex
 
 
 @dataclass
@@ -82,10 +82,10 @@ class Observation:
             return [0.0] * 111
         else:
             name = re.sub(r"[\-\.\:\’\s]+", "", pokemon["ident"][4:]).lower()
-            details = pokedex[name]
+            details = dex.pokemon[name]
             condition_features = self.__process_condition(pokemon["condition"])
             stats = [stat / 1000 for stat in pokemon["stats"].values()]
-            types = typedex.keys()
+            types = dex.types.keys()
             type_features = [float(t in details["types"]) for t in types]
             moves = pokemon["moves"]
             moves.extend([None] * (4 - len(moves)))
@@ -98,10 +98,10 @@ class Observation:
             return [0.0] * 20
         else:
             formatted_move = re.sub(r"\d+$", "", move)
-            details = movedex[formatted_move]
+            details = dex.moves[formatted_move]
             power = details["basePower"] / 250
             accuracy = 1.0 if details["accuracy"] == True else details["accuracy"] / 100
-            types = typedex.keys()
+            types = dex.types.keys()
             move_types = [float(t in details["type"]) for t in types]
             return [power, accuracy] + move_types
 
@@ -141,14 +141,14 @@ class Observation:
         return gen_features + weather_features
 
     def __process_opponent(self) -> list[float]:
-        types = typedex.keys()
+        types = dex.types.keys()
         opponent_id = "p2" if self.request["side"]["id"] == "p1" else "p1"
         opponent_info = [
             re.sub(r"[\-\.\:\’\s]+", "", msg[5:]).lower() for msg in self.protocol if msg[:3] == f"{opponent_id}a"
         ]
         if opponent_info:
             opponent = opponent_info[0]
-            opponent_details = pokedex[opponent]
+            opponent_details = dex.pokemon[opponent]
             opponent_base_stats = [stat / 255 for stat in opponent_details["baseStats"].values()]
             opponent_types = [(1.0 if t in opponent_details["types"] else 0.0) for t in types]
         else:

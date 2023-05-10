@@ -3,6 +3,7 @@ import os
 import re
 
 import requests
+from typing import Any, NamedTuple
 
 
 def scrape_js_file(filename: str):
@@ -41,16 +42,21 @@ def scrape_ts_file(filename: str):
         json.dump(json_obj, f, indent=4)
 
 
-# scrape js files
-scrape_js_file("pokedex")
-scrape_js_file("moves")
-scrape_js_file("typechart")
-scrape_js_file("abilities")
-scrape_js_file("items")
+pokemon = scrape_js_file("pokedex")
+moves = scrape_js_file("moves")
+types = scrape_js_file("typechart")
+natures = scrape_ts_file("natures")
+abilities = scrape_js_file("abilities")
+items = scrape_js_file("items")
 
-# scrape ts files
-scrape_ts_file("natures")
 
-movedex = json.load(open("json/moves.json"))
-pokedex = json.load(open("json/pokedex.json"))
-typedex = json.load(open("json/typechart.json"))
+class Dex(NamedTuple):
+    pokemon: Any
+    moves: Any
+    types: Any
+    natures: Any
+    abilities: Any
+    items: Any
+
+
+dex = Dex(pokemon, moves, types, natures, abilities, items)
