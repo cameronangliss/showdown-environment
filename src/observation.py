@@ -44,8 +44,9 @@ class Observation:
     def process(self) -> list[float]:
         active_features = self.process_active()
         side_features = self.process_side()
-        protocol_features = self.process_protocol()
-        return active_features + side_features + protocol_features
+        global_features = self.process_globals()
+        opponent_features = self.process_opponent()
+        return active_features + side_features + global_features + opponent_features
 
     def process_active(self) -> list[float]:
         if "active" not in self.request:
@@ -115,7 +116,7 @@ class Observation:
         status_features = [float(status == status_condition) for status_condition in status_conditions]
         return hp_features + status_features
 
-    def process_protocol(self) -> list[float]:
+    def process_globals(self) -> list[float]:
         gens = [f"gen{n}" for n in range(1, 10)]
         gen_features = [float(gen in self.protocol[0]) for gen in gens]
         weather_types = [
@@ -134,6 +135,9 @@ class Observation:
         else:
             weather = None
         weather_features = [float(weather == weather_type) for weather_type in weather_types]
+        return gen_features + weather_features
+
+    def process_opponent(self) -> list[float]:
         types = typedex.keys()
         opponent_id = "p2" if self.request["side"]["id"] == "p1" else "p1"
         opponent_info = [
@@ -147,7 +151,7 @@ class Observation:
         else:
             opponent_base_stats = [0.0] * 6
             opponent_types = [0.0] * 18
-        return gen_features + weather_features + opponent_base_stats + opponent_types
+        return opponent_base_stats + opponent_types
 
     @staticmethod
     def concat_features(list1: list[float], list2: list[float]) -> list[float]:
