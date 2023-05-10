@@ -29,7 +29,6 @@ class Model(nn.Module):
         self.layers = nn.ModuleList(layers)
 
     def forward(self, x: Tensor) -> Tensor:  # type: ignore
-        x = torch.tensor(x)
         for layer in self.layers:
             x = torch.relu(layer.forward(x))
         return x
