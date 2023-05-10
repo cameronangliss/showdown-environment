@@ -2,13 +2,14 @@ import asyncio
 import json
 import logging
 import os
+import random
+from datetime import datetime
 
 import torch
 
 from env import Env
 from model import Model
 from player import Player
-from trainer import Trainer
 
 
 async def main():
@@ -28,20 +29,27 @@ async def main():
     player2 = Player(config["username2"], config["password2"], logger)
     env = Env(player1, player2, logger)
 
-    # construct model or load save file if one exists
+    # construct model
     alpha = float(config["alpha"])
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
     hidden_dims = json.loads(config["hidden_dims"])
-    model = Model(alpha, epsilon, gamma, hidden_dims)
+    model = Model(env, alpha, epsilon, gamma, hidden_dims)
+
+    # load saved model with the same settings as `model` if one exists
     file_name = f"{alpha}_{epsilon}_{gamma}_{hidden_dims}"
     if os.path.exists(f"saves/{file_name}.pt"):
         model.load_state_dict(torch.load(f"saves/{file_name}.pt"))  # type: ignore
 
-    # construct and run trainer
+    # train model
     num_episodes = int(config["num_episodes"])
-    trainer = Trainer(model, env)
-    await trainer.train(num_episodes)
+    await model.env.setup()
+    random_formats = [f"gen{n}randombattle" for n in range(1, 10)]
+    for i in range(num_episodes):
+        winner = await model.run_episode(random.choice(random_formats))
+        time = datetime.now().strftime("%H:%M:%S")
+        print(f"{time}: {winner} wins game {i + 1}")
+    await model.env.close()
 
     # save progress
     if not os.path.exists("saves"):
