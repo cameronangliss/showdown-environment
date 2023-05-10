@@ -42,12 +42,20 @@ def scrape_ts_file(filename: str):
         json.dump(json_obj, f, indent=4)
 
 
-pokemon = scrape_js_file("pokedex")
-moves = scrape_js_file("moves")
-types = scrape_js_file("typechart")
-natures = scrape_ts_file("natures")
-abilities = scrape_js_file("abilities")
-items = scrape_js_file("items")
+scrape_js_file("pokedex")
+scrape_js_file("moves")
+scrape_js_file("typechart")
+scrape_ts_file("natures")
+scrape_js_file("abilities")
+scrape_js_file("items")
+
+
+pokemon = json.load(open("json/pokedex.json"))
+moves = json.load(open("json/moves.json"))
+types = json.load(open("json/typechart.json"))
+natures = json.load(open("json/natures.json"))
+abilities = json.load(open("json/abilities.json"))
+items = json.load(open("json/items.json"))
 
 
 class Dex(NamedTuple):
