@@ -1,12 +1,11 @@
 import json
 import os
 import re
-from typing import Any, NamedTuple
 
 import requests
 
 
-def scrape_js_file(filename: str):
+def __scrape_js_file(filename: str):
     response = requests.get(f"https://play.pokemonshowdown.com/data/{filename}.js")
     js_text = response.text
     i = js_text.index("{")
@@ -23,7 +22,7 @@ def scrape_js_file(filename: str):
         json.dump(json_obj, f, indent=4)
 
 
-def scrape_ts_file(filename: str):
+def __scrape_ts_file(filename: str):
     response = requests.get(f"https://play.pokemonshowdown.com/data/pokemon-showdown/data/{filename}.ts")
     ts_text = response.text
     i = ts_text.find("=")
@@ -42,29 +41,17 @@ def scrape_ts_file(filename: str):
         json.dump(json_obj, f, indent=4)
 
 
-scrape_js_file("pokedex")
-scrape_js_file("moves")
-scrape_js_file("typechart")
-scrape_ts_file("natures")
-scrape_js_file("abilities")
-scrape_js_file("items")
+__scrape_js_file("pokedex")
+__scrape_js_file("moves")
+__scrape_js_file("typechart")
+__scrape_ts_file("natures")
+__scrape_js_file("abilities")
+__scrape_js_file("items")
 
 
-pokemon = json.load(open("json/pokedex.json"))
-moves = json.load(open("json/moves.json"))
-types = json.load(open("json/typechart.json"))
-natures = json.load(open("json/natures.json"))
-abilities = json.load(open("json/abilities.json"))
-items = json.load(open("json/items.json"))
-
-
-class Dex(NamedTuple):
-    pokemon: Any
-    moves: Any
-    types: Any
-    natures: Any
-    abilities: Any
-    items: Any
-
-
-dex = Dex(pokemon, moves, types, natures, abilities, items)
+pokedex = json.load(open("json/pokedex.json"))
+movedex = json.load(open("json/moves.json"))
+typedex = json.load(open("json/typechart.json"))
+naturedex = json.load(open("json/natures.json"))
+abilitydex = json.load(open("json/abilities.json"))
+itemdex = json.load(open("json/items.json"))
