@@ -42,13 +42,13 @@ class Observation:
         return valid_action_ids
 
     def process(self) -> list[float]:
-        active_features = self.process_active()
-        side_features = self.process_side()
-        global_features = self.process_globals()
-        opponent_features = self.process_opponent()
+        active_features = self.__process_active()
+        side_features = self.__process_side()
+        global_features = self.__process_globals()
+        opponent_features = self.__process_opponent()
         return active_features + side_features + global_features + opponent_features
 
-    def process_active(self) -> list[float]:
+    def __process_active(self) -> list[float]:
         if "active" not in self.request:
             return [0.0] * 8
         else:
@@ -66,31 +66,31 @@ class Observation:
                 [move["pp"] / move["maxpp"], float(move["disabled"])] if (move and "pp" in move) else [0.0, 0.0]
                 for move in filtered_moves
             ]
-            active_features = reduce(Observation.concat_features, active_feature_lists)
+            active_features = reduce(Observation.__concat_features, active_feature_lists)
             return active_features
 
-    def process_side(self) -> list[float]:
-        pokemon_feature_lists = [self.process_pokemon(pokemon) for pokemon in self.request["side"]["pokemon"]]
-        side_features = reduce(Observation.concat_features, pokemon_feature_lists)
+    def __process_side(self) -> list[float]:
+        pokemon_feature_lists = [self.__process_pokemon(pokemon) for pokemon in self.request["side"]["pokemon"]]
+        side_features = reduce(Observation.__concat_features, pokemon_feature_lists)
         return side_features
 
-    def process_pokemon(self, pokemon: Any) -> list[float]:
+    def __process_pokemon(self, pokemon: Any) -> list[float]:
         if not pokemon:
             return [0.0] * 111
         else:
             name = re.sub(r"[\-\.\:\’\s]+", "", pokemon["ident"][4:]).lower()
             details = pokedex[name]
-            condition_features = self.process_condition(pokemon["condition"])
+            condition_features = self.__process_condition(pokemon["condition"])
             stats = [stat / 1000 for stat in pokemon["stats"].values()]
             types = typedex.keys()
             type_features = [float(t in details["types"]) for t in types]
             moves = pokemon["moves"]
             moves.extend([None] * (4 - len(moves)))
-            move_feature_lists = [self.process_move(move) for move in moves]
-            move_features = reduce(Observation.concat_features, move_feature_lists)
+            move_feature_lists = [self.__process_move(move) for move in moves]
+            move_features = reduce(Observation.__concat_features, move_feature_lists)
             return condition_features + stats + type_features + move_features
 
-    def process_move(self, move: str) -> list[float]:
+    def __process_move(self, move: str) -> list[float]:
         if not move:
             return [0.0] * 20
         else:
@@ -102,7 +102,7 @@ class Observation:
             move_types = [float(t in details["type"]) for t in types]
             return [power, accuracy] + move_types
 
-    def process_condition(self, condition: str) -> list[float]:
+    def __process_condition(self, condition: str) -> list[float]:
         if condition == "0 fnt":
             return [0] * 8
         elif " " in condition:
@@ -116,7 +116,7 @@ class Observation:
         status_features = [float(status == status_condition) for status_condition in status_conditions]
         return hp_features + status_features
 
-    def process_globals(self) -> list[float]:
+    def __process_globals(self) -> list[float]:
         gens = [f"gen{n}" for n in range(1, 10)]
         gen_features = [float(gen in self.protocol[0]) for gen in gens]
         weather_types = [
@@ -137,7 +137,7 @@ class Observation:
         weather_features = [float(weather == weather_type) for weather_type in weather_types]
         return gen_features + weather_features
 
-    def process_opponent(self) -> list[float]:
+    def __process_opponent(self) -> list[float]:
         types = typedex.keys()
         opponent_id = "p2" if self.request["side"]["id"] == "p1" else "p1"
         opponent_info = [
@@ -154,5 +154,5 @@ class Observation:
         return opponent_base_stats + opponent_types
 
     @staticmethod
-    def concat_features(list1: list[float], list2: list[float]) -> list[float]:
+    def __concat_features(list1: list[float], list2: list[float]) -> list[float]:
         return list1 + list2

@@ -57,13 +57,27 @@ class Env:
 
     async def step(
         self, action1: int | None, action2: int | None, rqid1: int, rqid2: int
-    ) -> tuple[Observation, Observation, bool]:
+    ) -> tuple[Observation, Observation, int, int, bool]:
         await self.player1.choose(action1, rqid1)
         await self.player2.choose(action2, rqid2)
         obs1 = await self.player1.observe()
         obs2 = await self.player2.observe()
         done = "win" in obs1.protocol or "tie" in obs1.protocol
-        return obs1, obs2, done
+        reward1, reward2 = self.__get_rewards(obs1)
+        return obs1, obs2, reward1, reward2, done
+
+    def __get_rewards(self, obs: Observation) -> tuple[int, int]:
+        if "win" in obs.protocol:
+            i = obs.protocol.index("win")
+            winner = obs.protocol[i + 1].strip()
+            if winner == self.player1.username:
+                return 1, -1
+            else:
+                return -1, 1
+        elif "tie" in obs.protocol:
+            return 0, 0
+        else:
+            return 0, 0
 
     async def close(self):
         await self.player1.leave()
