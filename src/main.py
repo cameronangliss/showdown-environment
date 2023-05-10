@@ -36,7 +36,7 @@ async def main():
     model = Model(alpha, epsilon, gamma, hidden_dims)
     file_name = f"{alpha}_{epsilon}_{gamma}_{hidden_dims}"
     if os.path.exists(f"saves/{file_name}.pt"):
-        model.load_state_dict(load(f"saves/{file_name}.pt"))  # type: ignore
+        model.load_state_dict(torch.load(f"saves/{file_name}.pt"))  # type: ignore
 
     # construct and run trainer
     num_episodes = int(config["num_episodes"])
