@@ -4,88 +4,57 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from obs_parser import ObsParser
-from player import Obs
+from observation import Observation
 
 
 class Model(nn.Module):
-    def __init__(self, alpha: float, epsilon: float, gamma: float, *hidden_dims: int):
-        super(Model, self).__init__()
+    def __init__(self, alpha: float, epsilon: float, gamma: float, hidden_dims: list[int]):
+        super(Model, self).__init__()  # type: ignore
+
         self.alpha = alpha
         self.epsilon = epsilon
         self.gamma = gamma
         self.input_dim = 716
-        self.hidden_dims = hidden_dims
+        self.hidden_dims = hidden_dims if hidden_dims else [100]
         self.output_dim = 10
-        layers = []
-        layers.append(nn.Linear(self.input_dim, hidden_dims[0]))
-        for i in range(len(hidden_dims) - 1):
-            layers.append(nn.Linear(hidden_dims[i], hidden_dims[i + 1]))
-        layers.append(nn.Linear(hidden_dims[-1], self.output_dim))
-        self.layers = nn.ModuleList(layers)
-        self.parser = ObsParser()
 
-    def forward(self, obs: Obs) -> Tensor:
-        x = torch.tensor(self.parser.process_obs(obs))
+        layers: list[nn.Module] = []
+        layers.append(nn.Linear(self.input_dim, self.hidden_dims[0]))
+        for i in range(len(self.hidden_dims) - 1):
+            layers.append(nn.Linear(self.hidden_dims[i], self.hidden_dims[i + 1]))
+        layers.append(nn.Linear(self.hidden_dims[-1], self.output_dim))
+        self.layers = nn.ModuleList(layers)
+
+    def forward(self, obs: Observation) -> Tensor:  # type: ignore
+        x = torch.tensor(obs.process())
         for layer in self.layers:
-            x = torch.relu(layer(x))
+            x = torch.relu(layer.forward(x))
         return x
 
-    @staticmethod
-    def get_valid_action_ids(obs: Obs) -> list[int]:
-        valid_switch_ids = [
-            i + 4
-            for i, pokemon in enumerate(obs.request["side"]["pokemon"])
-            if not pokemon["active"] and pokemon["condition"] != "0 fnt"
-        ]
-        if "wait" in obs.request:
-            valid_action_ids = []
-        elif "forceSwitch" in obs.request:
-            if "Revival Blessing" in obs.protocol:
-                dead_switch_ids = [
-                    i + 4
-                    for i, pokemon in enumerate(obs.request["side"]["pokemon"])
-                    if not pokemon["active"] and pokemon["condition"] == "0 fnt"
-                ]
-                valid_action_ids = dead_switch_ids
-            else:
-                valid_action_ids = valid_switch_ids
-        else:
-            valid_move_ids = [
-                i
-                for i, move in enumerate(obs.request["active"][0]["moves"])
-                if not ("disabled" in move and move["disabled"])
-            ]
-            if "trapped" in obs.request["active"][0] or "maybeTrapped" in obs.request["active"][0]:
-                valid_action_ids = valid_move_ids
-            else:
-                valid_action_ids = valid_move_ids + valid_switch_ids
-        return valid_action_ids
-
-    def get_action(self, obs: Obs) -> int | None:
-        action_space = Model.get_valid_action_ids(obs)
+    def get_action(self, obs: Observation) -> int | None:
+        action_space = obs.get_valid_action_ids()
         if action_space:
             if random.random() < self.epsilon:
                 action = random.choice(action_space)
             else:
-                outputs = self(obs)
+                outputs = self.forward(obs)
                 valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_space))
                 max_output_id = int(torch.argmax(valid_outputs).item())
                 action = action_space[max_output_id]
             return action
 
-    def update(self, obs: Obs, action: int | None, reward: int, next_obs: Obs, done: bool):
+    def update(self, obs: Observation, action: int | None, reward: int, next_obs: Observation, done: bool):
         if action:
             optimizer = torch.optim.SGD(self.parameters(), lr=self.alpha)
             if done:
                 q_target = torch.tensor(reward)
             else:
-                next_q_values: Tensor = self(next_obs)
-                q_target = reward + self.gamma * torch.max(next_q_values)
-            q_values: Tensor = self(obs)
+                next_q_values = self.forward(next_obs)
+                q_target = reward + self.gamma * torch.max(next_q_values)  # type: ignore
+            q_values = self.forward(obs)
             q_estimate = q_values[action]
             td_error = q_target - q_estimate
             loss = td_error**2
             optimizer.zero_grad()
-            loss.backward()
+            loss.backward()  # type: ignore
             optimizer.step()

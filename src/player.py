@@ -5,10 +5,11 @@ import json
 from dataclasses import dataclass
 from enum import Enum, auto
 from logging import Logger
-from typing import Any, NamedTuple
 
 import requests
 import websockets.client as ws
+
+from observation import Observation
 
 
 class MessageType(Enum):
@@ -19,11 +20,6 @@ class MessageType(Enum):
     ACCEPT = auto()
     OBSERVE = auto()
     LEAVE = auto()
-
-
-class Obs(NamedTuple):
-    request: Any
-    protocol: list[str]
 
 
 @dataclass
@@ -187,15 +183,15 @@ class Player:
     async def timer_on(self):
         await self.send_message("/timer on")
 
-    async def observe(self) -> Obs:
+    async def observe(self) -> Observation:
         split_message = await self.find_message(MessageType.OBSERVE)
         if split_message[1] == "request":
             request = json.loads(split_message[2])
             protocol = await self.find_message(MessageType.OBSERVE)
-            return Obs(request, protocol)
+            return Observation(request, protocol)
         else:
             protocol = split_message
-            return Obs(None, protocol)
+            return Observation(None, protocol)
 
     async def choose(self, action: int | None, rqid: int):
         if action != None:

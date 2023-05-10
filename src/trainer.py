@@ -6,7 +6,7 @@ from websockets.exceptions import ConnectionClosedError
 
 from env import Env
 from model import Model
-from player import Obs
+from observation import Observation
 
 
 @dataclass
@@ -14,7 +14,7 @@ class Trainer:
     model: Model
     env: Env
 
-    def get_rewards(self, obs: Obs) -> tuple[int, int]:
+    def get_rewards(self, obs: Observation) -> tuple[int, int]:
         if "win" in obs.protocol:
             i = obs.protocol.index("win")
             winner = obs.protocol[i + 1].strip()

@@ -2,51 +2,13 @@ import asyncio
 import json
 import logging
 import os
-import re
 
-import requests
 import torch
 
 from env import Env
 from model import Model
 from player import Player
 from trainer import Trainer
-
-
-def scrape_js_file(filename: str):
-    response = requests.get(f"https://play.pokemonshowdown.com/data/{filename}.js")
-    js_text = response.text
-    i = js_text.index("{")
-    js_literal = js_text[i:-1]
-    json_text = re.sub(
-        r"(?<![\"\w\s\-])(\w+)(:)",
-        r'"\1"\2',
-        js_literal,
-    )
-    json_obj = json.loads(json_text)
-    if not os.path.exists("json"):
-        os.makedirs("json")
-    with open(f"json/{filename}.json", "w") as f:
-        json.dump(json_obj, f, indent=4)
-
-
-def scrape_ts_file(filename: str):
-    response = requests.get(f"https://play.pokemonshowdown.com/data/pokemon-showdown/data/{filename}.ts")
-    ts_text = response.text
-    i = ts_text.find("=")
-    j = ts_text.find("{", i)
-    ts_literal = re.sub(r",\s*}", "}", ts_text[j:]).replace("'", '"')
-    json_text = re.sub(
-        r"(?<![\"\w])(\w+)(:)",
-        r'"\1"\2',
-        ts_literal,
-    )
-    decoder = json.JSONDecoder(strict=False)
-    json_obj, _ = decoder.raw_decode(json_text)
-    if not os.path.exists("json"):
-        os.makedirs("json")
-    with open(f"json/{filename}.json", "w") as f:
-        json.dump(json_obj, f, indent=4)
 
 
 async def main():
@@ -71,21 +33,10 @@ async def main():
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
     hidden_dims = json.loads(config["hidden_dims"])
+    model = Model(alpha, epsilon, gamma, hidden_dims)
     file_name = f"{alpha}_{epsilon}_{gamma}_{hidden_dims}"
-    if os.path.exists(f"saves/{file_name}.pth"):
-        model = torch.load(f"saves/{file_name}.pth")
-    else:
-        model = Model(alpha, epsilon, gamma, *hidden_dims)
-
-    # scrape js files
-    scrape_js_file("pokedex")
-    scrape_js_file("moves")
-    scrape_js_file("typechart")
-    scrape_js_file("abilities")
-    scrape_js_file("items")
-
-    # scrape ts files
-    scrape_ts_file("natures")
+    if os.path.exists(f"saves/{file_name}.pt"):
+        model.load_state_dict(load(f"saves/{file_name}.pt"))  # type: ignore
 
     # construct and run trainer
     num_episodes = int(config["num_episodes"])
@@ -95,7 +46,7 @@ async def main():
     # save progress
     if not os.path.exists("saves"):
         os.makedirs("saves")
-    torch.save(trainer.model, f"saves/{file_name}.pth")
+    torch.save(trainer.model.state_dict(), f"saves/{file_name}.pt")  # type: ignore
 
 
 if __name__ == "__main__":
