@@ -54,7 +54,7 @@ async def main():
     # save progress
     if not os.path.exists("saves"):
         os.makedirs("saves")
-    torch.save(trainer.model.state_dict(), f"saves/{file_name}.pt")  # type: ignore
+    torch.save(model.state_dict(), f"saves/{file_name}.pt")  # type: ignore
 
 
 if __name__ == "__main__":
