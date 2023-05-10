@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from functools import reduce
 from typing import Any
 
+import torch
+
 from scrape_data import movedex, pokedex, typedex
 
 
@@ -41,12 +43,13 @@ class Observation:
                 valid_action_ids = valid_move_ids + valid_switch_ids
         return valid_action_ids
 
-    def process(self) -> list[float]:
+    def process(self) -> torch.Tensor:
         active_features = self.__process_active()
         side_features = self.__process_side()
         global_features = self.__process_globals()
         opponent_features = self.__process_opponent()
-        return active_features + side_features + global_features + opponent_features
+        features = active_features + side_features + global_features + opponent_features
+        return torch.tensor(features)
 
     def __process_active(self) -> list[float]:
         if "active" not in self.request:

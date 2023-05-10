@@ -28,8 +28,8 @@ class Model(nn.Module):
         layers.append(nn.Linear(self.hidden_dims[-1], self.output_dim))
         self.layers = nn.ModuleList(layers)
 
-    def forward(self, obs: Observation) -> Tensor:  # type: ignore
-        x = torch.tensor(obs.process())
+    def forward(self, x: Tensor) -> Tensor:  # type: ignore
+        x = torch.tensor(x)
         for layer in self.layers:
             x = torch.relu(layer.forward(x))
         return x
@@ -40,7 +40,7 @@ class Model(nn.Module):
             if random.random() < self.epsilon:
                 action = random.choice(action_space)
             else:
-                outputs = self.forward(obs)
+                outputs = self.forward(obs.process())
                 valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_space))
                 max_output_id = int(torch.argmax(valid_outputs).item())
                 action = action_space[max_output_id]
@@ -52,9 +52,9 @@ class Model(nn.Module):
             if done:
                 q_target = torch.tensor(reward)
             else:
-                next_q_values = self.forward(next_obs)
+                next_q_values = self.forward(next_obs.process())
                 q_target = reward + self.gamma * torch.max(next_q_values)  # type: ignore
-            q_values = self.forward(obs)
+            q_values = self.forward(obs.process())
             q_estimate = q_values[action]
             td_error = q_target - q_estimate
             loss = td_error**2
