@@ -1,9 +1,9 @@
 import json
 import os
 import re
+from typing import Any, NamedTuple
 
 import requests
-from typing import Any, NamedTuple
 
 
 def scrape_js_file(filename: str):
