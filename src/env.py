@@ -2,6 +2,7 @@ import asyncio
 import random
 from dataclasses import dataclass
 from logging import Logger
+from typing import Any
 
 from observation import Observation
 from player import Player
@@ -56,12 +57,18 @@ class Env:
         return obs1, obs2
 
     async def step(
-        self, action1: int | None, action2: int | None, rqid1: int, rqid2: int
+        self,
+        action1: int | None,
+        action2: int | None,
+        opponent_info1: Any,
+        opponent_info2: Any,
+        rqid1: int,
+        rqid2: int,
     ) -> tuple[Observation, Observation, int, int, bool]:
         await self.player1.choose(action1, rqid1)
         await self.player2.choose(action2, rqid2)
-        obs1 = await self.player1.observe()
-        obs2 = await self.player2.observe()
+        obs1 = await self.player1.observe(opponent_info1)
+        obs2 = await self.player2.observe(opponent_info2)
         done = "win" in obs1.protocol or "tie" in obs1.protocol
         reward1, reward2 = self.__get_rewards(obs1)
         return obs1, obs2, reward1, reward2, done

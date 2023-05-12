@@ -17,7 +17,7 @@ class Model(nn.Module):
         self.alpha = alpha
         self.epsilon = epsilon
         self.gamma = gamma
-        self.input_dim = 716
+        self.input_dim = 1366
         self.hidden_dims = hidden_dims if hidden_dims else [100]
         self.output_dim = 10
 
@@ -71,6 +71,8 @@ class Model(nn.Module):
                 next_obs1, next_obs2, reward1, reward2, done = await self.env.step(
                     action1,
                     action2,
+                    obs1.opponent_info,
+                    obs2.opponent_info,
                     obs1.request["rqid"],
                     obs2.request["rqid"],
                 )

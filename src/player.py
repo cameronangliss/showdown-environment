@@ -5,6 +5,7 @@ import json
 from dataclasses import dataclass
 from enum import Enum, auto
 from logging import Logger
+from typing import Any
 
 import requests
 import websockets.client as ws
@@ -183,15 +184,19 @@ class Player:
     async def timer_on(self):
         await self.__send_message("/timer on")
 
-    async def observe(self) -> Observation:
+    async def observe(self, past_opponent_info: Any = None) -> Observation:
         split_message = await self.__find_message(MessageType.OBSERVE)
         if split_message[1] == "request":
             request = json.loads(split_message[2])
             protocol = await self.__find_message(MessageType.OBSERVE)
-            return Observation(request, protocol)
+            obs = Observation(request, protocol, past_opponent_info)
+            self.logger.info(obs.get_opponent_info_str())
+            return obs
         else:
             protocol = split_message
-            return Observation(None, protocol)
+            obs = Observation(None, protocol, past_opponent_info)
+            self.logger.info(obs.get_opponent_info_str())
+            return obs
 
     async def choose(self, action: int | None, rqid: int):
         if action != None:
