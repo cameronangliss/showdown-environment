@@ -5,7 +5,7 @@ from logging import Logger
 from typing import Any
 
 from observation import Observation
-from player import Player
+from player import Player, PopupError
 
 
 @dataclass
@@ -42,13 +42,15 @@ class Env:
         while True:
             try:
                 await self.player1.challenge(self.player2, format_str)
+                room = await self.player2.accept(self.player1)
                 break
-            except RuntimeError as e:
-                self.logger.warning(e)
-                if "You are already challenging someone" in str(e):
+            except PopupError as e1:
+                self.logger.warning(e1)
+                try:
                     await self.player1.cancel(self.player2)
+                except PopupError as e2:
+                    self.logger.warning(e2)
                 await asyncio.sleep(5)
-        room = await self.player2.accept(self.player1)
         await self.player1.join(room)
         await self.player2.join(room)
         await self.player1.timer_on()

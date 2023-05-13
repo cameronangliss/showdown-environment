@@ -23,6 +23,11 @@ class MessageType(Enum):
     LEAVE = auto()
 
 
+class PopupError(Exception):
+    def __init__(self, *args: Any):
+        super().__init__(*args)
+
+
 @dataclass
 class Player:
     username: str
@@ -81,12 +86,12 @@ class Player:
                         return split_message
                 case MessageType.CHALLENGE:
                     if split_message[1] == "popup":
-                        # Popups encountered in the past:
+                        # Popups encountered when searching for challenge message in the past:
                         # 1. Due to high load, you are limited to 12 battles and team validations every 3 minutes.
                         # 2. You challenged less than 10 seconds after your last challenge! It's cancelled in case it's a misclick.
                         # 3. You are already challenging someone. Cancel that challenge before challenging someone else.
                         # 4. The server is restarting. Battles will be available again in a few minutes.
-                        raise RuntimeError(split_message[2])
+                        raise PopupError(split_message[2])
                     elif (
                         split_message[1] == "pm"
                         and split_message[2] == f" {self.username}"
@@ -94,14 +99,22 @@ class Player:
                     ):
                         return split_message
                 case MessageType.CANCEL:
-                    if (
+                    if split_message[1] == "popup":
+                        # Popups encountered when searching for cancel message in the past:
+                        # 1. You are not challenging <opponent_username>. Maybe they accepted/rejected before you cancelled?
+                        raise PopupError(split_message[2])
+                    elif (
                         split_message[1] == "pm"
                         and split_message[2] == f" {self.username}"
                         and "cancelled the challenge." in split_message[4]
                     ):
                         return split_message
                 case MessageType.ACCEPT:
-                    if (
+                    if split_message[1] == "popup":
+                        # Popups encountered when searching for accept message in the past:
+                        # 1. Due to high load, you are limited to 12 battles and team validations every 3 minutes.
+                        raise PopupError(split_message[2])
+                    elif (
                         split_message[1] == "pm"
                         and split_message[3] == f" {self.username}"
                         and "wants to battle!" in split_message[4]
