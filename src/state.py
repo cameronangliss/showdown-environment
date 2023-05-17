@@ -147,17 +147,28 @@ class PokemonState:
         self.transformed = False
 
     def use_move(self, move: str):
-        if move != "Struggle":
-            if move in self.get_moves():
-                i = self.get_moves().index(move)
+        move = (
+            move
+            if (self.from_enemy or move != "Hidden Power")
+            else [m for m in self.get_moves() if m[:12] == "Hidden Power"][0]
+        )
+        if move == "Struggle":
+            pass
+        elif move in self.get_moves():
+            i = self.get_moves().index(move)
+            if self.transformed:
+                self.alt_moves[i].pp -= 1
+            else:
                 self.moves[i].pp -= 1
-            elif self.from_enemy:
-                new_move = MoveState.from_name(move)
-                new_move.pp -= 1
-                if self.transformed:
-                    self.alt_moves.append(new_move)
-                else:
-                    self.moves.append(new_move)
+        elif self.from_enemy:
+            new_move = MoveState.from_name(move)
+            new_move.pp -= 1
+            if self.transformed:
+                self.alt_moves.append(new_move)
+            else:
+                self.moves.append(new_move)
+        else:
+            raise RuntimeError("Cannot use move that user doesn't have.")
 
     def faint(self):
         self.condition = "0 fnt"
@@ -217,7 +228,7 @@ class TeamState:
             self.__team = [PokemonState.from_request(pokemon_json) for pokemon_json in request["side"]["pokemon"]]
         else:
             self.__team = []
-            self.update(protocol)
+            self.update_from_protocol(protocol)
 
     def get_names(self) -> list[str]:
         return [pokemon.pokemon for pokemon in self.__team]
@@ -229,21 +240,31 @@ class TeamState:
         else:
             return actives[0]
 
-    def update(self, protocol: list[str]):
+    def update_from_json(self, request: Any):
+        if not self.__is_opponent:
+            new_pokemon_info = [PokemonState.from_request(pokemon_json) for pokemon_json in request["side"]["pokemon"]]
+            for pokemon in self.__team:
+                matching_info = [new_info for new_info in new_pokemon_info if new_info.pokemon == pokemon.pokemon][0]
+                pokemon.condition = matching_info.condition
+                pokemon.active = matching_info.active
+                if pokemon.get_moves() != matching_info.get_moves() and not pokemon.alt_moves:
+                    pokemon.alt_moves = matching_info.moves
+
+    def update_from_protocol(self, protocol: list[str]):
         protocol_lines = "|".join(protocol).split("\n")
         for line in protocol_lines:
             split_line = line.split("|")
             if len(split_line) > 1:
-                if split_line[1] in ["switch", "drag"] and self.__ident in split_line[2]:
+                if split_line[1] in ["switch", "drag"] and self.__ident in split_line[2] and self.__is_opponent:
                     self.__switch(split_line[2][5:], split_line[3], split_line[4])
                 elif (
                     split_line[1] == "move"
                     and self.__ident in split_line[2]
-                    and not (len(split_line) == 6 and "[from]" in split_line[5])
+                    and not (len(split_line) > 5 and "[from]" in split_line[5])
                 ):
                     active_pokemon = self.get_active_pokemon()
                     active_pokemon.use_move(split_line[3])
-                elif split_line[1] == "faint" and self.__ident in split_line[2]:
+                elif split_line[1] == "faint" and self.__ident in split_line[2] and self.__is_opponent:
                     active_pokemon = self.get_active_pokemon()
                     active_pokemon.faint()
                 elif split_line[1] == "replace" and self.__ident in split_line[2] and self.__is_opponent:
@@ -341,11 +362,13 @@ class State:
                 valid_action_ids = valid_move_ids + valid_switch_ids
         return valid_action_ids
 
-    def update(self, protocol: list[str], request: Any):
+    def update(self, protocol: list[str], request: Any | None):
         self.protocol = protocol
         self.request = request
-        self.__team_state.update(protocol)
-        self.__opponent_state.update(protocol)
+        self.__team_state.update_from_protocol(protocol)
+        if request:
+            self.__team_state.update_from_json(request)
+        self.__opponent_state.update_from_protocol(protocol)
 
     def process(self) -> torch.Tensor:
         team_features = self.__team_state.process()
