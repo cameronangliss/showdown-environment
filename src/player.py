@@ -10,7 +10,7 @@ from typing import Any
 import requests
 import websockets.client as ws
 
-from observation import Observation
+from state import State
 
 
 class MessageType(Enum):
@@ -197,22 +197,23 @@ class Player:
     async def timer_on(self):
         await self.__send_message("/timer on")
 
-    async def observe(self, past_opponent_info: Any = None) -> Observation:
+    async def observe(self, state: State | None = None) -> State:
         split_message = await self.__find_message(MessageType.OBSERVE)
         if split_message[1] == "request":
             request = json.loads(split_message[2])
             protocol = await self.__find_message(MessageType.OBSERVE)
-            obs = Observation(request, protocol, past_opponent_info)
-            self.logger.info(obs.get_opponent_info_str())
-            return obs
         else:
+            request = None
             protocol = split_message
-            obs = Observation(None, protocol, past_opponent_info)
-            self.logger.info(obs.get_opponent_info_str())
-            return obs
+        if state:
+            state.update(protocol, request)
+        else:
+            state = State(protocol, request)
+        self.logger.info(state.to_json())
+        return state
 
     async def choose(self, action: int | None, rqid: int):
-        if action != None:
+        if action is not None:
             await self.__send_message(f"/choose {self.action_space[action]}|{rqid}")
 
     async def leave(self):

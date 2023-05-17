@@ -6,7 +6,7 @@ from torch import Tensor
 from websockets.exceptions import ConnectionClosedError
 
 from env import Env
-from observation import Observation
+from state import State
 
 
 class Model(nn.Module):
@@ -17,7 +17,7 @@ class Model(nn.Module):
         self.alpha = alpha
         self.epsilon = epsilon
         self.gamma = gamma
-        self.input_dim = 1366
+        self.input_dim = 2538
         self.hidden_dims = hidden_dims if hidden_dims else [100]
         self.output_dim = 10
 
@@ -33,27 +33,27 @@ class Model(nn.Module):
             x = torch.relu(layer.forward(x))
         return x
 
-    def __get_action(self, obs: Observation) -> int | None:
-        action_space = obs.get_valid_action_ids()
+    def __get_action(self, state: State) -> int | None:
+        action_space = state.get_valid_action_ids()
         if action_space:
             if random.random() < self.epsilon:
                 action = random.choice(action_space)
             else:
-                outputs = self.forward(obs.process())
+                outputs = self.forward(state.process())
                 valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_space))
                 max_output_id = int(torch.argmax(valid_outputs).item())
                 action = action_space[max_output_id]
             return action
 
-    def __update(self, obs: Observation, action: int | None, reward: int, next_obs: Observation, done: bool):
+    def __update(self, state: State, action: int | None, reward: int, next_state: State, done: bool):
         if action:
             optimizer = torch.optim.SGD(self.parameters(), lr=self.alpha)
             if done:
                 q_target = torch.tensor(reward)
             else:
-                next_q_values = self.forward(next_obs.process())
+                next_q_values = self.forward(next_state.process())
                 q_target = reward + self.gamma * torch.max(next_q_values)  # type: ignore
-            q_values = self.forward(obs.process())
+            q_values = self.forward(state.process())
             q_estimate = q_values[action]
             td_error = q_target - q_estimate
             loss = td_error**2
@@ -63,28 +63,26 @@ class Model(nn.Module):
 
     async def run_episode(self, format_str: str) -> str | None:
         try:
-            obs1, obs2 = await self.env.reset(format_str)
+            state1, state2 = await self.env.reset(format_str)
             done = False
             while not done:
-                action1 = self.__get_action(obs1)
-                action2 = self.__get_action(obs2)
-                next_obs1, next_obs2, reward1, reward2, done = await self.env.step(
+                action1 = self.__get_action(state1)
+                action2 = self.__get_action(state2)
+                next_state1, next_state2, reward1, reward2, done = await self.env.step(
+                    state1,
+                    state2,
                     action1,
                     action2,
-                    obs1.opponent_info,
-                    obs2.opponent_info,
-                    obs1.request["rqid"],
-                    obs2.request["rqid"],
                 )
-                self.__update(obs1, action1, reward1, next_obs1, done)
-                self.__update(obs2, action2, reward2, next_obs2, done)
-                obs1, obs2 = next_obs1, next_obs2
+                self.__update(state1, action1, reward1, next_state1, done)
+                self.__update(state2, action2, reward2, next_state2, done)
+                state1, state2 = next_state1, next_state2
             try:
-                winner_id = obs1.protocol.index("win")
+                winner_id = state1.protocol.index("win")
             except ValueError:
                 winner = None
             else:
-                winner = obs1.protocol[winner_id + 1].strip()
+                winner = state1.protocol[winner_id + 1].strip()
             return winner
         except ConnectionClosedError:
             self.env.logger.error("Connection closed unexpectedly")
