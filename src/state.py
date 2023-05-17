@@ -70,7 +70,7 @@ class PokemonState:
     moves: list[MoveState]
     alt_moves: list[MoveState]
     transformed: bool
-    illusioned: bool
+    was_illusion: bool
     from_enemy: bool
 
     @staticmethod
@@ -130,7 +130,7 @@ class PokemonState:
             moves=[],
             alt_moves=[],
             transformed=False,
-            illusioned=False,
+            was_illusion=False,
             from_enemy=True,
         )
 
@@ -234,7 +234,7 @@ class TeamState:
         for line in protocol_lines:
             split_line = line.split("|")
             if len(split_line) > 1:
-                if split_line[1] in ["switch", "drag", "replace"] and self.__ident in split_line[2]:
+                if split_line[1] in ["switch", "drag"] and self.__ident in split_line[2]:
                     self.__switch(split_line[2][5:], split_line[3], split_line[4])
                 elif (
                     split_line[1] == "move"
@@ -246,6 +246,8 @@ class TeamState:
                 elif split_line[1] == "faint" and self.__ident in split_line[2]:
                     active_pokemon = self.get_active_pokemon()
                     active_pokemon.faint()
+                elif split_line[1] == "replace" and self.__ident in split_line[2] and self.__is_opponent:
+                    self.__replace(split_line[2][5:], split_line[3])
                 elif split_line[1] == "-transform" and self.__ident in split_line[2]:
                     active_pokemon = self.get_active_pokemon()
                     active_pokemon.transform()
@@ -262,6 +264,14 @@ class TeamState:
             new_pokemon = PokemonState.from_protocol(pokemon, details)
             new_pokemon.switch_in(condition)
             self.__team.append(new_pokemon)
+
+    def __replace(self, pokemon: str, details: str):
+        active_pokemon = self.get_active_pokemon()
+        active_pokemon.was_illusion = True
+        active_pokemon.switch_out()
+        new_pokemon = PokemonState.from_protocol(pokemon, details)
+        new_pokemon.switch_in(active_pokemon.condition)
+        self.__team.append(new_pokemon)
 
     def process(self) -> list[float]:
         pokemon_feature_lists = [pokemon.process(self.__is_opponent) for pokemon in self.__team]
