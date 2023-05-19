@@ -69,7 +69,6 @@ class PokemonState:
     alt_moves: list[MoveState]
     ability: str | list[str]
     transformed: bool
-    was_illusion: bool
     from_enemy: bool
 
     @staticmethod
@@ -118,7 +117,7 @@ class PokemonState:
 
     @classmethod
     def from_request(cls, pokemon_json: Any) -> PokemonState:
-        self = cls("", "", 0, None, 0, 0, None, False, {}, [], [], "", False, False, False)
+        self = cls("", "", 0, None, 0, 0, None, False, {}, [], [], "", False, False)
         self.pokemon = pokemon_json["ident"][4:]
         self.pokemon_id = PokemonState.get_id(self.pokemon)
         level, gender = PokemonState.parse_details(pokemon_json["details"])
@@ -155,7 +154,6 @@ class PokemonState:
             alt_moves=[],
             ability=ability_ids,
             transformed=False,
-            was_illusion=False,
             from_enemy=True,
         )
 
@@ -168,7 +166,7 @@ class PokemonState:
             self.active = True
 
     def switch_out(self):
-        if self.ability == "regenerator":
+        if self.ability == "regenerator" and self.status != "fnt":
             self.hp = min(int(self.hp + self.max_hp / 3), self.max_hp)
         self.active = False
         for move in self.moves:
@@ -186,10 +184,7 @@ class PokemonState:
             pass
         elif move in [m.move for m in self.get_moves()]:
             i = [m.move for m in self.get_moves()].index(move)
-            if self.transformed:
-                self.alt_moves[i].pp -= 1
-            else:
-                self.moves[i].pp -= 1
+            self.get_moves()[i].pp -= 1
         elif self.from_enemy:
             new_move = MoveState.from_name(move)
             new_move.pp -= 1
@@ -207,8 +202,8 @@ class PokemonState:
     def transform(self):
         self.transformed = True
 
-    def activate(self, info: list[str]):
-        if info[0] == "move: Mimic":
+    def start(self, info: list[str]):
+        if info[0] == "Mimic":
             mimic_move = [move for move in self.get_moves() if move.move == "Mimic"][0]
             new_move = MoveState.from_name(info[1])
             if self.transformed:
@@ -300,8 +295,8 @@ class TeamState:
             elif active_pokemon is not None and split_line[2] == f"{self.__ident}a: {active_pokemon.pokemon}":
                 match split_line[1]:
                     case "move":
-                        reason = split_line[5] if len(split_line) > 5 else None
-                        active_pokemon.use_move(split_line[3], reason)
+                        source = split_line[5] if len(split_line) > 5 else None
+                        active_pokemon.use_move(split_line[3], source)
                     case "faint":
                         active_pokemon.update_condition(0, "fnt")
                     case "replace":
@@ -318,13 +313,17 @@ class TeamState:
                     case "-status":
                         active_pokemon.update_condition(active_pokemon.hp, split_line[3])
                     case "-curestatus":
-                        cured_pokemon_name = split_line[2].split(" ")[1]
+                        cured_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
                         cured_pokemon = [mon for mon in self.__team if mon.pokemon == cured_pokemon_name][0]
                         cured_pokemon.update_condition(cured_pokemon.hp, None)
+                    case "-cureteam":
+                        for pokemon in self.__team:
+                            if pokemon.status != "fnt":
+                                pokemon.update_condition(pokemon.hp, None)
                     case "-transform":
                         active_pokemon.transform()
-                    case "-activate":
-                        active_pokemon.activate(split_line[3:])
+                    case "-start":
+                        active_pokemon.start(split_line[3:])
                     case _:
                         pass
 
@@ -345,11 +344,9 @@ class TeamState:
     def __replace(self, pokemon: str, details: str):
         active_pokemon = self.get_active_pokemon()
         if active_pokemon:
-            active_pokemon.was_illusion = True
-            active_pokemon.switch_out()
-            new_pokemon = PokemonState.from_protocol(pokemon, details)
-            new_pokemon.switch_in(active_pokemon.hp, active_pokemon.status)
-            self.__team.append(new_pokemon)
+            active_pokemon = PokemonState.from_protocol(pokemon, details)
+        else:
+            raise RuntimeError("Cannot replace pokemon if there are no active pokemon.")
 
     def process(self) -> list[float]:
         pokemon_feature_lists = [pokemon.process() for pokemon in self.__team]
