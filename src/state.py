@@ -11,10 +11,6 @@ import torch
 from dex import movedex, pokedex, typedex
 
 
-def concat_features(list1: list[float], list2: list[float]) -> list[float]:
-    return list1 + list2
-
-
 @dataclass
 class MoveState:
     move: str
@@ -71,13 +67,22 @@ class PokemonState:
     stats: dict[str, int]
     moves: list[MoveState]
     alt_moves: list[MoveState]
+    ability: str | list[str]
     transformed: bool
     was_illusion: bool
     from_enemy: bool
 
     @staticmethod
+    def concat_features(list1: list[float], list2: list[float]) -> list[float]:
+        return list1 + list2
+
+    @staticmethod
     def get_id(pokemon: str) -> str:
         return re.sub(r"[\s\-\.\:\’]+", "", pokemon).lower()
+
+    @staticmethod
+    def get_ability_id(ability: str) -> str:
+        return re.sub(r"\s+", "", ability).lower()
 
     @staticmethod
     def parse_details(details: str) -> tuple[int, str | None]:
@@ -105,15 +110,15 @@ class PokemonState:
         status = split_condition[1] if len(split_condition) == 2 else None
         return hp, status
 
-    def get_moves(self):
+    def get_moves(self) -> list[MoveState]:
         if self.transformed:
-            return [move.move for move in self.alt_moves]
+            return self.alt_moves
         else:
-            return [move.move for move in self.moves]
+            return self.moves + self.alt_moves
 
     @classmethod
     def from_request(cls, pokemon_json: Any) -> PokemonState:
-        self = cls("", "", 0, None, 0, 0, None, False, {}, [], [], False, False, False)
+        self = cls("", "", 0, None, 0, 0, None, False, {}, [], [], "", False, False, False)
         self.pokemon = pokemon_json["ident"][4:]
         self.pokemon_id = PokemonState.get_id(self.pokemon)
         level, gender = PokemonState.parse_details(pokemon_json["details"])
@@ -127,12 +132,15 @@ class PokemonState:
         self.active = pokemon_json["active"]
         self.stats = pokemon_json["stats"]
         self.moves = [MoveState.from_name(move) for move in pokemon_json["moves"]]
+        self.ability = pokemon_json["baseAbility"]
         return self
 
     @classmethod
     def from_protocol(cls, pokemon: str, details: str) -> PokemonState:
         pokemon_id = PokemonState.get_id(pokemon)
         level, gender = PokemonState.parse_details(details)
+        abilities = pokedex[pokemon_id]["abilities"].values()
+        ability_ids = [PokemonState.get_ability_id(ability) for ability in abilities]
         return cls(
             pokemon=pokemon,
             pokemon_id=pokemon_id,
@@ -145,6 +153,7 @@ class PokemonState:
             stats=pokedex[pokemon_id]["baseStats"],
             moves=[],
             alt_moves=[],
+            ability=ability_ids,
             transformed=False,
             was_illusion=False,
             from_enemy=True,
@@ -159,7 +168,11 @@ class PokemonState:
             self.active = True
 
     def switch_out(self):
+        if self.ability == "regenerator":
+            self.hp = min(int(self.hp + self.max_hp / 3), self.max_hp)
         self.active = False
+        for move in self.moves:
+            move.disabled = False
         self.alt_moves = []
         self.transformed = False
 
@@ -167,12 +180,12 @@ class PokemonState:
         move = (
             move
             if (self.from_enemy or move != "Hidden Power")
-            else [m for m in self.get_moves() if m[:12] == "Hidden Power"][0]
+            else [m.move for m in self.get_moves() if m.move[:12] == "Hidden Power"][0]
         )
         if (source is not None and "[from]" in source) or move == "Struggle":
             pass
-        elif move in self.get_moves():
-            i = self.get_moves().index(move)
+        elif move in [m.move for m in self.get_moves()]:
+            i = [m.move for m in self.get_moves()].index(move)
             if self.transformed:
                 self.alt_moves[i].pp -= 1
             else:
@@ -194,6 +207,16 @@ class PokemonState:
     def transform(self):
         self.transformed = True
 
+    def activate(self, info: list[str]):
+        if info[0] == "move: Mimic":
+            mimic_move = [move for move in self.get_moves() if move.move == "Mimic"][0]
+            new_move = MoveState.from_name(info[1])
+            if self.transformed:
+                mimic_move = new_move
+            else:
+                mimic_move.disabled = True
+                self.alt_moves.append(new_move)
+
     def process(self) -> list[float]:
         details = pokedex[self.pokemon_id]
         gender_features = [
@@ -207,10 +230,10 @@ class PokemonState:
         type_features = [float(t in details["types"]) for t in types]
         move_feature_lists = [move.process() for move in self.moves]
         move_feature_lists.extend([[0.0] * 22] * (4 - len(move_feature_lists)))
-        move_features = reduce(concat_features, move_feature_lists)
+        move_features = reduce(PokemonState.concat_features, move_feature_lists)
         alt_move_feature_lists = [move.process() for move in self.alt_moves]
         alt_move_feature_lists.extend([[0.0] * 22] * (4 - len(alt_move_feature_lists)))
-        alt_move_features = reduce(concat_features, alt_move_feature_lists)
+        alt_move_features = reduce(PokemonState.concat_features, alt_move_feature_lists)
         features = (
             gender_features + hp_features + status_features + stats + type_features + move_features + alt_move_features
         )
@@ -250,20 +273,17 @@ class TeamState:
             for pokemon in self.__team:
                 matching_info = [new_info for new_info in new_pokemon_info if new_info.pokemon == pokemon.pokemon][0]
                 if pokemon.hp != matching_info.hp:
-                    print(
+                    raise RuntimeError(
                         f"Mismatch of request and records. Recorded {pokemon.pokemon} to have hp = {pokemon.hp}, but it has hp = {matching_info.hp}."
                     )
-                    pokemon.hp = matching_info.hp
                 if pokemon.status != matching_info.status:
-                    print(
+                    raise RuntimeError(
                         f"Mismatch of request and records. Recorded {pokemon.pokemon} to have status = {pokemon.status}, but it has status = {matching_info.status}."
                     )
-                    pokemon.status = matching_info.status
                 if pokemon.active != matching_info.active:
-                    print(
+                    raise RuntimeError(
                         f"Mismatch of request and records. Recorded {pokemon.pokemon} to have active = {pokemon.active}, but it has active = {matching_info.active}."
                     )
-                    pokemon.active = matching_info.active
                 if pokemon.transformed and not pokemon.alt_moves:
                     pokemon.alt_moves = matching_info.moves
 
@@ -303,6 +323,8 @@ class TeamState:
                         cured_pokemon.update_condition(cured_pokemon.hp, None)
                     case "-transform":
                         active_pokemon.transform()
+                    case "-activate":
+                        active_pokemon.activate(split_line[3:])
                     case _:
                         pass
 
@@ -332,7 +354,7 @@ class TeamState:
     def process(self) -> list[float]:
         pokemon_feature_lists = [pokemon.process() for pokemon in self.__team]
         pokemon_feature_lists.extend([[0.0] * 211] * (6 - len(pokemon_feature_lists)))
-        features = reduce(concat_features, pokemon_feature_lists)
+        features = reduce(PokemonState.concat_features, pokemon_feature_lists)
         return features
 
 
