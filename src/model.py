@@ -17,7 +17,7 @@ class Model(nn.Module):
         self.alpha = alpha
         self.epsilon = epsilon
         self.gamma = gamma
-        self.input_dim = 2538
+        self.input_dim = 2550
         self.hidden_dims = hidden_dims if hidden_dims else [100]
         self.output_dim = 10
 

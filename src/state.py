@@ -64,7 +64,9 @@ class PokemonState:
     pokemon_id: str
     level: int
     gender: str | None
-    condition: str
+    hp: int
+    max_hp: int
+    status: str | None
     active: bool
     stats: dict[str, int]
     moves: list[MoveState]
@@ -95,6 +97,14 @@ class PokemonState:
             gender = split_details[2]
         return level, gender
 
+    @staticmethod
+    def parse_condition(condition: str) -> tuple[int, str | None]:
+        split_condition = condition.split(" ")
+        split_hp_frac = split_condition[0].split("/")
+        hp = int(split_hp_frac[0])
+        status = split_condition[1] if len(split_condition) == 2 else None
+        return hp, status
+
     def get_moves(self):
         if self.transformed:
             return [move.move for move in self.alt_moves]
@@ -103,13 +113,17 @@ class PokemonState:
 
     @classmethod
     def from_request(cls, pokemon_json: Any) -> PokemonState:
-        self = cls("", "", 0, None, "", False, {}, [], [], False, False, False)
+        self = cls("", "", 0, None, 0, 0, None, False, {}, [], [], False, False, False)
         self.pokemon = pokemon_json["ident"][4:]
         self.pokemon_id = PokemonState.get_id(self.pokemon)
         level, gender = PokemonState.parse_details(pokemon_json["details"])
         self.level = level
         self.gender = gender
-        self.condition = pokemon_json["condition"]
+        split_condition = pokemon_json["condition"].split(" ")
+        split_hp_frac = split_condition[0].split("/")
+        self.hp = int(split_hp_frac[0])
+        self.max_hp = int(split_hp_frac[1]) if pokemon_json["condition"] != "0 fnt" else 100
+        self.status = split_condition[1] if len(split_condition) == 2 else None
         self.active = pokemon_json["active"]
         self.stats = pokemon_json["stats"]
         self.moves = [MoveState.from_name(move) for move in pokemon_json["moves"]]
@@ -124,7 +138,9 @@ class PokemonState:
             pokemon_id=pokemon_id,
             level=level,
             gender=gender,
-            condition="100/100",
+            hp=100,
+            max_hp=100,
+            status=None,
             active=False,
             stats=pokedex[pokemon_id]["baseStats"],
             moves=[],
@@ -134,11 +150,12 @@ class PokemonState:
             from_enemy=True,
         )
 
-    def switch_in(self, condition: str):
-        if self.condition == "0 fnt":
+    def switch_in(self, hp: int, status: str | None):
+        if self.status == "fnt":
             raise RuntimeError("Cannot switch in if fainted.")
         else:
-            self.condition = condition
+            self.hp = hp
+            self.status = status
             self.active = True
 
     def switch_out(self):
@@ -170,29 +187,9 @@ class PokemonState:
         else:
             raise RuntimeError(f"Chosen move {move} is not in pokemon {self.pokemon}'s moveset: {self.get_moves()}.")
 
-    def faint(self):
-        self.condition = "0 fnt"
-
-    def update_condition(self, condition: str):
-        self.condition = condition
-
-    def add_status(self, status: str, reason: str | None):
-        if " " not in self.condition:
-            self.condition += f" {status}"
-        elif reason is not None and "[from]" in reason:
-            split_condition = self.condition.split(" ")
-            self.condition = split_condition[0] + f" {status}"
-        else:
-            raise RuntimeError(f"Cannot add status {status} to condition {self.condition} of pokemon {self.pokemon}.")
-
-    def remove_status(self, status: str):
-        split_condition = self.condition.split(" ")
-        if len(split_condition) > 1 and split_condition[1] == status:
-            self.condition = split_condition[0]
-        else:
-            raise RuntimeError(
-                f"Cannot remove status {status} from condition {self.condition} of pokemon {self.pokemon}."
-            )
+    def update_condition(self, hp: int, status: str | None):
+        self.hp = hp
+        self.status = status
 
     def transform(self):
         self.transformed = True
@@ -202,7 +199,9 @@ class PokemonState:
         gender_features = [
             float(gender_bool) for gender_bool in [self.gender == "M", self.gender == "F", self.gender == None]
         ]
-        condition_features = self.__process_condition(self.condition)
+        hp_features = [self.hp / self.max_hp] if self.from_enemy else [self.hp / self.max_hp, self.max_hp / 1000]
+        status_conditions = ["psn", "tox", "par", "slp", "brn", "frz", "fnt"]
+        status_features = [float(self.status == status_condition) for status_condition in status_conditions]
         stats = [stat / 255 if self.from_enemy else stat / 1000 for stat in self.stats.values()]
         types = typedex.keys()
         type_features = [float(t in details["types"]) for t in types]
@@ -212,28 +211,10 @@ class PokemonState:
         alt_move_feature_lists = [move.process() for move in self.alt_moves]
         alt_move_feature_lists.extend([[0.0] * 22] * (4 - len(alt_move_feature_lists)))
         alt_move_features = reduce(concat_features, alt_move_feature_lists)
-        return gender_features + condition_features + stats + type_features + move_features + alt_move_features
-
-    def __process_condition(self, condition: str) -> list[float]:
-        if condition == "0 fnt":
-            if self.from_enemy:
-                return [0] * 7
-            else:
-                return [0] * 8
-        elif " " in condition:
-            hp_frac, status = condition.split(" ")
-        else:
-            hp_frac = condition
-            status = None
-        if self.from_enemy:
-            numer, denom = map(float, hp_frac.split("/"))
-            hp_features = [numer / denom]
-        else:
-            hp_left, max_hp = map(float, hp_frac.split("/"))
-            hp_features = [hp_left / max_hp, max_hp / 1000]
-        status_conditions = ["psn", "tox", "par", "slp", "brn", "frz"]
-        status_features = [float(status == status_condition) for status_condition in status_conditions]
-        return hp_features + status_features
+        features = (
+            gender_features + hp_features + status_features + stats + type_features + move_features + alt_move_features
+        )
+        return features
 
 
 @dataclass
@@ -268,9 +249,22 @@ class TeamState:
             new_pokemon_info = [PokemonState.from_request(pokemon_json) for pokemon_json in request["side"]["pokemon"]]
             for pokemon in self.__team:
                 matching_info = [new_info for new_info in new_pokemon_info if new_info.pokemon == pokemon.pokemon][0]
-                pokemon.condition = matching_info.condition
-                pokemon.active = matching_info.active
-                if pokemon.get_moves() != matching_info.get_moves() and not pokemon.alt_moves:
+                if pokemon.hp != matching_info.hp:
+                    print(
+                        f"Mismatch of request and records. Recorded {pokemon.pokemon} to have hp = {pokemon.hp}, but it has hp = {matching_info.hp}."
+                    )
+                    pokemon.hp = matching_info.hp
+                if pokemon.status != matching_info.status:
+                    print(
+                        f"Mismatch of request and records. Recorded {pokemon.pokemon} to have status = {pokemon.status}, but it has status = {matching_info.status}."
+                    )
+                    pokemon.status = matching_info.status
+                if pokemon.active != matching_info.active:
+                    print(
+                        f"Mismatch of request and records. Recorded {pokemon.pokemon} to have active = {pokemon.active}, but it has active = {matching_info.active}."
+                    )
+                    pokemon.active = matching_info.active
+                if pokemon.transformed and not pokemon.alt_moves:
                     pokemon.alt_moves = matching_info.moves
 
     def update_from_protocol(self, protocol: list[str]):
@@ -281,29 +275,38 @@ class TeamState:
             if len(split_line) <= 2:
                 pass
             elif split_line[1] in ["switch", "drag"] and self.__ident in split_line[2]:
-                self.__switch(split_line[2][5:], split_line[3], split_line[4])
-            elif active_pokemon and split_line[2] == f"{self.__ident}a: {active_pokemon}":
+                hp, status = PokemonState.parse_condition(split_line[4])
+                self.__switch(split_line[2][5:], split_line[3], hp, status)
+            elif active_pokemon is not None and split_line[2] == f"{self.__ident}a: {active_pokemon.pokemon}":
                 match split_line[1]:
                     case "move":
-                        active_pokemon.use_move(split_line[3], split_line[5] if len(split_line) > 5 else None)
+                        reason = split_line[5] if len(split_line) > 5 else None
+                        active_pokemon.use_move(split_line[3], reason)
                     case "faint":
-                        active_pokemon.faint()
+                        active_pokemon.update_condition(0, "fnt")
                     case "replace":
                         self.__replace(split_line[2][5:], split_line[3])
                     case "-damage":
-                        active_pokemon.update_condition(split_line[3])
+                        hp, status = PokemonState.parse_condition(split_line[3])
+                        active_pokemon.update_condition(hp, status)
                     case "-heal":
-                        active_pokemon.update_condition(split_line[3])
+                        hp, status = PokemonState.parse_condition(split_line[3])
+                        active_pokemon.update_condition(hp, status)
+                    case "-sethp":
+                        hp, status = PokemonState.parse_condition(split_line[3])
+                        active_pokemon.update_condition(hp, status)
                     case "-status":
-                        active_pokemon.add_status(split_line[3], split_line[4] if len(split_line) > 4 else None)
+                        active_pokemon.update_condition(active_pokemon.hp, split_line[3])
                     case "-curestatus":
-                        active_pokemon.remove_status(split_line[3])
+                        cured_pokemon_name = split_line[2].split(" ")[1]
+                        cured_pokemon = [mon for mon in self.__team if mon.pokemon == cured_pokemon_name][0]
+                        cured_pokemon.update_condition(cured_pokemon.hp, None)
                     case "-transform":
                         active_pokemon.transform()
                     case _:
                         pass
 
-    def __switch(self, pokemon: str, details: str, condition: str):
+    def __switch(self, pokemon: str, details: str, hp: int, status: str | None):
         # switch out active pokemon (if there is an active pokemon)
         active_pokemon = self.get_active_pokemon()
         if active_pokemon:
@@ -311,10 +314,10 @@ class TeamState:
         # switch in desired pokemon
         if pokemon in self.get_names():
             i = self.get_names().index(pokemon)
-            self.__team[i].switch_in(condition)
+            self.__team[i].switch_in(hp, status)
         else:
             new_pokemon = PokemonState.from_protocol(pokemon, details)
-            new_pokemon.switch_in(condition)
+            new_pokemon.switch_in(hp, status)
             self.__team.append(new_pokemon)
 
     def __replace(self, pokemon: str, details: str):
@@ -323,12 +326,12 @@ class TeamState:
             active_pokemon.was_illusion = True
             active_pokemon.switch_out()
             new_pokemon = PokemonState.from_protocol(pokemon, details)
-            new_pokemon.switch_in(active_pokemon.condition)
+            new_pokemon.switch_in(active_pokemon.hp, active_pokemon.status)
             self.__team.append(new_pokemon)
 
     def process(self) -> list[float]:
         pokemon_feature_lists = [pokemon.process() for pokemon in self.__team]
-        pokemon_feature_lists.extend([[0.0] * 210] * (6 - len(pokemon_feature_lists)))
+        pokemon_feature_lists.extend([[0.0] * 211] * (6 - len(pokemon_feature_lists)))
         features = reduce(concat_features, pokemon_feature_lists)
         return features
 
