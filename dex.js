@@ -2,16 +2,16 @@ const { Dex } = require('pokemon-showdown');
 const fs = require('fs');
 
 function transformData(jsonList) {
-    result = {}
+    result = {};
     for (let i = 0; i < jsonList.length; i++) {
-        jsonObj = JSON.parse(JSON.stringify(jsonList[i]))
+        jsonObj = JSON.parse(JSON.stringify(jsonList[i]));
         if (jsonObj.id == "hiddenpower" && jsonObj.name != "Hidden Power") {
-            splitName = jsonObj.name.split(" ")
-            jsonObj.id += splitName[splitName.length - 1].toLowerCase()
+            splitName = jsonObj.name.split(" ");
+            jsonObj.id += splitName[splitName.length - 1].toLowerCase();
         }
-        result[jsonObj.id] = jsonObj
+        result[jsonObj.id] = jsonObj;
     }
-    return JSON.stringify(result, null, 4)
+    return JSON.stringify(result, null, 4);
 }
 
 if (!fs.existsSync("json")) {
