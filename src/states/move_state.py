@@ -12,6 +12,7 @@ class MoveState:
     name: str
     identifier: str
     gen: int
+    move_type: str
     pp: int
     maxpp: int
     category: str
@@ -44,6 +45,7 @@ class MoveState:
             name=move_json["move"],
             identifier=move_json["id"],
             gen=gen,
+            move_type=movedex[f"gen{gen}"][move_json["id"]]["type"].lower(),
             pp=move_json["pp"],
             maxpp=move_json["maxpp"],
             category=movedex[f"gen{gen}"][move_json["id"]],
@@ -58,7 +60,7 @@ class MoveState:
         )
 
     @classmethod
-    def from_name(cls, name: str, gen: int, from_mimic: bool = False) -> MoveState:
+    def from_name(cls, name: str, gen: int, is_ghost: bool, from_mimic: bool = False) -> MoveState:
         identifier = MoveState.get_identifier(name)
         details = movedex[f"gen{gen}"][identifier]
         if from_mimic:
@@ -67,14 +69,16 @@ class MoveState:
             pp = min(int(1.6 * details["pp"]), 61) if details["pp"] > 1 else 1
         else:
             pp = int(1.6 * details["pp"]) if details["pp"] > 1 else 1
+        target = details["nonGhostTarget"] if "nonGhostTarget" in details and not is_ghost else details["target"]
         return cls(
             name=details["name"],
             identifier=identifier,
             gen=gen,
+            move_type=movedex[f"gen{gen}"][identifier]["type"].lower(),
             pp=pp,
             maxpp=pp,
             category=details["category"],
-            target=details["target"],
+            target=target,
             just_used=False,
             disabled=False,
             disable_disabled=False,

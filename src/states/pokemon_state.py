@@ -17,6 +17,7 @@ class PokemonState:
     owner: str
     level: int
     gender: str | None
+    types: list[str]
     hp: int
     max_hp: int
     status: str | None
@@ -93,12 +94,13 @@ class PokemonState:
 
     @classmethod
     def from_request(cls, pokemon_json: Any, gen: int, owner: str) -> PokemonState:
-        self = cls("", "", gen, owner, 0, None, 0, 0, None, False, {}, [], [], "", None, None, False, False, False)
+        self = cls("", "", gen, owner, 0, None, [], 0, 0, None, False, {}, [], [], "", None, None, False, False, False)
         self.name = pokemon_json["ident"][4:]
         self.identifier = PokemonState.get_identifier(self.name)
         level, gender = PokemonState.parse_details(pokemon_json["details"])
         self.level = level
         self.gender = gender
+        self.types = [t.lower() for t in pokedex[f"gen{gen}"][self.identifier]["types"]]
         split_condition = pokemon_json["condition"].split(" ")
         split_hp_frac = split_condition[0].split("/")
         self.hp = int(split_hp_frac[0])
@@ -106,7 +108,7 @@ class PokemonState:
         self.status = split_condition[1] if len(split_condition) == 2 else None
         self.active = pokemon_json["active"]
         self.stats = pokemon_json["stats"]
-        self.moves = [MoveState.from_name(name, gen) for name in pokemon_json["moves"]]
+        self.moves = [MoveState.from_name(name, gen, "ghost" in self.types) for name in pokemon_json["moves"]]
         self.ability = pokemon_json["baseAbility"]
         self.item = pokemon_json["item"] if pokemon_json["item"] != "" else None
         return self
@@ -125,6 +127,7 @@ class PokemonState:
             owner=owner,
             level=level,
             gender=gender,
+            types=[t.lower() for t in pokedex[f"gen{gen}"][identifier]["types"]],
             hp=100,
             max_hp=100,
             status=None,
@@ -191,7 +194,7 @@ class PokemonState:
                 raise RuntimeError(f"Move {move.name} of pokemon {self.name} has no more power points.")
             used_owned_move = True
         elif self.from_enemy:
-            new_move = MoveState.from_name(name, self.gen)
+            new_move = MoveState.from_name(name, self.gen, "ghost" in self.types)
             pp_cost = self.get_pp_cost(new_move, message, pressure)
             new_move.pp = max(0, new_move.pp - pp_cost)
             if self.transformed:
@@ -265,7 +268,7 @@ class PokemonState:
                     move.encore_disabled = True
         elif info[0][-5:] == "Mimic":
             mimic_move = [move for move in self.get_moves() if move.name == "Mimic"][0]
-            new_move = MoveState.from_name(info[1], self.gen, from_mimic=True)
+            new_move = MoveState.from_name(info[1], self.gen, "ghost" in self.types, from_mimic=True)
             if self.transformed:
                 mimic_move = new_move
             else:
@@ -290,17 +293,15 @@ class PokemonState:
         self.update_moves_disabled()
 
     def process(self) -> list[float]:
-        details = pokedex[f"gen{self.gen}"][self.identifier]
         gender_features = [
             float(gender_bool) for gender_bool in [self.gender == "M", self.gender == "F", self.gender == None]
         ]
+        types = typedex[f"gen{self.gen}"].keys()
+        type_features = [float(t in self.types) for t in types]
         hp_features = [self.hp / self.max_hp] if self.from_enemy else [self.hp / self.max_hp, self.max_hp / 1000]
         status_conditions = ["psn", "tox", "par", "slp", "brn", "frz", "fnt"]
         status_features = [float(self.status == status_condition) for status_condition in status_conditions]
         stats = [stat / 255 if self.from_enemy else stat / 1000 for stat in self.stats.values()]
-        types = typedex[f"gen{self.gen}"].keys()
-        pokemon_types = [t.lower() for t in details["types"]]
-        type_features = [float(t in pokemon_types) for t in types]
         move_feature_lists = [move.process() for move in self.moves]
         move_feature_lists.extend([[0.0] * 22] * (8 - len(move_feature_lists)))
         move_features = reduce(PokemonState.concat_features, move_feature_lists)
