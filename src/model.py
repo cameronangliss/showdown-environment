@@ -39,7 +39,8 @@ class Model(nn.Module):
             if random.random() < self.epsilon:
                 action = random.choice(action_space)
             else:
-                outputs = self.forward(state.process())
+                features = torch.tensor(state.process())
+                outputs = self.forward(features)
                 valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_space))
                 max_output_id = int(torch.argmax(valid_outputs).item())
                 action = action_space[max_output_id]
@@ -51,9 +52,11 @@ class Model(nn.Module):
             if done:
                 q_target = torch.tensor(reward)
             else:
-                next_q_values = self.forward(next_state.process())
+                next_features = torch.tensor(next_state.process())
+                next_q_values = self.forward(next_features)
                 q_target = reward + self.gamma * torch.max(next_q_values)  # type: ignore
-            q_values = self.forward(state.process())
+            features = torch.tensor(state.process())
+            q_values = self.forward(features)
             q_estimate = q_values[action]
             td_error = q_target - q_estimate
             loss = td_error**2

@@ -4,8 +4,6 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-import torch
-
 from states.team_state import TeamState
 
 
@@ -78,12 +76,12 @@ class State:
             self.__team_state.update_from_json(request)
         self.__opponent_state.update_from_protocol(protocol)
 
-    def process(self) -> torch.Tensor:
+    def process(self) -> list[float]:
         team_features = self.__team_state.process()
         enemy_features = self.__opponent_state.process()
         global_features = self.__process_globals()
         features = team_features + enemy_features + global_features
-        return torch.tensor(features)
+        return features
 
     def __process_globals(self) -> list[float]:
         gen_features = [float(n == self.__team_state.gen) for n in range(1, 10)]
