@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from logging import Logger
 
 from player import Player, PopupError
-from state import State
+from states.state import State
 
 
 @dataclass

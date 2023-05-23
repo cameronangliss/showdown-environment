@@ -2,6 +2,6 @@
 json
 node_modules
 saves
-src/__pycache__
+**/__pycache__
 config.json
 debug.log

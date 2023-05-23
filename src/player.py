@@ -10,7 +10,7 @@ from typing import Any
 import requests
 import websockets.client as ws
 
-from state import State
+from states.state import State
 
 
 class MessageType(Enum):
