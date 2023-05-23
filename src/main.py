@@ -44,7 +44,7 @@ async def main():
     # train model
     num_episodes = int(config["num_episodes"])
     await model.env.setup()
-    random_formats = [f"gen{n}randombattle" for n in range(1, 10)]
+    random_formats = [f"gen{n}randombattle" for n in [2, 4, 5, 6, 7, 8, 9]]
     for i in range(num_episodes):
         winner = await model.run_episode(random.choice(random_formats))
         time = datetime.now().strftime("%H:%M:%S")
