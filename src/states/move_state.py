@@ -24,6 +24,8 @@ class MoveState:
     taunt_disabled: bool
     item_disabled: bool
     no_item_disabled: bool
+    duration: int
+    num_occur: int
 
     @staticmethod
     def get_identifier(name: str) -> str:
@@ -41,14 +43,20 @@ class MoveState:
 
     @classmethod
     def from_request(cls, move_json: Any, gen: int) -> MoveState:
+        details = movedex[f"gen{gen}"][move_json["id"]]
+        duration = (
+            details["condition"]["duration"]
+            if details["category"] != "Status" and details.get("condition", {}).get("duration", {})
+            else 1
+        )
         return cls(
             name=move_json["move"],
             identifier=move_json["id"],
             gen=gen,
-            move_type=movedex[f"gen{gen}"][move_json["id"]]["type"].lower(),
+            move_type=details["type"].lower(),
             pp=move_json["pp"],
             maxpp=move_json["maxpp"],
-            category=movedex[f"gen{gen}"][move_json["id"]],
+            category=details["category"],
             target=move_json["target"],
             just_used=False,
             disabled=move_json["disabled"],
@@ -57,6 +65,8 @@ class MoveState:
             taunt_disabled=False,
             item_disabled=False,
             no_item_disabled=False,
+            duration=duration,
+            num_occur=0,
         )
 
     @classmethod
@@ -69,12 +79,21 @@ class MoveState:
             pp = min(int(1.6 * details["pp"]), 61) if details["pp"] > 1 else 1
         else:
             pp = int(1.6 * details["pp"]) if details["pp"] > 1 else 1
-        target = details["nonGhostTarget"] if "nonGhostTarget" in details and not is_ghost else details["target"]
+        target = (
+            details["nonGhostTarget"]
+            if "nonGhostTarget" in details and details["nonGhostTarget"] and not is_ghost
+            else details["target"]
+        )
+        duration = (
+            details["condition"]["duration"]
+            if details["category"] != "Status" and details.get("condition", {}).get("duration", {})
+            else 1
+        )
         return cls(
             name=details["name"],
             identifier=identifier,
             gen=gen,
-            move_type=movedex[f"gen{gen}"][identifier]["type"].lower(),
+            move_type=details["type"].lower(),
             pp=pp,
             maxpp=pp,
             category=details["category"],
@@ -86,6 +105,8 @@ class MoveState:
             taunt_disabled=False,
             item_disabled=False,
             no_item_disabled=False,
+            duration=duration,
+            num_occur=0,
         )
 
     def process(self) -> list[float]:

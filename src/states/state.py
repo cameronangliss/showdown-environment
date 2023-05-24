@@ -19,7 +19,7 @@ class State:
         self.request = request
         ident, enemy_ident = ("p1", "p2") if request["side"]["id"] == "p1" else ("p2", "p1")
         self.__team_state = TeamState(ident, protocol, request)
-        self.__opponent_state = TeamState(enemy_ident, protocol, is_opponent=True)
+        self.__opponent_state = TeamState(enemy_ident, protocol)
 
     @staticmethod
     def to_dict(instance: Any) -> Any:
@@ -71,10 +71,8 @@ class State:
     def update(self, protocol: list[str], request: Any | None):
         self.protocol = protocol
         self.request = request
-        self.__team_state.update_from_protocol(protocol)
-        if request:
-            self.__team_state.update_from_json(request)
-        self.__opponent_state.update_from_protocol(protocol)
+        self.__team_state.update(protocol, request)
+        self.__opponent_state.update(protocol)
 
     def process(self) -> list[float]:
         team_features = self.__team_state.process()

@@ -28,6 +28,7 @@ class PokemonState:
     ability: str | list[str]
     alt_ability: str | None
     item: str | None
+    item_off: bool
     transformed: bool
     illusion: bool
     from_enemy: bool
@@ -92,26 +93,47 @@ class PokemonState:
     def get_ability(self) -> str | list[str]:
         return self.alt_ability or self.ability
 
+    def get_item(self) -> str | None:
+        if self.item_off:
+            return None
+        else:
+            return self.item
+
     @classmethod
     def from_request(cls, pokemon_json: Any, gen: int, owner: str) -> PokemonState:
-        self = cls("", "", gen, owner, 0, None, [], 0, 0, None, False, {}, [], [], "", None, None, False, False, False)
-        self.name = pokemon_json["ident"][4:]
-        self.identifier = PokemonState.get_identifier(self.name)
+        name = pokemon_json["ident"][4:]
+        identifier = PokemonState.get_identifier(name)
         level, gender = PokemonState.parse_details(pokemon_json["details"])
-        self.level = level
-        self.gender = gender
-        self.types = [t.lower() for t in pokedex[f"gen{gen}"][self.identifier]["types"]]
+        types = [t.lower() for t in pokedex[f"gen{gen}"][identifier]["types"]]
         split_condition = pokemon_json["condition"].split(" ")
         split_hp_frac = split_condition[0].split("/")
-        self.hp = int(split_hp_frac[0])
-        self.max_hp = int(split_hp_frac[1]) if pokemon_json["condition"] != "0 fnt" else 100
-        self.status = split_condition[1] if len(split_condition) == 2 else None
-        self.active = pokemon_json["active"]
-        self.stats = pokemon_json["stats"]
-        self.moves = [MoveState.from_name(name, gen, "ghost" in self.types) for name in pokemon_json["moves"]]
-        self.ability = pokemon_json["baseAbility"]
-        self.item = pokemon_json["item"] if pokemon_json["item"] != "" else None
-        return self
+        hp = int(split_hp_frac[0])
+        max_hp = int(split_hp_frac[1]) if pokemon_json["condition"] != "0 fnt" else 100
+        status = split_condition[1] if len(split_condition) == 2 else None
+        moves = [MoveState.from_name(name, gen, "ghost" in types) for name in pokemon_json["moves"]]
+        return cls(
+            name=name,
+            identifier=identifier,
+            gen=gen,
+            owner=owner,
+            level=level,
+            gender=gender,
+            types=types,
+            hp=hp,
+            max_hp=max_hp,
+            status=status,
+            active=pokemon_json["active"],
+            stats=pokemon_json["stats"],
+            moves=moves,
+            alt_moves=[],
+            ability=pokemon_json["baseAbility"],
+            alt_ability=None,
+            item=pokemon_json["item"] if pokemon_json["item"] != "" else None,
+            item_off=False,
+            transformed=False,
+            illusion=False,
+            from_enemy=False,
+        )
 
     @classmethod
     def from_protocol(cls, name: str, details: str, gen: int, owner: str) -> PokemonState:
@@ -138,6 +160,7 @@ class PokemonState:
             ability=ability_identifiers[0] if len(ability_identifiers) == 1 else ability_identifiers,
             alt_ability=None,
             item=None,
+            item_off=False,
             transformed=False,
             illusion=False,
             from_enemy=True,
@@ -177,17 +200,17 @@ class PokemonState:
         self.transformed = False
         self.trapped = False
 
-    def use_move(self, name: str, message: str | None, pressure: bool):
+    def use_move(self, name: str, info: list[str], pressure: bool):
         name = (
             name
             if (self.from_enemy or name != "Hidden Power")
             else [move.name for move in self.get_moves() if move.name[:12] == "Hidden Power"][0]
         )
-        if (message is not None and "[from]" in message and name not in message) or name == "Struggle":
+        if (info and "[from]" in info[0] and name not in info[0]) or name == "Struggle":
             used_owned_move = False
         elif name in [move.name for move in self.get_moves()]:
             move = [move for move in self.get_moves() if move.name == name and not move.disabled][0]
-            pp_cost = self.get_pp_cost(move, message, pressure)
+            pp_cost = self.get_pp_cost(move, info, pressure)
             if move.pp > 0:
                 move.pp = max(0, move.pp - pp_cost)
             else:
@@ -195,7 +218,7 @@ class PokemonState:
             used_owned_move = True
         elif self.from_enemy:
             new_move = MoveState.from_name(name, self.gen, "ghost" in self.types)
-            pp_cost = self.get_pp_cost(new_move, message, pressure)
+            pp_cost = self.get_pp_cost(new_move, info, pressure)
             new_move.pp = max(0, new_move.pp - pp_cost)
             if self.transformed:
                 self.alt_moves.append(new_move)
@@ -212,10 +235,15 @@ class PokemonState:
                     other_moves = [move for move in self.get_moves() if move.name != last_used.name]
                     for move in other_moves:
                         move.item_disabled = True
+            elif self.item == "assaultvest":
+                for move in self.get_moves():
+                    if move.category == "Status":
+                        move.item_disabled = True
         self.update_moves_disabled()
 
-    def get_pp_cost(self, move: MoveState, message: str | None, pressure: bool) -> int:
-        if message and message == "[from]lockedmove":
+    def get_pp_cost(self, move: MoveState, info: list[str], pressure: bool) -> int:
+        move.num_occur += 1
+        if move.num_occur > 1:
             pp_used = 0
         elif pressure:
             if move.category != "Status" or move.target in ["all", "normal"]:
@@ -228,6 +256,9 @@ class PokemonState:
                 pp_used = 1
         else:
             pp_used = 1
+        missed = len(info) > 1 and info[1] == "[miss]"
+        if move.num_occur == move.duration or missed:
+            move.num_occur = 0
         return pp_used
 
     def update_condition(self, hp: int, status: str | None):
@@ -237,15 +268,27 @@ class PokemonState:
     def update_ability(self, new_ability: str):
         self.alt_ability = PokemonState.get_ability_identifier(new_ability)
 
-    def update_item(self, new_item: str | None):
-        old_item = self.item
-        if old_item in ["choiceband", "choicescarf", "choicespecs"]:
+    def update_item(self, new_item: str | None, info: list[str]):
+        if info and info[0] == "[from] ability: Frisk":
+            return
+        disabling_items = ["choiceband", "choicescarf", "choicespecs"]
+        if self.item in disabling_items and new_item not in disabling_items:
             for move in self.get_moves():
                 move.item_disabled = False
-        self.update_moves_disabled()
         if new_item:
+            if new_item == "assaultvest":
+                for move in self.get_moves():
+                    if move.category == "Status":
+                        move.item_disabled = True
             new_item_identifier = PokemonState.get_item_identifier(new_item)
             self.item = new_item_identifier
+            self.item_off = False
+        elif info and info[0] == "[from] move: Thief":
+            self.item = None
+        elif info and info[0] == "[eat]":
+            self.item = None
+        elif self.gen in [3, 4]:
+            self.item_off = True
         else:
             self.item = None
         for move in self.get_moves():
@@ -253,6 +296,7 @@ class PokemonState:
                 move.no_item_disabled = True
             elif move.name == "Stuff Cheeks" and self.item is not None and self.item[-5:] == "berry":
                 move.no_item_disabled = False
+        self.update_moves_disabled()
 
     def transform(self):
         self.transformed = True
