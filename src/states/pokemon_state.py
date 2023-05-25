@@ -201,21 +201,23 @@ class PokemonState:
         self.trapped = False
 
     def use_move(self, name: str, info: list[str], pressure: bool):
+        # Getting full name of hidden power, since protocol only says "Hidden Power", even if it has a type after.
         name = (
             name
             if (self.from_enemy or name != "Hidden Power")
             else [move.name for move in self.get_moves() if move.name[:12] == "Hidden Power"][0]
         )
-        if (info and "[from]" in info[0] and name not in info[0]) or name == "Struggle":
-            used_owned_move = False
+        if (info and info[0][:6] == "[from]") or name == "Struggle":
+            pass
         elif name in [move.name for move in self.get_moves()]:
-            move = [move for move in self.get_moves() if move.name == name and not move.disabled][0]
+            move = [move for move in self.get_moves() if move.name == name][0]
             pp_cost = self.get_pp_cost(move, info, pressure)
             if move.pp > 0:
                 move.pp = max(0, move.pp - pp_cost)
             else:
                 raise RuntimeError(f"Move {move.name} of pokemon {self.name} has no more power points.")
-            used_owned_move = True
+            self.update_last_used(name)
+            self.disable_moves_with_item()
         elif self.from_enemy:
             new_move = MoveState.from_name(name, self.gen, "ghost" in self.types)
             pp_cost = self.get_pp_cost(new_move, info, pressure)
@@ -224,26 +226,16 @@ class PokemonState:
                 self.alt_moves.append(new_move)
             else:
                 self.moves.append(new_move)
-            used_owned_move = True
-        else:
-            raise RuntimeError(f"Chosen move {name} is not in pokemon {self.name}'s moveset: {self.get_moves()}.")
-        if used_owned_move:
             self.update_last_used(name)
-            if self.item in ["choiceband", "choicescarf", "choicespecs"]:
-                last_used = self.get_last_used()
-                if last_used:
-                    other_moves = [move for move in self.get_moves() if move.name != last_used.name]
-                    for move in other_moves:
-                        move.item_disabled = True
-            elif self.item == "assaultvest":
-                for move in self.get_moves():
-                    if move.category == "Status":
-                        move.item_disabled = True
+            self.disable_moves_with_item()
+        else:
+            raise RuntimeError(
+                f"Chosen move {name} is not in pokemon {self.name}'s moveset: {[move.name for move in self.get_moves()]}."
+            )
         self.update_moves_disabled()
 
     def get_pp_cost(self, move: MoveState, info: list[str], pressure: bool) -> int:
-        move.num_occur += 1
-        if move.num_occur > 1:
+        if info and info[0] in ["[from]lockedmove", "[from]move: Sleep Talk"]:
             pp_used = 0
         elif pressure:
             if move.category != "Status" or move.target in ["all", "normal"]:
@@ -256,10 +248,15 @@ class PokemonState:
                 pp_used = 1
         else:
             pp_used = 1
-        missed = len(info) > 1 and info[1] == "[miss]"
-        if move.num_occur == move.duration or missed:
-            move.num_occur = 0
         return pp_used
+
+    def disable_moves_with_item(self):
+        if self.get_item() in ["choiceband", "choicescarf", "choicespecs"]:
+            last_used = self.get_last_used()
+            if last_used:
+                other_moves = [move for move in self.get_moves() if move.name != last_used.name]
+                for move in other_moves:
+                    move.item_disabled = True
 
     def update_condition(self, hp: int, status: str | None):
         self.hp = hp
@@ -268,35 +265,47 @@ class PokemonState:
     def update_ability(self, new_ability: str):
         self.alt_ability = PokemonState.get_ability_identifier(new_ability)
 
-    def update_item(self, new_item: str | None, info: list[str]):
+    def update_item(self, new_item: str, info: list[str]):
+        new_item_identifier = PokemonState.get_item_identifier(new_item)
         if info and info[0] == "[from] ability: Frisk":
-            return
-        disabling_items = ["choiceband", "choicescarf", "choicespecs"]
-        if self.item in disabling_items and new_item not in disabling_items:
+            pass
+        else:
+            self.update_moves_item_disabled(new_item_identifier)
+            self.item_off = False
+        self.update_moves_no_item_disabled()
+        self.update_moves_disabled()
+
+    def end_item(self, item: str, info: list[str]):
+        item_identifier = PokemonState.get_item_identifier(item)
+        if self.get_item() == item_identifier:
+            if info and info[0] == "[from] move: Knock Off":
+                temp = self.get_item()
+                self.update_moves_item_disabled(None)
+                if self.gen in [3, 4]:
+                    self.item = temp
+                    self.item_off = True
+            else:
+                self.update_moves_item_disabled(None)
+        else:
+            raise RuntimeError(f"Cannot remove {item_identifier} from pokemon {self.name} with item {self.get_item()}")
+        self.update_moves_no_item_disabled()
+        self.update_moves_disabled()
+
+    def update_moves_item_disabled(self, new_item: str | None):
+        if self.get_item() in ["assaultvest", "choiceband", "choicescarf", "choicespecs"]:
             for move in self.get_moves():
                 move.item_disabled = False
-        if new_item:
-            if new_item == "assaultvest":
-                for move in self.get_moves():
-                    if move.category == "Status":
-                        move.item_disabled = True
-            new_item_identifier = PokemonState.get_item_identifier(new_item)
-            self.item = new_item_identifier
-            self.item_off = False
-        elif info and info[0] == "[from] move: Thief":
-            self.item = None
-        elif info and info[0] == "[eat]":
-            self.item = None
-        elif self.gen in [3, 4]:
-            self.item_off = True
-        else:
-            self.item = None
+        if new_item == "assaultvest":
+            for move in self.get_moves():
+                if move.category == "Status":
+                    move.item_disabled = True
+        self.item = new_item
+
+    def update_moves_no_item_disabled(self):
         for move in self.get_moves():
-            if move.name == "Stuff Cheeks" and (self.item is None or self.item[-5:] != "berry"):
-                move.no_item_disabled = True
-            elif move.name == "Stuff Cheeks" and self.item is not None and self.item[-5:] == "berry":
-                move.no_item_disabled = False
-        self.update_moves_disabled()
+            if move.name == "Stuff Cheeks":
+                current_item = self.get_item()
+                move.no_item_disabled = current_item is None or current_item[-5:] != "berry"
 
     def transform(self):
         self.transformed = True

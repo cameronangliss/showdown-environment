@@ -24,8 +24,6 @@ class MoveState:
     taunt_disabled: bool
     item_disabled: bool
     no_item_disabled: bool
-    duration: int
-    num_occur: int
 
     @staticmethod
     def get_identifier(name: str) -> str:
@@ -44,14 +42,9 @@ class MoveState:
     @classmethod
     def from_request(cls, move_json: Any, gen: int) -> MoveState:
         details = movedex[f"gen{gen}"][move_json["id"]]
-        duration = (
-            details["condition"]["duration"]
-            if details["category"] != "Status" and details.get("condition", {}).get("duration", {})
-            else 1
-        )
         return cls(
             name=move_json["move"],
-            identifier=move_json["id"],
+            identifier=MoveState.get_identifier(move_json["move"]),
             gen=gen,
             move_type=details["type"].lower(),
             pp=move_json["pp"],
@@ -65,8 +58,6 @@ class MoveState:
             taunt_disabled=False,
             item_disabled=False,
             no_item_disabled=False,
-            duration=duration,
-            num_occur=0,
         )
 
     @classmethod
@@ -84,11 +75,6 @@ class MoveState:
             if "nonGhostTarget" in details and details["nonGhostTarget"] and not is_ghost
             else details["target"]
         )
-        duration = (
-            details["condition"]["duration"]
-            if details["category"] != "Status" and details.get("condition", {}).get("duration", {})
-            else 1
-        )
         return cls(
             name=details["name"],
             identifier=identifier,
@@ -105,8 +91,6 @@ class MoveState:
             taunt_disabled=False,
             item_disabled=False,
             no_item_disabled=False,
-            duration=duration,
-            num_occur=0,
         )
 
     def process(self) -> list[float]:

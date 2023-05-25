@@ -49,7 +49,7 @@ class TeamState:
         if request:
             self.update_from_request(request)
 
-    def update_from_request(self, request: Any, is_init: bool = False):
+    def update_from_request(self, request: Any):
         new_team_info = [
             PokemonState.from_request(pokemon_json, self.gen, self.__ident)
             for pokemon_json in request["side"]["pokemon"]
@@ -57,7 +57,7 @@ class TeamState:
         for pokemon in self.__team:
             matching_info = [new_info for new_info in new_team_info if new_info.name == pokemon.name][0]
             # Providing new move info to a newly-transformed pokemon.
-            if pokemon.transformed and not pokemon.alt_moves:
+            if pokemon.transformed and not pokemon.alt_moves and "active" in request:
                 pokemon.alt_moves = [
                     MoveState.from_request(move_json, self.gen) for move_json in request["active"][0]["moves"]
                 ]
@@ -160,7 +160,7 @@ class TeamState:
                     case "-item":
                         active_pokemon.update_item(split_line[3], split_line[4:])
                     case "-enditem":
-                        active_pokemon.update_item(None, split_line[4:])
+                        active_pokemon.end_item(split_line[3], split_line[4:])
                     case "-transform":
                         active_pokemon.transform()
                     case "-start":
@@ -184,7 +184,7 @@ class TeamState:
                             self.pressure = True
                     case "-item":
                         if len(split_line) > 4 and split_line[4] == "[from] move: Thief":
-                            active_pokemon.update_item(None, split_line[4:])
+                            active_pokemon.end_item(split_line[3], split_line[4:])
                     case _:
                         pass
 
