@@ -207,7 +207,7 @@ class PokemonState:
             if (self.from_enemy or name != "Hidden Power")
             else [move.name for move in self.get_moves() if move.name[:12] == "Hidden Power"][0]
         )
-        if (info and info[0][:6] == "[from]") or name == "Struggle":
+        if (info and info[0][:6] == "[from]" and name not in info[0][6:]) or name == "Struggle":
             pass
         elif name in [move.name for move in self.get_moves()]:
             move = [move for move in self.get_moves() if move.name == name][0]
@@ -235,16 +235,21 @@ class PokemonState:
         self.update_moves_disabled()
 
     def get_pp_cost(self, move: MoveState, info: list[str], pressure: bool) -> int:
+        print(self.owner, pressure)
         if info and info[0] in ["[from]lockedmove", "[from]move: Sleep Talk"]:
             pp_used = 0
         elif pressure:
             if move.category != "Status" or move.target in ["all", "normal"]:
+                print("first")
                 pp_used = 2
             elif self.gen <= 4:
+                print("second")
                 pp_used = 1
             elif move.name in ["Imprison", "Snatch", "Spikes", "Stealth Rock", "Toxic Spikes"]:
+                print("third")
                 pp_used = 2
             else:
+                print("fourth")
                 pp_used = 1
         else:
             pp_used = 1
