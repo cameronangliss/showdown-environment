@@ -36,7 +36,7 @@ class TeamState:
         return [pokemon.name for pokemon in self.__team]
 
     def get_active(self) -> PokemonState | None:
-        actives = [mon for mon in self.__team if mon.active == True]
+        actives = [mon for mon in self.__team if mon.active]
         if len(actives) == 0:
             return None
         if len(actives) == 1:
@@ -81,9 +81,9 @@ class TeamState:
                 #     raise RuntimeError(
                 #         f"Mismatch of request and records. Recorded {pokemon.name} to have ability = {pokemon.ability}, but it has ability = {matching_info.ability}."
                 #     )
-                elif pokemon.get_item() != matching_info.item:
+                elif pokemon.item != matching_info.item:
                     raise RuntimeError(
-                        f"Mismatch of request and records. Recorded {pokemon.name} to have item = {pokemon.get_item()}, but it has item = {matching_info.item}."
+                        f"Mismatch of request and records. Recorded {pokemon.name} to have item = {pokemon.item}, but it has item = {matching_info.item}."
                     )
                 elif len(pokemon.moves) > 4:
                     raise RuntimeError(
@@ -166,6 +166,8 @@ class TeamState:
                     case "-start":
                         active_pokemon.start(split_line[3:])
                     case "-activate":
+                        if len(split_line) > 3 and split_line[3] == "ability: Mummy" and self.pressure:
+                            self.pressure = False
                         active_pokemon.start(split_line[3:])
                     case "-end":
                         active_pokemon.end(split_line[3:])
@@ -179,12 +181,18 @@ class TeamState:
                     case "drag":
                         if self.pressure:
                             self.pressure = False
+                    case "faint":
+                        if self.pressure:
+                            self.pressure = False
                     case "-ability":
                         if split_line[3] == "Pressure":
                             self.pressure = True
                     case "-item":
                         if len(split_line) > 4 and split_line[4] == "[from] move: Thief":
                             active_pokemon.end_item(split_line[3], split_line[4:])
+                    case "-activate":
+                        if len(split_line) > 3 and split_line[3] == "ability: Mummy":
+                            active_pokemon.alt_ability = "mummy"
                     case _:
                         pass
 

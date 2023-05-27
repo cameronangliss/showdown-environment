@@ -24,6 +24,7 @@ class MoveState:
     taunt_disabled: bool
     item_disabled: bool
     no_item_disabled: bool
+    gigaton_hammer_disabled: bool
 
     @staticmethod
     def get_identifier(name: str) -> str:
@@ -36,6 +37,7 @@ class MoveState:
             or self.taunt_disabled
             or self.item_disabled
             or self.no_item_disabled
+            or self.gigaton_hammer_disabled
             or self.pp == 0
         )
 
@@ -58,6 +60,7 @@ class MoveState:
             taunt_disabled=False,
             item_disabled=False,
             no_item_disabled=False,
+            gigaton_hammer_disabled=False,
         )
 
     @classmethod
@@ -91,6 +94,7 @@ class MoveState:
             taunt_disabled=False,
             item_disabled=False,
             no_item_disabled=False,
+            gigaton_hammer_disabled=False,
         )
 
     def process(self) -> list[float]:

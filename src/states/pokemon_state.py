@@ -41,6 +41,13 @@ class PokemonState:
     def get_identifier(name: str) -> str:
         return re.sub(r"[\s\-\.\:\’]+", "", name).lower()
 
+    def get_full_move_name(self, part_name: str):
+        return (
+            part_name
+            if (self.from_enemy or part_name != "Hidden Power")
+            else [move.name for move in self.get_moves() if move.name[:12] == "Hidden Power"][0]
+        )
+
     @staticmethod
     def get_ability_identifier(name: str) -> str:
         return re.sub(r"[\s\-]+", "", name).lower()
@@ -94,10 +101,7 @@ class PokemonState:
         return self.alt_ability or self.ability
 
     def get_item(self) -> str | None:
-        if self.item_off:
-            return None
-        else:
-            return self.item
+        return None if self.item_off else self.item
 
     @classmethod
     def from_request(cls, pokemon_json: Any, gen: int, owner: str) -> PokemonState:
@@ -167,7 +171,7 @@ class PokemonState:
         )
 
     def update_last_used(self, name: str):
-        last_last_moves = [move for move in (self.moves + self.alt_moves) if move.just_used == True]
+        last_last_moves = [move for move in (self.moves + self.alt_moves) if move.just_used]
         if len(last_last_moves) == 1:
             last_last_moves[0].just_used = False
         move_last_used = [move for move in self.get_moves() if move.name == name][0]
@@ -194,6 +198,7 @@ class PokemonState:
             move.encore_disabled = False
             move.taunt_disabled = False
             move.item_disabled = False
+            move.gigaton_hammer_disabled = False
             move.disabled = move.is_disabled()
         self.alt_moves = []
         self.alt_ability = None
@@ -201,55 +206,50 @@ class PokemonState:
         self.trapped = False
 
     def use_move(self, name: str, info: list[str], pressure: bool):
-        # Getting full name of hidden power, since protocol only says "Hidden Power", even if it has a type after.
-        name = (
-            name
-            if (self.from_enemy or name != "Hidden Power")
-            else [move.name for move in self.get_moves() if move.name[:12] == "Hidden Power"][0]
-        )
-        if (info and info[0][:6] == "[from]" and name not in info[0][6:]) or name == "Struggle":
+        full_name = self.get_full_move_name(name)
+        # Known "[from]" instances:
+        #     "[from]lockedmove": pp isn't used when locked into a move
+        #     "[from]move: <unowned_move>": this can happen when using a move like Copycat
+        #     "[from]move: Sleep Talk": indicates that another move is being used due to Sleep Talk
+        if (info and info[0][:6] == "[from]" and full_name not in info[0][6:]) or full_name == "Struggle":
             pass
-        elif name in [move.name for move in self.get_moves()]:
-            move = [move for move in self.get_moves() if move.name == name][0]
-            pp_cost = self.get_pp_cost(move, info, pressure)
+        elif full_name in [move.name for move in self.get_moves()]:
+            move = [move for move in self.get_moves() if move.name == full_name][0]
+            pp_cost = self.get_pp_cost(move, pressure)
             if move.pp > 0:
                 move.pp = max(0, move.pp - pp_cost)
             else:
                 raise RuntimeError(f"Move {move.name} of pokemon {self.name} has no more power points.")
-            self.update_last_used(name)
+            self.update_last_used(full_name)
             self.disable_moves_with_item()
+            move.gigaton_hammer_disabled = move.name == "Gigaton Hammer"
         elif self.from_enemy:
-            new_move = MoveState.from_name(name, self.gen, "ghost" in self.types)
-            pp_cost = self.get_pp_cost(new_move, info, pressure)
+            new_move = MoveState.from_name(full_name, self.gen, "ghost" in self.types)
+            pp_cost = self.get_pp_cost(new_move, pressure)
             new_move.pp = max(0, new_move.pp - pp_cost)
             if self.transformed:
                 self.alt_moves.append(new_move)
             else:
                 self.moves.append(new_move)
-            self.update_last_used(name)
+            self.update_last_used(full_name)
             self.disable_moves_with_item()
+            new_move.gigaton_hammer_disabled = new_move.name == "Gigaton Hammer"
         else:
             raise RuntimeError(
-                f"Chosen move {name} is not in pokemon {self.name}'s moveset: {[move.name for move in self.get_moves()]}."
+                f"Chosen move {full_name} is not in pokemon {self.name}'s moveset: {[move.name for move in self.get_moves()]}."
             )
         self.update_moves_disabled()
 
-    def get_pp_cost(self, move: MoveState, info: list[str], pressure: bool) -> int:
-        print(self.owner, pressure)
-        if info and info[0] in ["[from]lockedmove", "[from]move: Sleep Talk"]:
-            pp_used = 0
-        elif pressure:
+    def get_pp_cost(self, move: MoveState, pressure: bool) -> int:
+        if pressure:
             if move.category != "Status" or move.target in ["all", "normal"]:
-                print("first")
                 pp_used = 2
-            elif self.gen <= 4:
-                print("second")
-                pp_used = 1
             elif move.name in ["Imprison", "Snatch", "Spikes", "Stealth Rock", "Toxic Spikes"]:
-                print("third")
-                pp_used = 2
+                if self.gen <= 4:
+                    pp_used = 1
+                else:
+                    pp_used = 2
             else:
-                print("fourth")
                 pp_used = 1
         else:
             pp_used = 1
@@ -291,8 +291,6 @@ class PokemonState:
                     self.item_off = True
             else:
                 self.update_moves_item_disabled(None)
-        else:
-            raise RuntimeError(f"Cannot remove {item_identifier} from pokemon {self.name} with item {self.get_item()}")
         self.update_moves_no_item_disabled()
         self.update_moves_disabled()
 
@@ -316,31 +314,37 @@ class PokemonState:
         self.transformed = True
 
     def start(self, info: list[str]):
-        if info[0] == "Disable":
-            move = [move for move in self.get_moves() if move.name == info[1]][0]
-            move.disable_disabled = True
-        elif info[0] == "Encore":
-            last_used_move = self.get_last_used()
-            for move in self.get_moves():
-                if move != last_used_move:
-                    move.encore_disabled = True
-        elif info[0][-5:] == "Mimic":
-            mimic_move = [move for move in self.get_moves() if move.name == "Mimic"][0]
-            new_move = MoveState.from_name(info[1], self.gen, "ghost" in self.types, from_mimic=True)
-            if self.transformed:
-                mimic_move = new_move
-            else:
-                mimic_move.disabled = True
-                self.alt_moves.append(new_move)
-        elif info[0] == "move: Taunt":
-            for move in self.get_moves():
-                if move.category == "Status":
-                    move.taunt_disabled = True
+        match info[0]:
+            case "Disable":
+                move = [move for move in self.get_moves() if move.name == self.get_full_move_name(info[1])][0]
+                move.disable_disabled = True
+            case "Encore":
+                last_used_move = self.get_last_used()
+                for move in self.get_moves():
+                    if move != last_used_move:
+                        move.encore_disabled = True
+            case "move: Mimic":
+                mimic_move = [move for move in self.get_moves() if move.name == "Mimic"][0]
+                new_move = MoveState.from_name(info[1], self.gen, "ghost" in self.types, from_mimic=True)
+                if self.transformed:
+                    mimic_move = new_move
+                else:
+                    mimic_move.disabled = True
+                    self.alt_moves.append(new_move)
+            case "move: Taunt":
+                for move in self.get_moves():
+                    if move.category == "Status":
+                        move.taunt_disabled = True
+            case "item: Leppa Berry":
+                move = [move for move in self.get_moves() if move.name == info[1]][0]
+                move.pp = min(move.maxpp, 10)
+            case _:
+                pass
         self.update_moves_disabled()
 
     def end(self, info: list[str]):
         if info[0] == "Disable":
-            move = [move for move in self.get_moves() if move.disable_disabled == True][0]
+            move = [move for move in self.get_moves() if move.disable_disabled][0]
             move.disable_disabled = False
         elif info[0] == "Encore":
             for move in self.get_moves():
