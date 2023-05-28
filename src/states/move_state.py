@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from dex import movedex, typedex
+from dex import itemdex, movedex, typedex
 
 
 @dataclass
@@ -18,13 +18,12 @@ class MoveState:
     category: str
     target: str
     just_used: bool
-    disabled: bool
     disable_disabled: bool
     encore_disabled: bool
     taunt_disabled: bool
     item_disabled: bool
     no_item_disabled: bool
-    gigaton_hammer_disabled: bool
+    self_disabled: bool
 
     @staticmethod
     def get_identifier(name: str) -> str:
@@ -37,7 +36,7 @@ class MoveState:
             or self.taunt_disabled
             or self.item_disabled
             or self.no_item_disabled
-            or self.gigaton_hammer_disabled
+            or self.self_disabled
             or self.pp == 0
         )
 
@@ -54,13 +53,12 @@ class MoveState:
             category=details["category"],
             target=move_json["target"],
             just_used=False,
-            disabled=move_json["disabled"],
             disable_disabled=False,
             encore_disabled=False,
             taunt_disabled=False,
             item_disabled=False,
             no_item_disabled=False,
-            gigaton_hammer_disabled=False,
+            self_disabled=False,
         )
 
     @classmethod
@@ -88,13 +86,19 @@ class MoveState:
             category=details["category"],
             target=target,
             just_used=False,
-            disabled=False,
             disable_disabled=False,
             encore_disabled=False,
             taunt_disabled=False,
             item_disabled=False,
             no_item_disabled=False,
-            gigaton_hammer_disabled=False,
+            self_disabled=False,
+        )
+
+    def can_zmove(self, item: str | None) -> bool:
+        return (
+            item is not None
+            and "zMoveType" in itemdex[f"gen{self.gen}"][item]
+            and itemdex[f"gen{self.gen}"][item]["zMoveType"] == movedex[f"gen{self.gen}"][self.identifier]["type"]
         )
 
     def process(self) -> list[float]:

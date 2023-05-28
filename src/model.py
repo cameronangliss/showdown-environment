@@ -19,7 +19,7 @@ class Model(nn.Module):
         self.gamma = gamma
         self.input_dim = 3606
         self.hidden_dims = hidden_dims if hidden_dims else [100]
-        self.output_dim = 10
+        self.output_dim = 22
 
         layers: list[nn.Module] = []
         layers.append(nn.Linear(self.input_dim, self.hidden_dims[0]))

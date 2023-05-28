@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from functools import reduce
 from typing import Any
 
-from dex import pokedex, typedex
+from dex import itemdex, movedex, pokedex, typedex
 from states.move_state import MoveState
 
 
@@ -25,6 +25,7 @@ class PokemonState:
     stats: dict[str, int]
     moves: list[MoveState]
     alt_moves: list[MoveState]
+    max_moves: list[MoveState]
     ability: str | list[str]
     alt_ability: str | None
     item: str | None
@@ -32,6 +33,10 @@ class PokemonState:
     transformed: bool
     illusion: bool
     from_enemy: bool
+    can_mega_evo: bool
+    can_zmove: bool
+    can_max: bool
+    maxed: bool
 
     @staticmethod
     def concat_features(list1: list[float], list2: list[float]) -> list[float]:
@@ -76,7 +81,7 @@ class PokemonState:
 
     @staticmethod
     def parse_condition(condition: str) -> tuple[int, str | None]:
-        split_condition = condition.split(" ")
+        split_condition = condition.split()
         split_hp_frac = split_condition[0].split("/")
         hp = int(split_hp_frac[0])
         status = split_condition[1] if len(split_condition) == 2 else None
@@ -109,12 +114,18 @@ class PokemonState:
         identifier = PokemonState.get_identifier(name)
         level, gender = PokemonState.parse_details(pokemon_json["details"])
         types = [t.lower() for t in pokedex[f"gen{gen}"][identifier]["types"]]
-        split_condition = pokemon_json["condition"].split(" ")
+        split_condition = pokemon_json["condition"].split()
         split_hp_frac = split_condition[0].split("/")
         hp = int(split_hp_frac[0])
         max_hp = int(split_hp_frac[1]) if pokemon_json["condition"] != "0 fnt" else 100
         status = split_condition[1] if len(split_condition) == 2 else None
         moves = [MoveState.from_name(name, gen, "ghost" in types) for name in pokemon_json["moves"]]
+        item = pokemon_json["item"] if pokemon_json["item"] != "" else None
+        can_mega_evo = (
+            item is not None
+            and "megaEvolves" in itemdex[f"gen{gen}"][item]
+            and itemdex[f"gen{gen}"][item]["megaEvolves"] == name
+        )
         return cls(
             name=name,
             identifier=identifier,
@@ -130,13 +141,18 @@ class PokemonState:
             stats=pokemon_json["stats"],
             moves=moves,
             alt_moves=[],
+            max_moves=[],
             ability=pokemon_json["baseAbility"],
             alt_ability=None,
-            item=pokemon_json["item"] if pokemon_json["item"] != "" else None,
+            item=item,
             item_off=False,
             transformed=False,
             illusion=False,
             from_enemy=False,
+            can_mega_evo=can_mega_evo,
+            can_zmove=item is not None and "zMove" in itemdex[f"gen{gen}"][item],
+            can_max=gen == 8,
+            maxed=False,
         )
 
     @classmethod
@@ -161,6 +177,7 @@ class PokemonState:
             stats=stats,
             moves=[],
             alt_moves=[],
+            max_moves=[],
             ability=ability_identifiers[0] if len(ability_identifiers) == 1 else ability_identifiers,
             alt_ability=None,
             item=None,
@@ -168,7 +185,19 @@ class PokemonState:
             transformed=False,
             illusion=False,
             from_enemy=True,
+            can_mega_evo=False,
+            can_zmove=False,
+            can_max=False,
+            maxed=False,
         )
+
+    def update_special_options(self, mega_used: bool, zmove_used: bool, max_used: bool):
+        if mega_used:
+            self.can_mega_evo = False
+        if zmove_used:
+            self.can_zmove = False
+        if max_used:
+            self.can_max = False
 
     def update_last_used(self, name: str):
         last_last_moves = [move for move in (self.moves + self.alt_moves) if move.just_used]
@@ -176,10 +205,6 @@ class PokemonState:
             last_last_moves[0].just_used = False
         move_last_used = [move for move in self.get_moves() if move.name == name][0]
         move_last_used.just_used = True
-
-    def update_moves_disabled(self):
-        for move in self.get_moves():
-            move.disabled = move.is_disabled()
 
     def switch_in(self, hp: int, status: str | None):
         if self.status == "fnt":
@@ -198,8 +223,7 @@ class PokemonState:
             move.encore_disabled = False
             move.taunt_disabled = False
             move.item_disabled = False
-            move.gigaton_hammer_disabled = False
-            move.disabled = move.is_disabled()
+            move.self_disabled = False
         self.alt_moves = []
         self.alt_ability = None
         self.transformed = False
@@ -222,7 +246,9 @@ class PokemonState:
                 raise RuntimeError(f"Move {move.name} of pokemon {self.name} has no more power points.")
             self.update_last_used(full_name)
             self.disable_moves_with_item()
-            move.gigaton_hammer_disabled = move.name == "Gigaton Hammer"
+            for self_move in self.get_moves():
+                if self_move.name == "Gigaton Hammer":
+                    self_move.self_disabled = move.name == "Gigaton Hammer"
         elif self.from_enemy:
             new_move = MoveState.from_name(full_name, self.gen, "ghost" in self.types)
             pp_cost = self.get_pp_cost(new_move, pressure)
@@ -233,12 +259,18 @@ class PokemonState:
                 self.moves.append(new_move)
             self.update_last_used(full_name)
             self.disable_moves_with_item()
-            new_move.gigaton_hammer_disabled = new_move.name == "Gigaton Hammer"
+            for self_move in self.get_moves():
+                if self_move.name == "Gigaton Hammer":
+                    self_move.self_disabled = new_move.name == "Gigaton Hammer"
         else:
-            raise RuntimeError(
-                f"Chosen move {full_name} is not in pokemon {self.name}'s moveset: {[move.name for move in self.get_moves()]}."
-            )
-        self.update_moves_disabled()
+            if (
+                full_name.split()[0] not in ["Max", "G-Max"]
+                and "isZ" not in movedex[f"gen{self.gen}"][MoveState.get_identifier(full_name)]
+                and full_name != "Z-Roost"
+            ):
+                raise RuntimeError(
+                    f"Chosen move {full_name} is not in pokemon {self.name}'s moveset: {[move.name for move in self.get_moves()]}."
+                )
 
     def get_pp_cost(self, move: MoveState, pressure: bool) -> int:
         if pressure:
@@ -278,7 +310,6 @@ class PokemonState:
             self.update_moves_item_disabled(new_item_identifier)
             self.item_off = False
         self.update_moves_no_item_disabled()
-        self.update_moves_disabled()
 
     def end_item(self, item: str, info: list[str]):
         item_identifier = PokemonState.get_item_identifier(item)
@@ -292,7 +323,6 @@ class PokemonState:
             else:
                 self.update_moves_item_disabled(None)
         self.update_moves_no_item_disabled()
-        self.update_moves_disabled()
 
     def update_moves_item_disabled(self, new_item: str | None):
         if self.get_item() in ["assaultvest", "choiceband", "choicescarf", "choicespecs"]:
@@ -329,7 +359,7 @@ class PokemonState:
                 if self.transformed:
                     mimic_move = new_move
                 else:
-                    mimic_move.disabled = True
+                    mimic_move.self_disabled = True
                     self.alt_moves.append(new_move)
             case "move: Taunt":
                 for move in self.get_moves():
@@ -338,9 +368,10 @@ class PokemonState:
             case "item: Leppa Berry":
                 move = [move for move in self.get_moves() if move.name == info[1]][0]
                 move.pp = min(move.maxpp, 10)
+            case "Dynamax":
+                self.maxed = True
             case _:
                 pass
-        self.update_moves_disabled()
 
     def end(self, info: list[str]):
         if info[0] == "Disable":
@@ -352,7 +383,8 @@ class PokemonState:
         elif info[0] == "move: Taunt":
             for move in self.get_moves():
                 move.taunt_disabled = False
-        self.update_moves_disabled()
+        elif info[0] == "Dynamax":
+            self.maxed = False
 
     def process(self) -> list[float]:
         gender_features = [

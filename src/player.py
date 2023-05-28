@@ -35,18 +35,13 @@ class Player:
     logger: Logger
     websocket: ws.WebSocketClientProtocol | None = None
     room: str | None = None
-    action_space = [
-        "move 1",
-        "move 2",
-        "move 3",
-        "move 4",
-        "switch 1",
-        "switch 2",
-        "switch 3",
-        "switch 4",
-        "switch 5",
-        "switch 6",
-    ]
+    action_space = (
+        [f"switch {i}" for i in range(1, 7)]
+        + [f"move {i}" for i in range(1, 5)]
+        + [f"move {i} mega" for i in range(1, 5)]
+        + [f"move {i} zmove" for i in range(1, 5)]
+        + [f"move {i} max" for i in range(1, 5)]
+    )
 
     async def connect(self):
         while True:

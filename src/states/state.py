@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from states.move_state import MoveState
 from states.team_state import TeamState
 
 
@@ -13,13 +14,21 @@ class State:
     protocol: list[str]
     __team_state: TeamState
     __opponent_state: TeamState
+    gen: int
 
     def __init__(self, protocol: list[str], request: Any):
         self.protocol = protocol
         self.request = request
         ident, enemy_ident = ("p1", "p2") if request["side"]["id"] == "p1" else ("p2", "p1")
-        self.__team_state = TeamState(ident, protocol, request)
-        self.__opponent_state = TeamState(enemy_ident, protocol)
+        self.gen = State.get_gen(protocol)
+        self.__team_state = TeamState(ident, self.gen, protocol, request)
+        self.__opponent_state = TeamState(enemy_ident, self.gen, protocol)
+
+    @staticmethod
+    def get_gen(protocol: list[str]) -> int:
+        i = protocol.index("gen")
+        gen = int(protocol[i + 1].strip())
+        return gen
 
     @staticmethod
     def to_dict(instance: Any) -> Any:
@@ -40,7 +49,7 @@ class State:
 
     def get_valid_action_ids(self) -> list[int]:
         valid_switch_ids = [
-            i + 4
+            i
             for i, pokemon in enumerate(self.request["side"]["pokemon"])
             if not pokemon["active"] and pokemon["condition"] != "0 fnt"
         ]
@@ -49,7 +58,7 @@ class State:
         elif "forceSwitch" in self.request:
             if "Revival Blessing" in self.protocol:
                 dead_switch_ids = [
-                    i + 4
+                    i
                     for i, pokemon in enumerate(self.request["side"]["pokemon"])
                     if not pokemon["active"] and pokemon["condition"] == "0 fnt"
                 ]
@@ -58,14 +67,38 @@ class State:
                 valid_action_ids = valid_switch_ids
         else:
             valid_move_ids = [
-                i
+                i + 6
                 for i, move in enumerate(self.request["active"][0]["moves"])
                 if not ("disabled" in move and move["disabled"])
             ]
-            if "trapped" in self.request["active"][0] or "maybeTrapped" in self.request["active"][0]:
-                valid_action_ids = valid_move_ids
+            active_pokemon = self.__team_state.get_active()
+            if active_pokemon:
+                valid_mega_ids = (
+                    [i + 4 for i in valid_move_ids]
+                    if not self.__team_state.mega_used and active_pokemon.can_mega_evo
+                    else []
+                )
+                valid_zmove_ids = [
+                    i + 8
+                    for i in valid_move_ids
+                    if not self.__team_state.zmove_used
+                    and active_pokemon.can_zmove
+                    and MoveState.from_request(self.request["active"][0]["moves"][i - 6], self.gen).can_zmove(
+                        active_pokemon.get_item() if active_pokemon else None
+                    )
+                ]
+                valid_max_ids = (
+                    [i + 12 for i in valid_move_ids]
+                    if not self.__team_state.max_used and active_pokemon.can_max
+                    else []
+                )
+                valid_special_ids = valid_mega_ids + valid_zmove_ids + valid_max_ids
             else:
-                valid_action_ids = valid_move_ids + valid_switch_ids
+                valid_special_ids = []
+            if "trapped" in self.request["active"][0] or "maybeTrapped" in self.request["active"][0]:
+                valid_action_ids = valid_move_ids + valid_special_ids
+            else:
+                valid_action_ids = valid_switch_ids + valid_move_ids + valid_special_ids
         return valid_action_ids
 
     def update(self, protocol: list[str], request: Any | None):
