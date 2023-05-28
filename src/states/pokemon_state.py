@@ -30,6 +30,7 @@ class PokemonState:
     alt_ability: str | None
     item: str | None
     item_off: bool
+    preparing: bool
     transformed: bool
     illusion: bool
     from_enemy: bool
@@ -146,6 +147,7 @@ class PokemonState:
             alt_ability=None,
             item=item,
             item_off=False,
+            preparing=False,
             transformed=False,
             illusion=False,
             from_enemy=False,
@@ -182,6 +184,7 @@ class PokemonState:
             alt_ability=None,
             item=None,
             item_off=False,
+            preparing=False,
             transformed=False,
             illusion=False,
             from_enemy=True,
@@ -226,6 +229,7 @@ class PokemonState:
             move.self_disabled = False
         self.alt_moves = []
         self.alt_ability = None
+        self.preparing = False
         self.transformed = False
         self.trapped = False
 

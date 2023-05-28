@@ -63,7 +63,10 @@ class TeamState:
             if active_pokemon is not None and len(split_line) > 2 and split_line[2][:2] == self.__ident:
                 match split_line[1]:
                     case "move":
-                        active_pokemon.use_move(split_line[3], split_line[5:], self.pressure)
+                        if active_pokemon.preparing:
+                            active_pokemon.preparing = False
+                        else:
+                            active_pokemon.use_move(split_line[3], split_line[5:], self.pressure)
                     case "switch":
                         hp, status = PokemonState.parse_condition(split_line[4])
                         self.__switch(split_line[2][5:], split_line[3], hp, status)
@@ -105,6 +108,8 @@ class TeamState:
                         active_pokemon.update_item(split_line[3], split_line[4:])
                     case "-enditem":
                         active_pokemon.end_item(split_line[3], split_line[4:])
+                    case "-prepare":
+                        active_pokemon.preparing = True
                     case "-mega":
                         self.mega_used = True
                     case "-zpower":
@@ -207,7 +212,15 @@ class TeamState:
                 elif pokemon.active and "active" in request and "pp" in request["active"][0]["moves"][0]:
                     for move_info in request["active"][0]["moves"]:
                         move = TeamState.get_matching_move(pokemon, move_info)
-                        if pokemon.maxed or just_zmoved or just_unmaxed:
+                        if (
+                            pokemon.maxed
+                            or just_zmoved
+                            or just_unmaxed
+                            or (
+                                self.gen <= 2
+                                and len([move for move in pokemon.get_moves() if move.name == "Mimic"]) > 0
+                            )
+                        ):
                             move.pp = move_info["pp"]
                         else:
                             TeamState.check_move_consistency(move, move_info)
