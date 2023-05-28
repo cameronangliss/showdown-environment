@@ -47,9 +47,8 @@ class TeamState:
             protocol_lines = "|".join(protocol).split("\n")
             active_pokemon = self.get_active()
             active_name = active_pokemon.name if active_pokemon else ""
-            just_mega_evod = (
-                f"|-mega|{self.__ident}a: {active_name}|{active_name}|{active_pokemon.get_item() or '' if active_pokemon else ''}"
-                in protocol_lines
+            just_mega_evod = any(
+                f"|-mega|{self.__ident}a: {active_name}|{active_name}" in line for line in protocol_lines
             )
             just_zmoved = f"|-zpower|{self.__ident}a: {active_name}" in protocol_lines
             just_unmaxed = f"|-end|{self.__ident}a: {active_name}|Dynamax" in protocol_lines
@@ -109,7 +108,8 @@ class TeamState:
                     case "-enditem":
                         active_pokemon.end_item(split_line[3], split_line[4:])
                     case "-prepare":
-                        active_pokemon.preparing = True
+                        if self.gen <= 2:
+                            active_pokemon.preparing = True
                     case "-mega":
                         self.mega_used = True
                     case "-zpower":
@@ -212,18 +212,9 @@ class TeamState:
                 elif pokemon.active and "active" in request and "pp" in request["active"][0]["moves"][0]:
                     for move_info in request["active"][0]["moves"]:
                         move = TeamState.get_matching_move(pokemon, move_info)
-                        if (
-                            pokemon.maxed
-                            or just_zmoved
-                            or just_unmaxed
-                            or (
-                                self.gen <= 2
-                                and len([move for move in pokemon.get_moves() if move.name == "Mimic"]) > 0
-                            )
-                        ):
+                        if pokemon.maxed or just_zmoved or just_unmaxed or self.gen <= 3:
                             move.pp = move_info["pp"]
-                        else:
-                            TeamState.check_move_consistency(move, move_info)
+                        TeamState.check_move_consistency(move, move_info)
 
     @staticmethod
     def check_condition_consistency(pokemon: PokemonState, pokemon_info: Any):
