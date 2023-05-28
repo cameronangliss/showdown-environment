@@ -244,10 +244,7 @@ class PokemonState:
         elif full_name in [move.name for move in self.get_moves()]:
             move = [move for move in self.get_moves() if move.name == full_name][0]
             pp_cost = self.get_pp_cost(move, pressure)
-            if move.pp > 0:
-                move.pp = max(0, move.pp - pp_cost)
-            else:
-                raise RuntimeError(f"Move {move.name} of pokemon {self.name} has no more power points.")
+            move.pp = max(0, move.pp - pp_cost)
             self.update_last_used(full_name)
             self.disable_moves_with_item()
             for self_move in self.get_moves():

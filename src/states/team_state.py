@@ -43,16 +43,16 @@ class TeamState:
 
     def update(self, protocol: list[str], request: Any | None = None):
         self.update_from_protocol(protocol)
-        if request:
-            protocol_lines = "|".join(protocol).split("\n")
-            active_pokemon = self.get_active()
-            active_name = active_pokemon.name if active_pokemon else ""
-            just_mega_evod = any(
-                f"|-mega|{self.__ident}a: {active_name}|{active_name}" in line for line in protocol_lines
-            )
-            just_zmoved = f"|-zpower|{self.__ident}a: {active_name}" in protocol_lines
-            just_unmaxed = f"|-end|{self.__ident}a: {active_name}|Dynamax" in protocol_lines
-            self.update_from_request(request, just_mega_evod, just_zmoved, just_unmaxed)
+        # if request:
+        #     protocol_lines = "|".join(protocol).split("\n")
+        #     active_pokemon = self.get_active()
+        #     active_name = active_pokemon.name if active_pokemon else ""
+        #     just_mega_evod = any(
+        #         f"|-mega|{self.__ident}a: {active_name}|{active_name}" in line for line in protocol_lines
+        #     )
+        #     just_zmoved = f"|-zpower|{self.__ident}a: {active_name}" in protocol_lines
+        #     just_unmaxed = f"|-end|{self.__ident}a: {active_name}|Dynamax" in protocol_lines
+        #     self.update_from_request(request, just_mega_evod, just_zmoved, just_unmaxed)
 
     def update_from_protocol(self, protocol: list[str]):
         protocol_lines = "|".join(protocol).split("\n")
