@@ -2,8 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import random
-from datetime import datetime
 
 import torch
 
@@ -34,7 +32,7 @@ async def main():
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
     hidden_dims = json.loads(config["hidden_dims"])
-    model = Model(env, alpha, epsilon, gamma, hidden_dims)
+    model = Model(alpha, epsilon, gamma, hidden_dims)
 
     # load saved model with the same settings as `model` if one exists
     file_name = f"{alpha}_{epsilon}_{gamma}_{hidden_dims}"
@@ -43,13 +41,7 @@ async def main():
 
     # train model
     num_episodes = int(config["num_episodes"])
-    await model.env.setup()
-    random_formats = [f"gen{n}randombattle" for n in range(1, 10)]
-    for i in range(num_episodes):
-        winner = await model.run_episode(random.choice(random_formats))
-        time = datetime.now().strftime("%H:%M:%S")
-        print(f"{time}: {winner} wins game {i + 1}")
-    await model.env.close()
+    await model.self_play_train(env, num_episodes)
 
     # save progress
     if not os.path.exists("saves"):
