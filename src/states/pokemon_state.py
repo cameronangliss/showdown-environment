@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from functools import reduce
@@ -154,6 +155,20 @@ class PokemonState:
     def __get_item_identifier(name: str) -> str:
         return re.sub(r"[\s\-]+", "", name).lower()
 
+    def get_json_str(self) -> str:
+        return json.dumps(
+            {
+                "name": self.name,
+                "id": self.identifier,
+                "condition": f"{self.hp}/{self.max_hp}" + (f" {self.status}" if self.status else ""),
+                "active": self.active,
+                "stats": self.stats,
+                "moves": [json.loads(move.get_json_str()) for move in self.get_moves()],
+                "ability": self.__get_ability(),
+                "item": self.item,
+            }
+        )
+
     ###################################################################################################################
     # Getter methods
 
@@ -231,6 +246,8 @@ class PokemonState:
             self.hp = hp
             self.status = status
             self.active = True
+            for move in self.get_moves():
+                move.update_item_disabled(None, self.get_item())
 
     def switch_out(self):
         if self.__get_ability() == "regenerator" and self.status != "fnt":
@@ -260,9 +277,9 @@ class PokemonState:
             move = [move for move in self.get_moves() if full_name in [move.name, f"Z-{move.name}"]][0]
             pp_cost = self.__get_pp_cost(move, pressure)
             move.pp = max(0, move.pp - pp_cost)
-            self.__update_last_used(full_name)
-            self.__disable_moves_with_item()
+            self.__update_last_used(move.name)
             for self_move in self.get_moves():
+                self_move.update_item_disabled(self.get_item(), self.get_item())
                 if self_move.name == "Gigaton Hammer":
                     self_move.self_disabled = move.name == "Gigaton Hammer"
         elif self.from_opponent:
@@ -274,9 +291,9 @@ class PokemonState:
                 self.alt_moves.append(new_move)
             else:
                 self.moves.append(new_move)
-            self.__update_last_used(full_name)
-            self.__disable_moves_with_item()
+            self.__update_last_used(new_move.name)
             for self_move in self.get_moves():
+                self_move.update_item_disabled(self.get_item(), self.get_item())
                 if self_move.name == "Gigaton Hammer":
                     self_move.self_disabled = new_move.name == "Gigaton Hammer"
         else:
@@ -295,26 +312,23 @@ class PokemonState:
         self.alt_ability = PokemonState.__get_ability_identifier(new_ability)
 
     def update_item(self, new_item: str, info: list[str]):
-        new_item_identifier = PokemonState.__get_item_identifier(new_item)
-        if info and info[0] == "[from] ability: Frisk":
-            pass
-        else:
-            self.__update_moves_item_disabled(new_item_identifier)
+        if not (info and info[0] == "[from] ability: Frisk"):
+            new_item_identifier = PokemonState.__get_item_identifier(new_item)
+            for move in self.get_moves():
+                move.update_item_disabled(self.get_item(), None)
+                move.update_item_disabled(None, new_item_identifier)
+            self.item = new_item_identifier
             self.item_off = False
-        self.__update_moves_no_item_disabled()
 
     def end_item(self, item: str, info: list[str]):
         item_identifier = PokemonState.__get_item_identifier(item)
         if self.get_item() == item_identifier:
-            if info and info[0] == "[from] move: Knock Off":
-                temp = self.get_item()
-                self.__update_moves_item_disabled(None)
-                if self.gen in [3, 4]:
-                    self.item = temp
-                    self.item_off = True
+            for move in self.get_moves():
+                move.update_item_disabled(self.get_item(), None)
+            if info and info[0] == "[from] move: Knock Off" and self.gen in [3, 4]:
+                self.item_off = True
             else:
-                self.__update_moves_item_disabled(None)
-        self.__update_moves_no_item_disabled()
+                self.item = None
 
     def start(self, info: list[str]):
         match info[0]:
@@ -326,7 +340,7 @@ class PokemonState:
                 for move in self.get_moves():
                     if move != last_used_move:
                         move.encore_disabled = True
-            case "move: Mimic":
+            case "Mimic":
                 mimic_move = [move for move in self.get_moves() if move.name == "Mimic"][0]
                 types = [t.lower() for t in pokedex[f"gen{self.gen}"][self.identifier]["types"]]
                 new_move = MoveState.from_name(info[1], self.gen, "ghost" in types, from_mimic=True)
@@ -365,7 +379,7 @@ class PokemonState:
 
     def __get_pp_cost(self, move: MoveState, pressure: bool) -> int:
         if pressure:
-            if movedex[f"gen{self.gen}"][move.identifier]["category"] != "Status" or move.target in ["all", "normal"]:
+            if move.get_category() != "Status" or move.target in ["all", "normal"]:
                 pp_used = 2
             elif move.name in ["Imprison", "Snatch", "Spikes", "Stealth Rock", "Toxic Spikes"]:
                 if self.gen <= 4:
@@ -377,27 +391,3 @@ class PokemonState:
         else:
             pp_used = 1
         return pp_used
-
-    def __disable_moves_with_item(self):
-        if self.get_item() in ["choiceband", "choicescarf", "choicespecs"]:
-            last_used = self.__get_last_used()
-            if last_used:
-                other_moves = [move for move in self.get_moves() if move.name != last_used.name]
-                for move in other_moves:
-                    move.item_disabled = True
-
-    def __update_moves_item_disabled(self, new_item: str | None):
-        if self.get_item() in ["assaultvest", "choiceband", "choicescarf", "choicespecs"]:
-            for move in self.get_moves():
-                move.item_disabled = False
-        if new_item == "assaultvest":
-            for move in self.get_moves():
-                if movedex[f"gen{self.gen}"][move.identifier]["category"] == "Status":
-                    move.item_disabled = True
-        self.item = new_item
-
-    def __update_moves_no_item_disabled(self):
-        for move in self.get_moves():
-            if move.name == "Stuff Cheeks":
-                current_item = self.get_item()
-                move.no_item_disabled = current_item is None or current_item[-5:] != "berry"

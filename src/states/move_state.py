@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -20,7 +21,6 @@ class MoveState:
     encore_disabled: bool = False
     taunt_disabled: bool = False
     item_disabled: bool = False
-    no_item_disabled: bool = False
     self_disabled: bool = False
 
     ###################################################################################################################
@@ -70,14 +70,52 @@ class MoveState:
 
     def is_disabled(self) -> bool:
         return (
-            self.disable_disabled
+            self.pp == 0
+            or self.disable_disabled
             or self.encore_disabled
             or self.taunt_disabled
             or self.item_disabled
-            or self.no_item_disabled
             or self.self_disabled
-            or self.pp == 0
         )
+
+    def get_category(self) -> str:
+        return movedex[f"gen{self.gen}"][self.identifier]["category"]
+
+    def get_json_str(self) -> str:
+        return json.dumps(
+            {
+                "name": self.name,
+                "id": self.identifier,
+                "pp": self.pp,
+                "maxpp": self.maxpp,
+                "target": self.target,
+                "disabled": self.is_disabled(),
+            }
+        )
+
+    ###################################################################################################################
+    # Setter methods
+
+    def update_item_disabled(self, old_item: str | None, new_item: str | None):
+        # adding item
+        if old_item is None and new_item is not None:
+            if new_item == "assaultvest" and self.get_category() == "Status":
+                self.item_disabled = True
+            elif self.item_disabled and new_item[-5:] == "berry":
+                self.item_disabled = False
+        # removing item
+        elif old_item is not None and new_item is None:
+            self.item_disabled = self.name == "Stuff Cheeks"
+        # keep item
+        elif old_item == new_item:
+            item = old_item
+            if item in ["choiceband", "choicescarf", "choicespecs"]:
+                self.item_disabled = not self.just_used
+        else:
+            raise RuntimeError(
+                f"Must either add, remove, or keep current item. None are the case with old_item = {old_item} and "
+                f"new_item = {new_item}."
+            )
 
     ###################################################################################################################
     # Processes MoveState object into a feature vector to be fed into the model's input layer

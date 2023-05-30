@@ -1,3 +1,4 @@
+import json
 from functools import reduce
 from typing import Any
 
@@ -41,6 +42,9 @@ class TeamState:
             return actives[0]
         else:
             raise RuntimeError(f"Multiple active pokemon: {[active.name for active in actives]}")
+
+    def get_json_str(self) -> str:
+        return json.dumps([json.loads(pokemon.get_json_str()) for pokemon in self.__team])
 
     ###################################################################################################################
     # Processes TeamState object into a feature vector to be fed into the model's input layer
@@ -128,7 +132,7 @@ class TeamState:
                     case "-zpower":
                         self.zmove_used = True
                     case "-transform":
-                        self.transformed = True
+                        active_pokemon.transformed = True
                     case "-start":
                         if len(split_line) > 3 and split_line[3] == "Dynamax":
                             self.max_used = True
@@ -205,7 +209,6 @@ class TeamState:
                     MoveState.from_request(move_json, self.__gen, pokemon.item)
                     for move_json in request["active"][0]["moves"]
                 ]
-                print("new moves after transforming:", [move.name for move in pokemon.alt_moves])
             # If active has been mistracked, we assume that the active pokemon is using an illusion.
             if pokemon.active != pokemon_info["active"]:
                 hp, status = PokemonState.parse_condition(pokemon_info["condition"])
@@ -216,20 +219,10 @@ class TeamState:
             # Conducting harsh consistency checks if illusion pokemon isn't interfering.
             elif pokemon.active == pokemon_info["active"] and not pokemon.illusion:
                 TeamState.__check_condition_consistency(pokemon, pokemon_info)
-                if just_mega_evod:
-                    pokemon.ability = pokemon_info["baseAbility"]
-                if len(pokemon.moves) > 4:
-                    raise RuntimeError(
-                        f"Pokemon cannot have more than 4 moves: {[move.name for move in pokemon.moves]}."
-                    )
-                elif pokemon.active and "active" in request and "pp" in request["active"][0]["moves"][0]:
-                    for move_info in request["active"][0]["moves"]:
-                        move = TeamState.__get_matching_move(pokemon, move_info)
-                        if pokemon.maxed or just_zmoved or just_unmaxed or self.__gen <= 3:
-                            move.pp = move_info["pp"]
-                        TeamState.__check_move_consistency(move, move_info)
-                        TeamState.__check_can_special_consistency(pokemon, request["active"])
-                TeamState.__check_ability_consistency(pokemon, pokemon_info)
+                if pokemon.active and "active" in request and "pp" in request["active"][0]["moves"][0]:
+                    TeamState.__check_moves_consistency(pokemon, request["active"], just_zmoved, just_unmaxed)
+                    TeamState.__check_can_special_consistency(pokemon, request["active"])
+                TeamState.__check_ability_consistency(pokemon, pokemon_info, just_mega_evod)
                 TeamState.__check_item_consistency(pokemon, pokemon_info)
 
     ###################################################################################################################
@@ -250,7 +243,9 @@ class TeamState:
             )
 
     @staticmethod
-    def __check_ability_consistency(pokemon: PokemonState, pokemon_info: Any):
+    def __check_ability_consistency(pokemon: PokemonState, pokemon_info: Any, just_mega_evod: bool):
+        if just_mega_evod:
+            pokemon.ability = pokemon_info["baseAbility"]
         if pokemon.ability != pokemon_info["baseAbility"]:
             raise RuntimeError(
                 f"Mismatch of request and records. Recorded {pokemon.name} to have ability = {pokemon.ability}, but "
@@ -264,6 +259,20 @@ class TeamState:
                 f"Mismatch of request and records. Recorded {pokemon.name} to have item = {pokemon.item}, but it "
                 f"has item = {pokemon_info['item'] or None}."
             )
+
+    @staticmethod
+    def __check_moves_consistency(pokemon: PokemonState, active_info: Any, just_zmoved: bool, just_unmaxed: bool):
+        if len(pokemon.moves) > 4:
+            raise RuntimeError(f"Pokemon cannot have more than 4 moves: {[move.name for move in pokemon.moves]}.")
+        elif len(pokemon.alt_moves) > 4:
+            raise RuntimeError(
+                f"Pokemon cannot have more than 4 alt_moves: {[move.name for move in pokemon.alt_moves]}."
+            )
+        for move_info in active_info[0]["moves"]:
+            move = TeamState.__get_matching_move(pokemon, move_info)
+            if pokemon.maxed or just_zmoved or just_unmaxed or pokemon.gen <= 3:
+                move.pp = move_info["pp"]
+            TeamState.__check_move_consistency(move, move_info)
 
     @staticmethod
     def __check_move_consistency(move: MoveState, move_info: Any):

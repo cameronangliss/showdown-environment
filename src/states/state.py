@@ -22,32 +22,22 @@ class State:
         self.__opponent_state = TeamState(enemy_ident, self.__gen, protocol)
 
     ###################################################################################################################
-    # JSON conversion methods
-
-    def to_json(self) -> str:
-        json_str = json.dumps(
-            {"team_state": State.__to_dict(self.__team_state), "enemy_state": State.__to_dict(self.__opponent_state)},
-            separators=(",", ":"),
-        )
-        return json_str
-
-    @staticmethod
-    def __to_dict(instance: Any) -> Any:
-        if isinstance(instance, list):
-            list_instance: list[Any] = instance
-            return [State.__to_dict(item) for item in list_instance]
-        elif hasattr(instance, "__dict__"):
-            return {key: State.__to_dict(value) for key, value in instance.__dict__.items()}
-        else:
-            return instance
-
-    ###################################################################################################################
     # Getter methods
 
     def __get_gen(self) -> int:
         i = self.protocol.index("gen")
         gen = int(self.protocol[i + 1].strip())
         return gen
+
+    def get_json_str(self) -> str:
+        json_str = json.dumps(
+            {
+                "team_state": json.loads(self.__team_state.get_json_str()),
+                "opponent_state": json.loads(self.__opponent_state.get_json_str()),
+            },
+            separators=(",", ":"),
+        )
+        return json_str
 
     def get_valid_action_ids(self) -> list[int]:
         valid_switch_ids = [

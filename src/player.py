@@ -147,7 +147,7 @@ class Player:
             state.update(protocol, request)
         else:
             state = State(protocol, request)
-        self._logger.info(state.to_json())
+        self._logger.info(state.get_json_str())
         return state
 
     async def choose(self, action: int | None, rqid: int):
