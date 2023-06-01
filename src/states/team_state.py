@@ -51,8 +51,10 @@ class TeamState:
 
     def process(self) -> list[float]:
         pokemon_feature_lists = [pokemon.process() for pokemon in self.__team]
-        pokemon_feature_lists.extend([[0.0] * 299] * (6 - len(pokemon_feature_lists)))
-        features = reduce(lambda features1, features2: features1 + features2, pokemon_feature_lists)
+        pokemon_feature_lists.extend([[0.0] * 123] * (6 - len(pokemon_feature_lists)))
+        pokemon_features = reduce(lambda features1, features2: features1 + features2, pokemon_feature_lists)
+        special_used_features = [float(self.mega_used), float(self.zmove_used), float(self.max_used)]
+        features = pokemon_features + special_used_features
         return features
 
     ###################################################################################################################

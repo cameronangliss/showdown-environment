@@ -58,7 +58,7 @@ class PokemonState:
             item is not None
             and "megaEvolves" in itemdex[f"gen{gen}"][item]
             and itemdex[f"gen{gen}"][item]["megaEvolves"] == name
-        )
+        ) or (name == "Rayquaza" and "dragonascent" in pokemon_json["moves"] and gen in [6, 7])
         return cls(
             name=name,
             identifier=identifier,
@@ -78,7 +78,7 @@ class PokemonState:
             from_opponent=False,
             can_mega=can_mega,
             can_zmove=item is not None and "zMove" in itemdex[f"gen{gen}"][item],
-            can_max=gen == 8,
+            can_max=gen == 8 and name not in ["Eternatus", "Zacian", "Zamazenta"],
         )
 
     @classmethod
@@ -123,7 +123,11 @@ class PokemonState:
 
     @staticmethod
     def __parse_details(details: str) -> tuple[int, str | None]:
+        # split_details format: "<alias>, <maybe level>, <maybe gender>, <maybe shiny>"
+        # examples: "Castform, M, shiny", "Moltres, L84", "Raichu, L88, M"
         split_details = details.split(", ")
+        if split_details[-1] == "shiny":
+            split_details = split_details[:-1]
         if len(split_details) == 1:
             level = 100
             gender = None
@@ -175,8 +179,10 @@ class PokemonState:
     def get_moves(self) -> list[MoveState]:
         if self.transformed:
             return self.alt_moves
+        elif "Mimic" in [move.name for move in self.moves] and len(self.alt_moves) == 1:
+            return [move if move.name != "Mimic" else self.alt_moves[0] for move in self.moves]
         else:
-            return self.moves + self.alt_moves
+            return self.moves
 
     def __get_last_used(self) -> MoveState | None:
         moves = [move for move in self.get_moves() if move.just_used]
@@ -225,15 +231,10 @@ class PokemonState:
         status_conditions = ["psn", "tox", "par", "slp", "brn", "frz", "fnt"]
         status_features = [float(self.status == status_condition) for status_condition in status_conditions]
         stats = [stat / 255 if self.from_opponent else stat / 1000 for stat in self.stats.values()]
-        move_feature_lists = [move.process() for move in self.moves]
-        move_feature_lists.extend([[0.0] * 22] * (8 - len(move_feature_lists)))
+        move_feature_lists = [move.process() for move in self.get_moves()]
+        move_feature_lists.extend([[0.0] * 22] * (4 - len(move_feature_lists)))
         move_features = reduce(lambda features1, features2: features1 + features2, move_feature_lists)
-        alt_move_feature_lists = [move.process() for move in self.alt_moves]
-        alt_move_feature_lists.extend([[0.0] * 22] * (4 - len(alt_move_feature_lists)))
-        alt_move_features = reduce(lambda features1, features2: features1 + features2, alt_move_feature_lists)
-        features = (
-            gender_features + hp_features + status_features + stats + type_features + move_features + alt_move_features
-        )
+        features = gender_features + hp_features + status_features + stats + type_features + move_features
         return features
 
     ###################################################################################################################
@@ -257,7 +258,7 @@ class PokemonState:
             move.disable_disabled = False
             move.encore_disabled = False
             move.taunt_disabled = False
-            move.item_disabled = False
+            move.update_item_disabled(self.get_item(), None)
             move.self_disabled = False
         self.alt_moves = []
         self.alt_ability = None
