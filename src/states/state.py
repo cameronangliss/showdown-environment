@@ -72,7 +72,10 @@ class State:
                     else []
                 )
                 valid_max_ids = [i + 12 for i in valid_move_ids] if "canDynamax" in self.request["active"][0] else []
-                valid_special_ids = valid_mega_ids + valid_zmove_ids + valid_max_ids
+                valid_tera_ids = (
+                    [i + 16 for i in valid_move_ids] if "canTerastallize" in self.request["active"][0] else []
+                )
+                valid_special_ids = valid_mega_ids + valid_zmove_ids + valid_max_ids + valid_tera_ids
             else:
                 valid_special_ids = []
             if "trapped" in self.request["active"][0] or "maybeTrapped" in self.request["active"][0]:

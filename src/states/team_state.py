@@ -14,6 +14,7 @@ class TeamState:
     mega_used: bool = False
     zmove_used: bool = False
     max_used: bool = False
+    tera_used: bool = False
 
     def __init__(self, ident: str, gen: int, protocol: list[str], request: Any | None = None):
         self.__ident = ident
@@ -53,7 +54,12 @@ class TeamState:
         pokemon_feature_lists = [pokemon.process() for pokemon in self.__team]
         pokemon_feature_lists.extend([[0.0] * 123] * (6 - len(pokemon_feature_lists)))
         pokemon_features = reduce(lambda features1, features2: features1 + features2, pokemon_feature_lists)
-        special_used_features = [float(self.mega_used), float(self.zmove_used), float(self.max_used)]
+        special_used_features = [
+            float(self.mega_used),
+            float(self.zmove_used),
+            float(self.max_used),
+            float(self.tera_used),
+        ]
         features = pokemon_features + special_used_features
         return features
 
@@ -133,6 +139,8 @@ class TeamState:
                         self.mega_used = True
                     case "-zpower":
                         self.zmove_used = True
+                    case "-terastallize":
+                        self.tera_used = True
                     case "-transform":
                         active_pokemon.transformed = True
                     case "-start":
@@ -173,7 +181,7 @@ class TeamState:
                     case _:
                         pass
             if active_pokemon:
-                active_pokemon.update_special_options(self.mega_used, self.zmove_used, self.max_used)
+                active_pokemon.update_special_options(self.mega_used, self.zmove_used, self.max_used, self.tera_used)
 
     def __switch(self, pokemon: str, details: str, hp: int, status: str | None):
         # switch out active pokemon (if there is an active pokemon)
@@ -319,4 +327,9 @@ class TeamState:
             raise RuntimeError(
                 f"Mismatch of request and records. Recorded pokemon {pokemon.name} to have can_max = "
                 f"{pokemon.can_max}, but it has can_max = {'canDynamax' in active_info[0]}."
+            )
+        elif pokemon.can_tera != ("canTerastallize" in active_info[0]):
+            raise RuntimeError(
+                f"Mismatch of request and records. Recorded pokemon {pokemon.name} to have can_tera = "
+                f"{pokemon.can_tera}, but it has can_tera = {'canTerastallize' in active_info[0]}."
             )

@@ -36,6 +36,7 @@ class PokemonState:
     can_mega: bool = False
     can_zmove: bool = False
     can_max: bool = False
+    can_tera: bool = False
     maxed: bool = False
 
     ###################################################################################################################
@@ -79,6 +80,7 @@ class PokemonState:
             can_mega=can_mega,
             can_zmove=item is not None and "zMove" in itemdex[f"gen{gen}"][item],
             can_max=gen == 8 and name not in ["Eternatus", "Zacian", "Zamazenta"],
+            can_tera=gen == 9,
         )
 
     @classmethod
@@ -209,13 +211,15 @@ class PokemonState:
         move_last_used = [move for move in self.get_moves() if move.name == name][0]
         move_last_used.just_used = True
 
-    def update_special_options(self, mega_used: bool, zmove_used: bool, max_used: bool):
+    def update_special_options(self, mega_used: bool, zmove_used: bool, max_used: bool, tera_used: bool):
         if mega_used:
             self.can_mega = False
         if zmove_used:
             self.can_zmove = False
         if max_used:
             self.can_max = False
+        if tera_used:
+            self.can_tera = False
 
     ###################################################################################################################
     # Processes PokemonState object into a feature vector to be fed into the model's input layer

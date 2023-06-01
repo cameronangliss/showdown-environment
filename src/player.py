@@ -41,6 +41,7 @@ class Player:
         + [f"move {i} mega" for i in range(1, 5)]
         + [f"move {i} zmove" for i in range(1, 5)]
         + [f"move {i} max" for i in range(1, 5)]
+        + [f"move {i} terastallize" for i in range(1, 5)]
     )
 
     ###################################################################################################################
