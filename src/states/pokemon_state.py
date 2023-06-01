@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from functools import reduce
 from typing import Any
 
-from dex import itemdex, movedex, pokedex, typedex
+from dex import abilitydex, itemdex, movedex, pokedex, typedex
 from states.move_state import MoveState
 
 
@@ -35,6 +35,7 @@ class PokemonState:
     illusion: bool = False
     can_mega: bool = False
     can_zmove: bool = False
+    can_burst: bool = False
     can_max: bool = False
     can_tera: bool = False
     maxed: bool = False
@@ -60,6 +61,7 @@ class PokemonState:
             and "megaEvolves" in itemdex[f"gen{gen}"][item]
             and itemdex[f"gen{gen}"][item]["megaEvolves"] == name
         ) or (name == "Rayquaza" and "dragonascent" in pokemon_json["moves"] and gen in [6, 7])
+        can_burst = name == "Necrozma" and item is not None and item == "ultranecroziumz"
         return cls(
             name=name,
             identifier=identifier,
@@ -78,7 +80,8 @@ class PokemonState:
             item=item,
             from_opponent=False,
             can_mega=can_mega,
-            can_zmove=item is not None and "zMove" in itemdex[f"gen{gen}"][item],
+            can_zmove=not can_burst and item is not None and "zMove" in itemdex[f"gen{gen}"][item],
+            can_burst=can_burst,
             can_max=gen == 8 and name not in ["Eternatus", "Zacian", "Zamazenta"],
             can_tera=gen == 9,
         )
@@ -128,6 +131,8 @@ class PokemonState:
         # split_details format: "<alias>, <maybe level>, <maybe gender>, <maybe shiny>"
         # examples: "Castform, M, shiny", "Moltres, L84", "Raichu, L88, M"
         split_details = details.split(", ")
+        if "tera:" in split_details[-1]:
+            split_details = split_details[:-1]
         if split_details[-1] == "shiny":
             split_details = split_details[:-1]
         if len(split_details) == 1:
@@ -170,7 +175,7 @@ class PokemonState:
                 "active": self.active,
                 "stats": self.stats,
                 "moves": [json.loads(move.get_json_str()) for move in self.get_moves()],
-                "ability": self.__get_ability(),
+                "ability": self.get_ability(),
                 "item": self.item,
             }
         )
@@ -195,7 +200,7 @@ class PokemonState:
         else:
             raise RuntimeError(f"Pokemon {self.name} cannot have move just used = {[move.name for move in moves]}")
 
-    def __get_ability(self) -> str | list[str]:
+    def get_ability(self) -> str | list[str]:
         return self.alt_ability or self.ability
 
     def get_item(self) -> str | None:
@@ -211,11 +216,15 @@ class PokemonState:
         move_last_used = [move for move in self.get_moves() if move.name == name][0]
         move_last_used.just_used = True
 
-    def update_special_options(self, mega_used: bool, zmove_used: bool, max_used: bool, tera_used: bool):
+    def update_special_options(
+        self, mega_used: bool, zmove_used: bool, burst_used: bool, max_used: bool, tera_used: bool
+    ):
         if mega_used:
             self.can_mega = False
         if zmove_used:
             self.can_zmove = False
+        if burst_used:
+            self.can_burst = False
         if max_used:
             self.can_max = False
         if tera_used:
@@ -255,7 +264,7 @@ class PokemonState:
                 move.update_item_disabled(None, self.get_item())
 
     def switch_out(self):
-        if self.__get_ability() == "regenerator" and self.status != "fnt":
+        if self.get_ability() == "regenerator" and self.status != "fnt":
             self.hp = min(int(self.hp + self.max_hp / 3), self.max_hp)
         self.active = False
         for move in self.moves:
@@ -268,7 +277,6 @@ class PokemonState:
         self.alt_ability = None
         self.preparing = False
         self.transformed = False
-        self.trapped = False
 
     def use_move(self, name: str, info: list[str], pressure: bool):
         full_name = self.__get_full_move_name(name)
@@ -312,9 +320,13 @@ class PokemonState:
     def update_condition(self, hp: int, status: str | None):
         self.hp = hp
         self.status = status
+        if hp == 0 and status == "fnt":
+            self.alt_ability = None
 
     def update_ability(self, new_ability: str):
-        self.alt_ability = PokemonState.__get_ability_identifier(new_ability)
+        ability_info = abilitydex[f"gen{self.gen}"][self.get_ability()]
+        if not ("isPermanent" in ability_info and ability_info["isPermanent"]):
+            self.alt_ability = PokemonState.__get_ability_identifier(new_ability)
 
     def update_item(self, new_item: str, info: list[str]):
         if not (info and info[0] == "[from] ability: Frisk"):
@@ -334,6 +346,20 @@ class PokemonState:
                 self.item_off = True
             else:
                 self.item = None
+
+    def primal_reversion(self):
+        if self.name == "Groudon":
+            self.ability = "desolateland"
+        elif self.name == "Kyogre":
+            self.ability = "primordialsea"
+        else:
+            raise RuntimeError(f"Pokemon {self.name} cannot achieve primal reversion.")
+
+    def mega_evolve(self):
+        mega_pokemon_identifier = PokemonState.__get_identifier(itemdex[f"gen{self.gen}"][self.item]["megaStone"])
+        mega_ability = pokedex[f"gen{self.gen}"][mega_pokemon_identifier]["abilities"]["0"]
+        self.ability = self.__get_ability_identifier(mega_ability)
+        self.alt_ability = None
 
     def start(self, info: list[str]):
         match info[0]:

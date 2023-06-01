@@ -69,6 +69,10 @@ class State:
                 valid_zmove_ids = (
                     [i + 6 + 8 for i, move in enumerate(self.request["active"][0]["canZMove"]) if move is not None]
                     if "canZMove" in self.request["active"][0]
+                    else [
+                        i + 6 + 8 for i, move in self.request["active"][0]["moves"] if move["move"] == "Photon Geyser"
+                    ]
+                    if "canUltraBurst" in self.request["active"][0]
                     else []
                 )
                 valid_max_ids = [i + 12 for i in valid_move_ids] if "canDynamax" in self.request["active"][0] else []
