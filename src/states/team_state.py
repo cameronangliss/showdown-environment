@@ -34,9 +34,6 @@ class TeamState:
     ###################################################################################################################
     # Getter methods
 
-    def __get_names(self) -> list[str]:
-        return [pokemon.name for pokemon in self.__team]
-
     def get_active(self) -> PokemonState | None:
         actives = [mon for mon in self.__team if mon.active]
         if len(actives) == 0:
@@ -82,7 +79,11 @@ class TeamState:
         for line in protocol_lines:
             split_line = line.split("|")
             active_pokemon = self.get_active()
-            if active_pokemon is not None and len(split_line) > 2 and split_line[2][:2] == self.__ident:
+            if active_pokemon is None:
+                if len(split_line) > 2 and split_line[1] == "switch" and split_line[2][:2] == self.__ident:
+                    hp, status = PokemonState.parse_condition(split_line[4])
+                    self.__switch(split_line[2][5:], split_line[3], hp, status)
+            elif len(split_line) > 2 and split_line[2][:2] == self.__ident:
                 match split_line[1]:
                     case "move":
                         if active_pokemon.preparing:
@@ -135,7 +136,7 @@ class TeamState:
                             active_pokemon.preparing = True
                     case "-mega":
                         self.mega_used = True
-                        active_pokemon.mega_evolve()
+                        active_pokemon.mega_evolve(split_line[4])
                     case "-primal":
                         active_pokemon.primal_reversion()
                     case "-zpower":
@@ -161,7 +162,7 @@ class TeamState:
                         active_pokemon.end(split_line[3:])
                     case _:
                         pass
-            elif active_pokemon is not None and len(split_line) > 2 and split_line[2][:2] != self.__ident:
+            elif len(split_line) > 2 and split_line[2][:2] != self.__ident:
                 match split_line[1]:
                     case "switch":
                         if self.__pressure:
@@ -176,40 +177,40 @@ class TeamState:
                         if split_line[3] == "Pressure":
                             self.__pressure = True
                     case "-item":
-                        if len(split_line) > 4 and split_line[4] == "[from] move: Thief":
+                        if len(split_line) > 4 and split_line[4] in ["[from] move: Thief", "[from] ability: Magician"]:
                             active_pokemon.end_item(split_line[3], split_line[4:])
                     case "-activate":
                         if len(split_line) > 3 and split_line[3] == "ability: Mummy":
                             active_pokemon.alt_ability = "mummy"
                     case _:
                         pass
-            if active_pokemon:
+            if active_pokemon is not None:
                 active_pokemon.update_special_options(
                     self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
                 )
 
-    def __switch(self, pokemon: str, details: str, hp: int, status: str | None):
+    def __switch(self, pokemon_switching_in_name: str, details: str, hp: int, status: str | None):
         # switch out active pokemon (if there is an active pokemon)
         active_pokemon = self.get_active()
-        if active_pokemon:
+        if active_pokemon is not None:
             active_pokemon.switch_out()
         # switch in desired pokemon
-        if pokemon in self.__get_names():
-            i = self.__get_names().index(pokemon)
-            self.__team[i].switch_in(hp, status)
+        if pokemon_switching_in_name in [pokemon.name for pokemon in self.__team]:
+            pokemon_switching_in = [pokemon for pokemon in self.__team if pokemon.name == pokemon_switching_in_name][0]
+            pokemon_switching_in.switch_in(hp, status)
         else:
-            new_pokemon = PokemonState.from_protocol(pokemon, details, self.__gen, self.__ident)
+            new_pokemon = PokemonState.from_protocol(pokemon_switching_in_name, details, self.__gen, self.__ident)
             new_pokemon.switch_in(hp, status)
             self.__team.append(new_pokemon)
 
     def __replace(self, pokemon: str, details: str):
         active_pokemon = self.get_active()
-        if active_pokemon and not active_pokemon.illusion:
-            actual_pokemon = PokemonState.from_protocol(pokemon, details, self.__gen, self.__ident)
-            actual_pokemon.switch_in(active_pokemon.hp, active_pokemon.status)
-            active_pokemon = actual_pokemon
-        elif active_pokemon and active_pokemon.illusion:
-            pass
+        if active_pokemon is not None:
+            # If the player didn't know about the illusion before it was revealed, corrections need to be made.
+            if not active_pokemon.illusion:
+                actual_pokemon = PokemonState.from_protocol(pokemon, details, self.__gen, self.__ident)
+                actual_pokemon.switch_in(active_pokemon.hp, active_pokemon.status)
+                active_pokemon = actual_pokemon
         else:
             raise RuntimeError("Cannot replace pokemon if there are no active pokemon.")
 
@@ -221,8 +222,7 @@ class TeamState:
             # Providing new move info to a newly-transformed pokemon.
             if pokemon.transformed and not pokemon.alt_moves and "active" in request:
                 pokemon.alt_moves = [
-                    MoveState.from_request(move_json, self.__gen, pokemon.item)
-                    for move_json in request["active"][0]["moves"]
+                    MoveState.from_request(move_json, self.__gen) for move_json in request["active"][0]["moves"]
                 ]
                 pokemon.alt_ability = (
                     pokemon_info["ability"] if "ability" in pokemon_info else pokemon_info["baseAbility"]

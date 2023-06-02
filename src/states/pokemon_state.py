@@ -25,7 +25,7 @@ class PokemonState:
     stats: dict[str, int]
     moves: list[MoveState]
     alt_moves: list[MoveState]
-    ability: str | list[str]
+    ability: str | None
     item: str | None
     from_opponent: bool
     alt_ability: str | None = None
@@ -107,7 +107,7 @@ class PokemonState:
             stats=stats,
             moves=[],
             alt_moves=[],
-            ability=ability_identifiers[0] if len(ability_identifiers) == 1 else ability_identifiers,
+            ability=ability_identifiers[0] if len(ability_identifiers) == 1 else None,
             item=None,
             from_opponent=True,
         )
@@ -116,11 +116,15 @@ class PokemonState:
     # Parsing/String Manipulation
 
     def __get_full_move_name(self, part_name: str):
-        return (
-            part_name
-            if part_name != "Hidden Power"
-            else [move.name for move in self.get_moves() if move.name[:12] == "Hidden Power"][0]
-        )
+        if part_name == "Hidden Power":
+            if self.from_opponent:
+                return "Hidden Power"
+            else:
+                return [move.name for move in self.get_moves() if move.name[:12] == "Hidden Power"][0]
+        elif part_name[:2] == "Z-":
+            return part_name[2:]
+        else:
+            return part_name
 
     @staticmethod
     def __get_identifier(name: str) -> str:
@@ -200,7 +204,7 @@ class PokemonState:
         else:
             raise RuntimeError(f"Pokemon {self.name} cannot have move just used = {[move.name for move in moves]}")
 
-    def get_ability(self) -> str | list[str]:
+    def get_ability(self) -> str | None:
         return self.alt_ability or self.ability
 
     def get_item(self) -> str | None:
@@ -264,7 +268,8 @@ class PokemonState:
                 move.update_item_disabled(None, self.get_item())
 
     def switch_out(self):
-        if self.get_ability() == "regenerator" and self.status != "fnt":
+        current_ability = self.get_ability()
+        if current_ability is not None and current_ability == "regenerator" and self.status != "fnt":
             self.hp = min(int(self.hp + self.max_hp / 3), self.max_hp)
         self.active = False
         for move in self.moves:
@@ -286,8 +291,8 @@ class PokemonState:
         #     "[from]move: Sleep Talk": indicates that another move is being used due to Sleep Talk
         if (info and info[0][:6] == "[from]" and full_name not in info[0][6:]) or full_name == "Struggle":
             pass
-        elif full_name in [move.name for move in self.get_moves()] + [f"Z-{move.name}" for move in self.get_moves()]:
-            move = [move for move in self.get_moves() if full_name in [move.name, f"Z-{move.name}"]][0]
+        elif full_name in [move.name for move in self.get_moves()]:
+            move = [move for move in self.get_moves() if full_name == move.name][0]
             pp_cost = self.__get_pp_cost(move, pressure)
             move.pp = max(0, move.pp - pp_cost)
             self.__update_last_used(move.name)
@@ -295,6 +300,10 @@ class PokemonState:
                 self_move.update_item_disabled(self.get_item(), self.get_item())
                 if self_move.name == "Gigaton Hammer":
                     self_move.self_disabled = move.name == "Gigaton Hammer"
+        elif movedex[f"gen{self.gen}"][MoveState.get_identifier(full_name)]["isZ"]:
+            pass
+        elif full_name.split()[0] in ["Max", "G-Max"]:
+            pass
         elif self.from_opponent:
             types = [t.lower() for t in pokedex[f"gen{self.gen}"][self.identifier]["types"]]
             new_move = MoveState.from_name(full_name, self.gen, "ghost" in types)
@@ -310,12 +319,9 @@ class PokemonState:
                 if self_move.name == "Gigaton Hammer":
                     self_move.self_disabled = new_move.name == "Gigaton Hammer"
         else:
-            if "isZ" not in movedex[f"gen{self.gen}"][MoveState.get_identifier(full_name)] and full_name.split()[
-                0
-            ] not in ["Max", "G-Max"]:
-                raise RuntimeError(
-                    f"Chosen move {full_name} is not in pokemon {self.name}'s moveset: {[move.name for move in self.get_moves()]}."
-                )
+            raise RuntimeError(
+                f"Chosen move {full_name} is not in pokemon {self.name}'s moveset: {[move.name for move in self.get_moves()]}."
+            )
 
     def update_condition(self, hp: int, status: str | None):
         self.hp = hp
@@ -324,9 +330,12 @@ class PokemonState:
             self.alt_ability = None
 
     def update_ability(self, new_ability: str):
-        ability_info = abilitydex[f"gen{self.gen}"][self.get_ability()]
-        if not ("isPermanent" in ability_info and ability_info["isPermanent"]):
+        if self.get_ability() is None:
             self.alt_ability = PokemonState.__get_ability_identifier(new_ability)
+        else:
+            ability_info = abilitydex[f"gen{self.gen}"][self.get_ability()]
+            if not ("isPermanent" in ability_info and ability_info["isPermanent"]):
+                self.alt_ability = PokemonState.__get_ability_identifier(new_ability)
 
     def update_item(self, new_item: str, info: list[str]):
         if not (info and info[0] == "[from] ability: Frisk"):
@@ -355,14 +364,18 @@ class PokemonState:
         else:
             raise RuntimeError(f"Pokemon {self.name} cannot achieve primal reversion.")
 
-    def mega_evolve(self):
-        mega_pokemon_identifier = PokemonState.__get_identifier(itemdex[f"gen{self.gen}"][self.item]["megaStone"])
+    def mega_evolve(self, mega_stone: str):
+        mega_stone_identifier = PokemonState.__get_item_identifier(mega_stone)
+        mega_pokemon_identifier = PokemonState.__get_identifier(
+            itemdex[f"gen{self.gen}"][mega_stone_identifier]["megaStone"]
+        )
         mega_ability = pokedex[f"gen{self.gen}"][mega_pokemon_identifier]["abilities"]["0"]
         self.ability = self.__get_ability_identifier(mega_ability)
         self.alt_ability = None
 
     def start(self, info: list[str]):
-        match info[0]:
+        cause = info[0][6:] if info[0][:6] in ["move: ", "item: "] else info[0]
+        match cause:
             case "Disable":
                 move = [move for move in self.get_moves() if move.name == self.__get_full_move_name(info[1])][0]
                 move.disable_disabled = True
@@ -380,15 +393,17 @@ class PokemonState:
                 else:
                     mimic_move.self_disabled = True
                     self.alt_moves.append(new_move)
-            case "move: Taunt":
+            case "Taunt":
                 for move in self.get_moves():
                     if movedex[f"gen{self.gen}"][move.identifier]["category"] == "Status":
                         move.taunt_disabled = True
-            case "item: Leppa Berry":
+            case "Leppa Berry":
                 move = [move for move in self.get_moves() if move.name == info[1]][0]
                 move.pp = min(move.maxpp, 10)
             case "Dynamax":
                 self.maxed = True
+                for move in self.get_moves():
+                    move.update_item_disabled(self.get_item(), self.get_item(), maxed=True)
             case _:
                 pass
 
@@ -404,6 +419,8 @@ class PokemonState:
                 move.taunt_disabled = False
         elif info[0] == "Dynamax":
             self.maxed = False
+            for move in self.get_moves():
+                move.update_item_disabled(self.get_item(), self.get_item())
 
     ###################################################################################################################
     # Helper methods

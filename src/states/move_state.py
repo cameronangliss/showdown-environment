@@ -27,7 +27,7 @@ class MoveState:
     # Constructors
 
     @classmethod
-    def from_request(cls, move_json: Any, gen: int, pokemon_item: str | None) -> MoveState:
+    def from_request(cls, move_json: Any, gen: int) -> MoveState:
         return cls(
             name=move_json["move"],
             identifier=MoveState.get_identifier(move_json["move"]),
@@ -68,14 +68,14 @@ class MoveState:
     def get_identifier(name: str) -> str:
         return re.sub(r"([\s\-\']+)|(\d+$)", "", name).lower()
 
-    def is_disabled(self) -> bool:
+    def is_disabled(self, maxed: bool = False) -> bool:
         return (
             self.pp == 0
-            or self.disable_disabled
-            or self.encore_disabled
-            or self.taunt_disabled
+            or (self.disable_disabled and not maxed)
+            or (self.encore_disabled and not maxed)
+            or (self.taunt_disabled and not maxed)
             or self.item_disabled
-            or self.self_disabled
+            or (self.self_disabled and not maxed)
         )
 
     def get_category(self) -> str:
@@ -96,7 +96,7 @@ class MoveState:
     ###################################################################################################################
     # Setter methods
 
-    def update_item_disabled(self, old_item: str | None, new_item: str | None):
+    def update_item_disabled(self, old_item: str | None, new_item: str | None, maxed: bool = False):
         # adding item
         if old_item is None and new_item is not None:
             if new_item == "assaultvest" and self.get_category() == "Status":
@@ -108,9 +108,8 @@ class MoveState:
             self.item_disabled = self.name == "Stuff Cheeks"
         # keep item
         elif old_item == new_item:
-            item = old_item
-            if item in ["choiceband", "choicescarf", "choicespecs"]:
-                self.item_disabled = not self.just_used
+            if old_item in ["choiceband", "choicescarf", "choicespecs"]:
+                self.item_disabled = not (maxed or self.just_used)
         else:
             raise RuntimeError(
                 f"Must either add, remove, or keep current item. None are the case with old_item = {old_item} and "
