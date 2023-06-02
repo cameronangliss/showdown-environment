@@ -136,7 +136,7 @@ class TeamState:
                             active_pokemon.preparing = True
                     case "-mega":
                         self.mega_used = True
-                        active_pokemon.mega_evolve(split_line[4])
+                        active_pokemon.mega_evolve(split_line[4] or None)
                     case "-primal":
                         active_pokemon.primal_reversion()
                     case "-zpower":

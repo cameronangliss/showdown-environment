@@ -364,11 +364,14 @@ class PokemonState:
         else:
             raise RuntimeError(f"Pokemon {self.name} cannot achieve primal reversion.")
 
-    def mega_evolve(self, mega_stone: str):
-        mega_stone_identifier = PokemonState.__get_item_identifier(mega_stone)
-        mega_pokemon_identifier = PokemonState.__get_identifier(
-            itemdex[f"gen{self.gen}"][mega_stone_identifier]["megaStone"]
-        )
+    def mega_evolve(self, mega_stone: str | None):
+        if mega_stone is None:
+            mega_pokemon_identifier = "rayquazamega"
+        else:
+            mega_stone_identifier = PokemonState.__get_item_identifier(mega_stone)
+            mega_pokemon_identifier = PokemonState.__get_identifier(
+                itemdex[f"gen{self.gen}"][mega_stone_identifier]["megaStone"]
+            )
         mega_ability = pokedex[f"gen{self.gen}"][mega_pokemon_identifier]["abilities"]["0"]
         self.ability = self.__get_ability_identifier(mega_ability)
         self.alt_ability = None
