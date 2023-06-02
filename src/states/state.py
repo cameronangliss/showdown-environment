@@ -16,10 +16,10 @@ class State:
     def __init__(self, protocol: list[str], request: Any):
         self.protocol = protocol
         self.request = request
-        ident, enemy_ident = ("p1", "p2") if request["side"]["id"] == "p1" else ("p2", "p1")
+        ident, opponent_ident = ("p1", "p2") if request["side"]["id"] == "p1" else ("p2", "p1")
         self.__gen = self.__get_gen()
         self.__team_state = TeamState(ident, self.__gen, protocol, request)
-        self.__opponent_state = TeamState(enemy_ident, self.__gen, protocol)
+        self.__opponent_state = TeamState(opponent_ident, self.__gen, protocol)
 
     ###################################################################################################################
     # Getter methods
@@ -32,8 +32,8 @@ class State:
     def get_json_str(self) -> str:
         json_str = json.dumps(
             {
-                "team_state": json.loads(self.__team_state.get_json_str()),
-                "opponent_state": json.loads(self.__opponent_state.get_json_str()),
+                "##### team_state #####": json.loads(self.__team_state.get_json_str()),
+                "##### opponent_state #####": json.loads(self.__opponent_state.get_json_str()),
             },
             separators=(",", ":"),
         )
@@ -93,9 +93,9 @@ class State:
 
     def process(self) -> list[float]:
         team_features = self.__team_state.process()
-        enemy_features = self.__opponent_state.process()
+        opponent_features = self.__opponent_state.process()
         global_features = self.__process_globals()
-        features = team_features + enemy_features + global_features
+        features = team_features + opponent_features + global_features
         return features
 
     def __process_globals(self) -> list[float]:
