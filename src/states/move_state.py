@@ -78,7 +78,7 @@ class MoveState:
             or (self.self_disabled and not maxed)
         )
 
-    def get_category(self) -> str:
+    def __get_category(self) -> str:
         return movedex[f"gen{self.gen}"][self.identifier]["category"]
 
     def get_json_str(self) -> str:
@@ -96,25 +96,41 @@ class MoveState:
     ###################################################################################################################
     # Setter methods
 
-    def update_item_disabled(self, old_item: str | None, new_item: str | None, maxed: bool = False):
-        # adding item
-        if old_item is None and new_item is not None:
-            if new_item == "assaultvest" and self.get_category() == "Status":
-                self.item_disabled = True
-            elif self.item_disabled and new_item[-5:] == "berry":
-                self.item_disabled = False
-        # removing item
-        elif old_item is not None and new_item is None:
-            self.item_disabled = self.name == "Stuff Cheeks"
-        # keep item
-        elif old_item == new_item:
-            if old_item in ["choiceband", "choicescarf", "choicespecs"]:
-                self.item_disabled = not (maxed or self.just_used)
+    def update_pp(self, pressure: bool):
+        if pressure:
+            if self.__get_category() != "Status" or self.target in ["all", "normal"]:
+                pp_used = 2
+            elif self.name in ["Imprison", "Snatch", "Spikes", "Stealth Rock", "Toxic Spikes"]:
+                if self.gen <= 4:
+                    pp_used = 1
+                else:
+                    pp_used = 2
+            else:
+                pp_used = 1
         else:
-            raise RuntimeError(
-                f"Must either add, remove, or keep current item. None are the case with old_item = {old_item} and "
-                f"new_item = {new_item}."
-            )
+            pp_used = 1
+        self.pp = max(0, self.pp - pp_used)
+
+    def add_item(self, item: str):
+        if item == "assaultvest" and self.__get_category() == "Status":
+            self.item_disabled = True
+        elif self.item_disabled and item[-5:] == "berry":
+            self.item_disabled = False
+
+    def remove_item(self):
+        self.item_disabled = self.name == "Stuff Cheeks"
+
+    def keep_item(self, item: str | None, maxed: bool = False):
+        if item in ["choiceband", "choicescarf", "choicespecs"]:
+            self.item_disabled = not (maxed or self.just_used)
+
+    def swap_item(self, old_item: str, new_item: str, maxed: bool):
+        if new_item not in ["choiceband", "choicescarf", "choicespecs"]:
+            self.remove_item()
+            self.add_item(new_item)
+        elif old_item not in ["choiceband", "choicescarf", "choicespecs"]:
+            self.remove_item()
+            self.item_disabled = not (maxed or self.just_used)
 
     ###################################################################################################################
     # Processes MoveState object into a feature vector to be fed into the model's input layer

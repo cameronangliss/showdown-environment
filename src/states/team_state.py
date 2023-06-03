@@ -188,6 +188,9 @@ class TeamState:
                 active_pokemon.update_special_options(
                     self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
                 )
+        active_pokemon = self.get_active()
+        if active_pokemon is not None:
+            active_pokemon.tricking = False
 
     def __switch(self, pokemon_switching_in_name: str, details: str, hp: int, status: str | None):
         # switch out active pokemon (if there is an active pokemon)

@@ -31,6 +31,7 @@ class PokemonState:
     alt_ability: str | None = None
     item_off: bool = False
     preparing: bool = False
+    tricking: bool = False
     transformed: bool = False
     illusion: bool = False
     can_mega: bool = False
@@ -264,8 +265,10 @@ class PokemonState:
             self.hp = hp
             self.status = status
             self.active = True
-            for move in self.get_moves():
-                move.update_item_disabled(None, self.get_item())
+            item = self.get_item()
+            if item is not None:
+                for move in self.get_moves():
+                    move.add_item(item)
 
     def switch_out(self):
         current_ability = self.get_ability()
@@ -276,11 +279,12 @@ class PokemonState:
             move.disable_disabled = False
             move.encore_disabled = False
             move.taunt_disabled = False
-            move.update_item_disabled(self.get_item(), None)
+            move.remove_item()
             move.self_disabled = False
         self.alt_moves = []
         self.alt_ability = None
         self.preparing = False
+        self.tricking = False
         self.transformed = False
 
     def use_move(self, name: str, info: list[str], pressure: bool):
@@ -293,11 +297,10 @@ class PokemonState:
             pass
         elif full_name in [move.name for move in self.get_moves()]:
             move = [move for move in self.get_moves() if full_name == move.name][0]
-            pp_cost = self.__get_pp_cost(move, pressure)
-            move.pp = max(0, move.pp - pp_cost)
+            move.update_pp(pressure)
             self.__update_last_used(move.name)
             for self_move in self.get_moves():
-                self_move.update_item_disabled(self.get_item(), self.get_item())
+                self_move.keep_item(self.get_item())
                 if self_move.name == "Gigaton Hammer":
                     self_move.self_disabled = move.name == "Gigaton Hammer"
         elif movedex[f"gen{self.gen}"][MoveState.get_identifier(full_name)]["isZ"]:
@@ -307,15 +310,14 @@ class PokemonState:
         elif self.from_opponent:
             types = [t.lower() for t in pokedex[f"gen{self.gen}"][self.identifier]["types"]]
             new_move = MoveState.from_name(full_name, self.gen, "ghost" in types)
-            pp_cost = self.__get_pp_cost(new_move, pressure)
-            new_move.pp = max(0, new_move.pp - pp_cost)
+            new_move.update_pp(pressure)
             if self.transformed:
                 self.alt_moves.append(new_move)
             else:
                 self.moves.append(new_move)
             self.__update_last_used(new_move.name)
             for self_move in self.get_moves():
-                self_move.update_item_disabled(self.get_item(), self.get_item())
+                self_move.keep_item(self.get_item())
                 if self_move.name == "Gigaton Hammer":
                     self_move.self_disabled = new_move.name == "Gigaton Hammer"
         else:
@@ -341,8 +343,13 @@ class PokemonState:
         if not (info and info[0] == "[from] ability: Frisk"):
             new_item_identifier = PokemonState.__get_item_identifier(new_item)
             for move in self.get_moves():
-                move.update_item_disabled(self.get_item(), None)
-                move.update_item_disabled(None, new_item_identifier)
+                if self.tricking:
+                    item = self.get_item()
+                    if item is not None:
+                        move.swap_item(item, new_item_identifier, self.maxed)
+                else:
+                    move.remove_item()
+                    move.add_item(new_item_identifier)
             self.item = new_item_identifier
             self.item_off = False
 
@@ -350,7 +357,7 @@ class PokemonState:
         item_identifier = PokemonState.__get_item_identifier(item)
         if self.get_item() == item_identifier:
             for move in self.get_moves():
-                move.update_item_disabled(self.get_item(), None)
+                move.remove_item()
             if info and info[0] == "[from] move: Knock Off" and self.gen in [3, 4]:
                 self.item_off = True
             else:
@@ -400,13 +407,15 @@ class PokemonState:
                 for move in self.get_moves():
                     if movedex[f"gen{self.gen}"][move.identifier]["category"] == "Status":
                         move.taunt_disabled = True
+            case "Trick":
+                self.tricking = True
             case "Leppa Berry":
                 move = [move for move in self.get_moves() if move.name == info[1]][0]
                 move.pp = min(move.maxpp, 10)
             case "Dynamax":
                 self.maxed = True
                 for move in self.get_moves():
-                    move.update_item_disabled(self.get_item(), self.get_item(), maxed=True)
+                    move.keep_item(self.get_item(), maxed=True)
             case _:
                 pass
 
@@ -423,22 +432,4 @@ class PokemonState:
         elif info[0] == "Dynamax":
             self.maxed = False
             for move in self.get_moves():
-                move.update_item_disabled(self.get_item(), self.get_item())
-
-    ###################################################################################################################
-    # Helper methods
-
-    def __get_pp_cost(self, move: MoveState, pressure: bool) -> int:
-        if pressure:
-            if move.get_category() != "Status" or move.target in ["all", "normal"]:
-                pp_used = 2
-            elif move.name in ["Imprison", "Snatch", "Spikes", "Stealth Rock", "Toxic Spikes"]:
-                if self.gen <= 4:
-                    pp_used = 1
-                else:
-                    pp_used = 2
-            else:
-                pp_used = 1
-        else:
-            pp_used = 1
-        return pp_used
+                move.keep_item(self.get_item())
