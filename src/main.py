@@ -23,9 +23,9 @@ async def main():
         format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s()\n%(message)s\n",
     )
     logger = logging.getLogger()
-    player1 = Player(config["username1"], config["password1"], logger)
-    player2 = Player(config["username2"], config["password2"], logger)
-    env = Env(player1, player2, logger)
+    player = Player(config["username"], config["password"], logger)
+    alt_player = Player(config["alt_username"], config["alt_password"], logger)
+    env = Env(player, alt_player, logger)
 
     # construct model
     alpha = float(config["alpha"])
