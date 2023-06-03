@@ -63,7 +63,6 @@ class Model(nn.Module):
     # Training methods
 
     async def self_play_train(self, env: Env, num_episodes: int):
-        random_formats = [f"gen{n}randombattle" for n in range(1, 10)]
         cynthia_avatars = [
             "cynthia-anime",
             "cynthia-anime2",
@@ -76,9 +75,8 @@ class Model(nn.Module):
         ]
         await env.setup()
         for i in range(num_episodes):
-            format_str = random.choice(random_formats)
             [avatar1, avatar2, *_] = random.sample(cynthia_avatars, k=2)
-            winner = await self.run_episode(env, format_str, avatar1, avatar2)
+            winner = await self.run_episode(env, "gen4randombattle", avatar1, avatar2)
             time = datetime.now().strftime("%H:%M:%S")
             print(f"{time}: {winner} wins game {i + 1}")
         await env.close()
