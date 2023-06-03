@@ -18,6 +18,7 @@ class PokemonState:
     owner: str
     level: int
     gender: str | None
+    types: list[str]
     hp: int
     max_hp: int
     status: str | None
@@ -28,6 +29,8 @@ class PokemonState:
     ability: str | None
     item: str | None
     from_opponent: bool
+    alt_types: list[str] | None = None
+    alt_stats: dict[str, int] | None = None
     alt_ability: str | None = None
     item_off: bool = False
     preparing: bool = False
@@ -49,13 +52,13 @@ class PokemonState:
         name = pokemon_json["ident"][4:]
         identifier = PokemonState.__get_identifier(name)
         level, gender = PokemonState.__parse_details(pokemon_json["details"])
+        types = [t.lower() for t in pokedex[f"gen{gen}"][identifier]["types"]]
         split_condition = pokemon_json["condition"].split()
         split_hp_frac = split_condition[0].split("/")
         hp = int(split_hp_frac[0])
         max_hp = int(split_hp_frac[1]) if pokemon_json["condition"] != "0 fnt" else 100
         status = split_condition[1] if len(split_condition) == 2 else None
-        types = [t.lower() for t in pokedex[f"gen{gen}"][identifier]["types"]]
-        moves = [MoveState.from_name(name, gen, "ghost" in types) for name in pokemon_json["moves"]]
+        moves = [MoveState(name, gen, "ghost" in types) for name in pokemon_json["moves"]]
         item = pokemon_json["item"] if pokemon_json["item"] != "" else None
         can_mega = (
             item is not None
@@ -70,6 +73,7 @@ class PokemonState:
             owner=owner,
             level=level,
             gender=gender,
+            types=types,
             hp=hp,
             max_hp=max_hp,
             status=status,
@@ -91,6 +95,7 @@ class PokemonState:
     def from_protocol(cls, name: str, details: str, gen: int, owner: str) -> PokemonState:
         identifier = PokemonState.__get_identifier(name)
         level, gender = PokemonState.__parse_details(details)
+        types = [t.lower() for t in pokedex[f"gen{gen}"][identifier]["types"]]
         stats = pokedex[f"gen{gen}"][identifier]["baseStats"]
         abilities = pokedex[f"gen{gen}"][identifier]["abilities"].values()
         ability_identifiers = [PokemonState.__get_ability_identifier(ability) for ability in abilities]
@@ -101,6 +106,7 @@ class PokemonState:
             owner=owner,
             level=level,
             gender=gender,
+            types=types,
             hp=100,
             max_hp=100,
             status=None,
@@ -178,7 +184,7 @@ class PokemonState:
                 "id": self.identifier,
                 "condition": f"{self.hp}/{self.max_hp}" + (f" {self.status}" if self.status else ""),
                 "active": self.active,
-                "stats": self.stats,
+                "stats": self.get_stats(),
                 "moves": [json.loads(move.get_json_str()) for move in self.get_moves()],
                 "ability": self.get_ability(),
                 "item": self.item,
@@ -187,6 +193,12 @@ class PokemonState:
 
     ###################################################################################################################
     # Getter methods
+
+    def get_types(self) -> list[str]:
+        return self.types if self.alt_types is None else self.alt_types
+
+    def get_stats(self) -> dict[str, int]:
+        return self.stats if self.alt_stats is None else self.alt_stats
 
     def get_moves(self) -> list[MoveState]:
         if self.transformed:
@@ -243,12 +255,11 @@ class PokemonState:
             float(gender_bool) for gender_bool in [self.gender == "M", self.gender == "F", self.gender == None]
         ]
         all_types = typedex[f"gen{self.gen}"].keys()
-        types = [t.lower() for t in pokedex[f"gen{self.gen}"][self.identifier]["types"]]
-        type_features = [float(t in types) for t in all_types]
+        type_features = [float(t in self.get_types()) for t in all_types]
         hp_features = [self.hp / self.max_hp] if self.from_opponent else [self.hp / self.max_hp, self.max_hp / 1000]
         status_conditions = ["psn", "tox", "par", "slp", "brn", "frz", "fnt"]
         status_features = [float(self.status == status_condition) for status_condition in status_conditions]
-        stats = [stat / 255 if self.from_opponent else stat / 1000 for stat in self.stats.values()]
+        stats = [stat / 255 if self.from_opponent else stat / 1000 for stat in self.get_stats().values()]
         move_feature_lists = [move.process() for move in self.get_moves()]
         move_feature_lists.extend([[0.0] * 22] * (4 - len(move_feature_lists)))
         move_features = reduce(lambda features1, features2: features1 + features2, move_feature_lists)
@@ -285,7 +296,10 @@ class PokemonState:
         self.alt_ability = None
         self.preparing = False
         self.tricking = False
-        self.transformed = False
+        if self.transformed:
+            self.transformed = False
+            self.alt_types = None
+            self.alt_stats = None
 
     def use_move(self, name: str, info: list[str], pressure: bool):
         full_name = self.__get_full_move_name(name)
@@ -308,8 +322,7 @@ class PokemonState:
         elif full_name.split()[0] in ["Max", "G-Max"]:
             pass
         elif self.from_opponent:
-            types = [t.lower() for t in pokedex[f"gen{self.gen}"][self.identifier]["types"]]
-            new_move = MoveState.from_name(full_name, self.gen, "ghost" in types)
+            new_move = MoveState(full_name, self.gen, "ghost" in self.get_types())
             new_move.update_pp(pressure)
             if self.transformed:
                 self.alt_moves.append(new_move)
@@ -363,6 +376,10 @@ class PokemonState:
             else:
                 self.item = None
 
+    def transform(self, name: str):
+        self.transformed = True
+        self.alt_types = [t.lower() for t in pokedex[f"gen{self.gen}"][PokemonState.__get_identifier(name)]["types"]]
+
     def primal_reversion(self):
         if self.name == "Groudon":
             self.ability = "desolateland"
@@ -396,8 +413,7 @@ class PokemonState:
                         move.encore_disabled = True
             case "Mimic":
                 mimic_move = [move for move in self.get_moves() if move.name == "Mimic"][0]
-                types = [t.lower() for t in pokedex[f"gen{self.gen}"][self.identifier]["types"]]
-                new_move = MoveState.from_name(info[1], self.gen, "ghost" in types, from_mimic=True)
+                new_move = MoveState(info[1], self.gen, "ghost" in self.get_types(), from_mimic=True)
                 if self.transformed:
                     mimic_move = new_move
                 else:

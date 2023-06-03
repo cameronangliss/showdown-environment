@@ -146,7 +146,8 @@ class TeamState:
                     case "-terastallize":
                         self.tera_used = True
                     case "-transform":
-                        active_pokemon.transformed = True
+                        copied_pokemon_name = split_line[3][split_line[3].index(" ") + 1 :]
+                        active_pokemon.transform(copied_pokemon_name)
                     case "-start":
                         if len(split_line) > 3 and split_line[3] == "Dynamax":
                             self.max_used = True
@@ -222,11 +223,13 @@ class TeamState:
             pokemon_info = [
                 new_info for new_info in request["side"]["pokemon"] if new_info["ident"][4:] == pokemon.name
             ][0]
-            # Providing new move info to a newly-transformed pokemon.
-            if pokemon.transformed and not pokemon.alt_moves and "active" in request:
+            # Providing new info to a newly-transformed pokemon.
+            if pokemon.transformed and pokemon.alt_stats is None:
                 pokemon.alt_moves = [
-                    MoveState.from_request(move_json, self.__gen) for move_json in request["active"][0]["moves"]
+                    MoveState(move_name, self.__gen, "ghost" in pokemon.get_types())
+                    for move_name in pokemon_info["moves"]
                 ]
+                pokemon.alt_stats = pokemon_info["stats"]
                 pokemon.alt_ability = (
                     pokemon_info["ability"] if "ability" in pokemon_info else pokemon_info["baseAbility"]
                 )
@@ -240,6 +243,7 @@ class TeamState:
             # Conducting harsh consistency checks if illusion pokemon isn't interfering.
             elif pokemon.active == pokemon_info["active"] and not pokemon.illusion:
                 TeamState.__check_condition_consistency(pokemon, pokemon_info)
+                TeamState.__check_stats_consistency(pokemon, pokemon_info)
                 if pokemon.active and "active" in request and "pp" in request["active"][0]["moves"][0]:
                     self.__check_moves_consistency(pokemon, request["active"], just_unmaxed)
                     TeamState.__check_can_special_consistency(pokemon, request["active"])
@@ -261,6 +265,14 @@ class TeamState:
             raise RuntimeError(
                 f"Mismatch of request and records. Recorded {pokemon.name} to have status = {pokemon.status}, but it "
                 f"has status = {status}."
+            )
+
+    @staticmethod
+    def __check_stats_consistency(pokemon: PokemonState, pokemon_info: Any):
+        if pokemon.stats != pokemon_info["stats"]:
+            raise RuntimeError(
+                f"Mismatch of request and records. Recorded pokemon {pokemon.name} to have stats = {pokemon.stats}, "
+                f"but it has stats = {pokemon_info['stats']}."
             )
 
     def __check_moves_consistency(self, pokemon: PokemonState, active_info: Any, just_unmaxed: bool):

@@ -1,14 +1,9 @@
-from __future__ import annotations
-
 import json
 import re
-from dataclasses import dataclass
-from typing import Any
 
 from dex import movedex, typedex
 
 
-@dataclass
 class MoveState:
     name: str
     identifier: str
@@ -23,42 +18,23 @@ class MoveState:
     item_disabled: bool = False
     self_disabled: bool = False
 
-    ###################################################################################################################
-    # Constructors
-
-    @classmethod
-    def from_request(cls, move_json: Any, gen: int) -> MoveState:
-        return cls(
-            name=move_json["move"],
-            identifier=MoveState.get_identifier(move_json["move"]),
-            gen=gen,
-            pp=move_json["pp"],
-            maxpp=move_json["maxpp"],
-            target=move_json["target"],
-        )
-
-    @classmethod
-    def from_name(cls, name: str, gen: int, is_ghost: bool, from_mimic: bool = False) -> MoveState:
-        identifier = MoveState.get_identifier(name)
-        details = movedex[f"gen{gen}"][identifier]
+    def __init__(self, name: str, gen: int, is_ghost: bool, from_mimic: bool = False):
+        self.identifier = MoveState.get_identifier(name)
+        details = movedex[f"gen{gen}"][self.identifier]
+        self.name = details["name"]
+        self.gen = gen
         if from_mimic:
             pp = details["pp"]
         elif gen == 1 or gen == 2:
             pp = min(int(1.6 * details["pp"]), 61) if details["pp"] > 1 else 1
         else:
             pp = int(1.6 * details["pp"]) if details["pp"] > 1 else 1
-        target = (
+        self.pp = pp
+        self.maxpp = pp
+        self.target = (
             details["nonGhostTarget"]
             if "nonGhostTarget" in details and details["nonGhostTarget"] and not is_ghost
             else details["target"]
-        )
-        return cls(
-            name=details["name"],
-            identifier=identifier,
-            gen=gen,
-            pp=pp,
-            maxpp=pp,
-            target=target,
         )
 
     ###################################################################################################################
@@ -141,7 +117,7 @@ class MoveState:
         details = movedex[f"gen{self.gen}"][self.identifier]
         power_feature = details["basePower"] / 250
         accuracy_feature = 1.0 if details["accuracy"] == True else details["accuracy"] / 100
-        types = typedex[f"gen{self.gen}"].keys()
+        all_types = typedex[f"gen{self.gen}"].keys()
         move_type = details["type"].lower()
-        type_features = [float(t == move_type) for t in types]
+        type_features = [float(t == move_type) for t in all_types]
         return [pp_frac_feature, disabled_feature, power_feature, accuracy_feature] + type_features
