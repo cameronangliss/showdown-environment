@@ -73,8 +73,10 @@ class MoveState:
     # Setter methods
 
     def get_pp_used(self, pressure: bool) -> int:
-        if pressure:
-            if self.__get_category() != "Status" or self.target in ["all", "normal"]:
+        if not pressure:
+            pp_used = 1
+        else:
+            if self.__get_category() != "Status" or self.target in ["all", "normal"] or self.name == "Dark Void":
                 pp_used = 2
             elif self.name in ["Imprison", "Snatch", "Spikes", "Stealth Rock", "Toxic Spikes"]:
                 if self.gen <= 4:
@@ -83,8 +85,6 @@ class MoveState:
                     pp_used = 2
             else:
                 pp_used = 1
-        else:
-            pp_used = 1
         return pp_used
 
     def add_item(self, item: str):

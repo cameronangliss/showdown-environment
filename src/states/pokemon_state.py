@@ -309,17 +309,17 @@ class PokemonState:
         #     "[from]move: Sleep Talk": indicates that another move is being used due to Sleep Talk
         if info and info[0] == "[from]move: Sleep Talk":
             sleep_move = [move for move in self.get_moves() if move.name == "Sleep Talk"][0]
-            move_used = [move for move in self.get_moves() if move.name == full_name][0]
-            pp_used = move_used.get_pp_used(pressure)
-            sleep_move.pp = max(sleep_move.pp - pp_used + 1, 0)
+            matching_moves = [move for move in self.get_moves() if move.name == full_name]
+            if len(matching_moves) == 1:
+                move_used = matching_moves[0]
+            else:
+                move_used = MoveState(full_name, self.gen, "ghost" in self.get_types())
+            pp_used = move_used.get_pp_used(pressure) - 1
+            sleep_move.pp = max(sleep_move.pp - pp_used, 0)
             self.__update_last_used(sleep_move.name)
             for self_move in self.get_moves():
                 self_move.keep_item(self.get_item())
-        elif (
-            (info and info[0][:6] == "[from]" and full_name not in info[0][6:])
-            or (full_name == "Sleep Talk" and not info)
-            or full_name == "Struggle"
-        ):
+        elif (info and info[0][:6] == "[from]" and full_name not in info[0][6:]) or full_name == "Struggle":
             pass
         elif full_name in [move.name for move in self.get_moves()]:
             move = [move for move in self.get_moves() if full_name == move.name][0]
