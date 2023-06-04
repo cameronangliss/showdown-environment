@@ -226,9 +226,11 @@ class TeamState:
             # Providing new info to a newly-transformed pokemon.
             if pokemon.transformed and pokemon.alt_stats is None:
                 pokemon.alt_moves = [
-                    MoveState(move_name, self.__gen, "ghost" in pokemon.get_types())
+                    MoveState(move_name, self.__gen, "ghost" in pokemon.get_types(), copied=True)
                     for move_name in pokemon_info["moves"]
                 ]
+                for move in pokemon.alt_moves:
+                    move.pp = 5
                 pokemon.alt_stats = pokemon_info["stats"]
                 pokemon.alt_ability = (
                     pokemon_info["ability"] if "ability" in pokemon_info else pokemon_info["baseAbility"]

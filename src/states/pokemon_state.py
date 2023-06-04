@@ -307,11 +307,24 @@ class PokemonState:
         #     "[from]lockedmove": pp isn't used when locked into a move
         #     "[from]move: <unowned_move>": this can happen when using a move like Copycat
         #     "[from]move: Sleep Talk": indicates that another move is being used due to Sleep Talk
-        if (info and info[0][:6] == "[from]" and full_name not in info[0][6:]) or full_name == "Struggle":
+        if info and info[0] == "[from]move: Sleep Talk":
+            sleep_move = [move for move in self.get_moves() if move.name == "Sleep Talk"][0]
+            move_used = [move for move in self.get_moves() if move.name == full_name][0]
+            pp_used = move_used.get_pp_used(pressure)
+            sleep_move.pp = max(sleep_move.pp - pp_used + 1, 0)
+            self.__update_last_used(sleep_move.name)
+            for self_move in self.get_moves():
+                self_move.keep_item(self.get_item())
+        elif (
+            (info and info[0][:6] == "[from]" and full_name not in info[0][6:])
+            or (full_name == "Sleep Talk" and not info)
+            or full_name == "Struggle"
+        ):
             pass
         elif full_name in [move.name for move in self.get_moves()]:
             move = [move for move in self.get_moves() if full_name == move.name][0]
-            move.update_pp(pressure)
+            pp_used = move.get_pp_used(pressure)
+            move.pp = max(move.pp - pp_used, 0)
             self.__update_last_used(move.name)
             for self_move in self.get_moves():
                 self_move.keep_item(self.get_item())
@@ -323,7 +336,8 @@ class PokemonState:
             pass
         elif self.from_opponent:
             new_move = MoveState(full_name, self.gen, "ghost" in self.get_types())
-            new_move.update_pp(pressure)
+            pp_used = new_move.get_pp_used(pressure)
+            new_move.pp = max(new_move.pp - pp_used, 0)
             if self.transformed:
                 self.alt_moves.append(new_move)
             else:
@@ -355,14 +369,12 @@ class PokemonState:
     def update_item(self, new_item: str, info: list[str]):
         if not (info and info[0] == "[from] ability: Frisk"):
             new_item_identifier = PokemonState.__get_item_identifier(new_item)
+            item = self.get_item()
             for move in self.get_moves():
-                if self.tricking:
-                    item = self.get_item()
-                    if item is not None:
-                        move.swap_item(item, new_item_identifier, self.maxed)
+                if item is None:
+                    move.add_item(new_item)
                 else:
-                    move.remove_item()
-                    move.add_item(new_item_identifier)
+                    move.swap_item(item, new_item_identifier, tricking=self.tricking, maxed=self.maxed)
             self.item = new_item_identifier
             self.item_off = False
 
@@ -413,7 +425,7 @@ class PokemonState:
                         move.encore_disabled = True
             case "Mimic":
                 mimic_move = [move for move in self.get_moves() if move.name == "Mimic"][0]
-                new_move = MoveState(info[1], self.gen, "ghost" in self.get_types(), from_mimic=True)
+                new_move = MoveState(info[1], self.gen, "ghost" in self.get_types(), copied=True)
                 if self.transformed:
                     mimic_move = new_move
                 else:

@@ -18,12 +18,12 @@ class MoveState:
     item_disabled: bool = False
     self_disabled: bool = False
 
-    def __init__(self, name: str, gen: int, is_ghost: bool, from_mimic: bool = False):
+    def __init__(self, name: str, gen: int, is_ghost: bool, copied: bool = False):
         self.identifier = MoveState.get_identifier(name)
         details = movedex[f"gen{gen}"][self.identifier]
         self.name = details["name"]
         self.gen = gen
-        if from_mimic:
+        if copied:
             pp = details["pp"]
         elif gen == 1 or gen == 2:
             pp = min(int(1.6 * details["pp"]), 61) if details["pp"] > 1 else 1
@@ -72,7 +72,7 @@ class MoveState:
     ###################################################################################################################
     # Setter methods
 
-    def update_pp(self, pressure: bool):
+    def get_pp_used(self, pressure: bool) -> int:
         if pressure:
             if self.__get_category() != "Status" or self.target in ["all", "normal"]:
                 pp_used = 2
@@ -85,7 +85,7 @@ class MoveState:
                 pp_used = 1
         else:
             pp_used = 1
-        self.pp = max(0, self.pp - pp_used)
+        return pp_used
 
     def add_item(self, item: str):
         if item == "assaultvest" and self.__get_category() == "Status":
@@ -100,13 +100,19 @@ class MoveState:
         if item in ["choiceband", "choicescarf", "choicespecs"]:
             self.item_disabled = not (maxed or self.just_used)
 
-    def swap_item(self, old_item: str, new_item: str, maxed: bool):
-        if new_item not in ["choiceband", "choicescarf", "choicespecs"]:
-            self.remove_item()
-            self.add_item(new_item)
-        elif old_item not in ["choiceband", "choicescarf", "choicespecs"]:
-            self.remove_item()
-            self.item_disabled = not (maxed or self.just_used)
+    def swap_item(self, old_item: str, new_item: str, tricking: bool = False, maxed: bool = False):
+        choice_items = ["choiceband", "choicescarf", "choicespecs"]
+        if not tricking:
+            if not (old_item in choice_items and new_item in choice_items):
+                self.remove_item()
+                self.add_item(new_item)
+        else:
+            if new_item not in choice_items:
+                self.remove_item()
+                self.add_item(new_item)
+            elif old_item not in choice_items:
+                self.remove_item()
+                self.item_disabled = not (maxed or self.just_used)
 
     ###################################################################################################################
     # Processes MoveState object into a feature vector to be fed into the model's input layer
