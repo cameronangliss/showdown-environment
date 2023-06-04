@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 from datetime import datetime
 
@@ -62,40 +64,40 @@ class Model(nn.Module):
     ###################################################################################################################
     # Training methods
 
-    async def self_play_train(self, env: Env, num_episodes: int):
-        cynthia_avatars = [
-            "cynthia-anime",
-            "cynthia-anime2",
-            "cynthia-gen4",
-            "cynthia-gen7",
-            "cynthia-masters",
-            "cynthia-masters2",
-            "cynthia-masters3",
-            "cynthia",
-        ]
-        await env.setup()
-        for i in range(num_episodes):
-            [avatar1, avatar2, *_] = random.sample(cynthia_avatars, k=2)
-            winner = await self.run_episode(env, "gen4randombattle", avatar1, avatar2)
+    async def attempt_improve(self, alt_model: Model, env: Env, train_episodes: int, eval_episodes: int) -> float:
+        # training against frozen state of self
+        for i in range(train_episodes):
+            winner = await self.__run_episode(alt_model, env, "gen4randombattle")
             time = datetime.now().strftime("%H:%M:%S")
             print(f"{time}: {winner} wins game {i + 1}")
-        await env.close()
+        # evaluating against frozen state of self
+        print(f"Trained for {train_episodes} games. Now evaluating progress...")
+        num_wins = 0
+        for i in range(eval_episodes):
+            winner = await self.__run_episode(alt_model, env, "gen4randombattle", frozen=True)
+            time = datetime.now().strftime("%H:%M:%S")
+            print(f"{time}: {winner} wins game {i + 1}")
+            if winner == env.player.username:
+                num_wins += 1
+        # returning win rate
+        print(f"Win rate: {num_wins}/{eval_episodes}")
+        return num_wins / eval_episodes
 
-    async def run_episode(self, env: Env, format_str: str, avatar1: str, avatar2: str) -> str | None:
+    async def __run_episode(self, alt_model: Model, env: Env, format_str: str, frozen: bool = False) -> str | None:
         try:
-            state1, state2 = await env.reset(format_str, avatar1, avatar2)
+            state1, state2 = await env.reset(format_str)
             done = False
             while not done:
                 action1 = self.__get_action(state1)
-                action2 = self.__get_action(state2)
-                next_state1, next_state2, reward1, reward2, done = await env.step(
+                action2 = alt_model.__get_action(state2)
+                next_state1, next_state2, reward, done = await env.step(
                     state1,
                     state2,
                     action1,
                     action2,
                 )
-                self.__update(state1, action1, reward1, next_state1, done)
-                self.__update(state2, action2, reward2, next_state2, done)
+                if not frozen:
+                    self.__update(state1, action1, reward, next_state1, done)
                 state1, state2 = next_state1, next_state2
             try:
                 winner_id = state1.protocol.index("win")

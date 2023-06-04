@@ -7,5 +7,7 @@
     "epsilon": "",
     "gamma": "",
     "hidden_dims": "[]",
-    "num_episodes": ""
+    "train_episodes": "",
+    "eval_episodes": "",
+    "improve_attempts": ""
 }
