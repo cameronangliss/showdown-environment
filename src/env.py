@@ -67,7 +67,7 @@ class Env:
         new_state1 = await self.player.observe(state1)
         new_state2 = await self._alt_player.observe(state2)
         done = "win" in new_state1.protocol or "tie" in new_state1.protocol
-        reward = self.__get_rewards(new_state1)
+        reward = self.__get_reward(new_state1)
         return new_state1, new_state2, reward, done
 
     async def close(self):
@@ -77,7 +77,7 @@ class Env:
     ###################################################################################################################
     # Helper methods
 
-    def __get_rewards(self, state: State) -> int:
+    def __get_reward(self, state: State) -> int:
         if "win" in state.protocol:
             i = state.protocol.index("win")
             winner = state.protocol[i + 1].strip()
