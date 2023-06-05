@@ -194,7 +194,13 @@ class Player:
                     if split_message[1] == "challstr":
                         return split_message
                 case MessageType.GAMES:
-                    if split_message[1] == "updatesearch":
+                    if split_message[1] == "popup":
+                        # Popups encountered when searching for games message in the past:
+                        # 1. Due to high load, you are limited to 12 battles and team validations every 3 minutes.
+                        # NOTE: This popup occurs in response to the player accepting a challenge, but manifests when looking for
+                        # the games message.
+                        raise PopupError(split_message[2])
+                    elif split_message[1] == "updatesearch":
                         return split_message
                 case MessageType.CHALLENGE:
                     if split_message[1] == "popup":
@@ -222,11 +228,7 @@ class Player:
                     ):
                         return split_message
                 case MessageType.ACCEPT:
-                    if split_message[1] == "popup":
-                        # Popups encountered when searching for accept message in the past:
-                        # 1. Due to high load, you are limited to 12 battles and team validations every 3 minutes.
-                        raise PopupError(split_message[2])
-                    elif (
+                    if (
                         split_message[1] == "pm"
                         and split_message[3] == f" {self.username}"
                         and "wants to battle!" in split_message[4]
