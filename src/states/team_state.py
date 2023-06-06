@@ -193,19 +193,33 @@ class TeamState:
         if active_pokemon is not None:
             active_pokemon.tricking = False
 
-    def __switch(self, pokemon_switching_in_name: str, details: str, hp: int, status: str | None):
-        # switch out active pokemon (if there is an active pokemon)
-        active_pokemon = self.get_active()
-        if active_pokemon is not None:
-            active_pokemon.switch_out()
-        # switch in desired pokemon
-        if pokemon_switching_in_name in [pokemon.name for pokemon in self.__team]:
-            pokemon_switching_in = [pokemon for pokemon in self.__team if pokemon.name == pokemon_switching_in_name][0]
-            pokemon_switching_in.switch_in(hp, status)
+    def __switch(self, incoming_pokemon_name: str, details: str, hp: int, status: str | None):
+        # get incoming pokemon
+        if incoming_pokemon_name in [pokemon.name for pokemon in self.__team]:
+            incoming_pokemon = [pokemon for pokemon in self.__team if pokemon.name == incoming_pokemon_name][0]
+            incoming_index = self.__team.index(incoming_pokemon)
         else:
-            new_pokemon = PokemonState.from_protocol(pokemon_switching_in_name, details, self.__gen, self.__ident)
-            new_pokemon.switch_in(hp, status)
-            self.__team.append(new_pokemon)
+            incoming_pokemon = PokemonState.from_protocol(incoming_pokemon_name, details, self.__gen, self.__ident)
+            incoming_index = None
+        # get outgoing pokemon
+        outgoing_pokemon = self.get_active()
+        if outgoing_pokemon is None:
+            outgoing_index = None if incoming_index is None else 0
+        else:
+            outgoing_index = self.__team.index(outgoing_pokemon)
+            outgoing_pokemon.switch_out()
+        incoming_pokemon.switch_in(hp, status)
+        # place incoming pokemon in new position
+        if outgoing_index is None:
+            self.__team.append(incoming_pokemon)
+        else:
+            self.__team[outgoing_index] = incoming_pokemon
+        # place outgoing pokemon in new position
+        if outgoing_pokemon is not None:
+            if incoming_index is None:
+                self.__team.append(outgoing_pokemon)
+            else:
+                self.__team[incoming_index] = outgoing_pokemon
 
     def __replace(self, pokemon: str, details: str):
         active_pokemon = self.get_active()
@@ -219,10 +233,8 @@ class TeamState:
             raise RuntimeError("Cannot replace pokemon if there are no active pokemon.")
 
     def __update_from_request(self, request: Any, just_unmaxed: bool):
-        for pokemon in self.__team:
-            pokemon_info = [
-                new_info for new_info in request["side"]["pokemon"] if new_info["ident"][4:] == pokemon.name
-            ][0]
+        team_info = [pokemon_info for pokemon_info in request["side"]["pokemon"]]
+        for pokemon, pokemon_info in zip(self.__team, team_info):
             # Providing new info to a newly-transformed pokemon.
             if pokemon.transformed and pokemon.alt_stats is None:
                 pokemon.alt_moves = [
