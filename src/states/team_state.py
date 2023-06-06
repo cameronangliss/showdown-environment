@@ -226,7 +226,7 @@ class TeamState:
             # Providing new info to a newly-transformed pokemon.
             if pokemon.transformed and pokemon.alt_stats is None:
                 pokemon.alt_moves = [
-                    MoveState(move_name, self.__gen, "ghost" in pokemon.get_types(), copied=True)
+                    MoveState(move_name, self.__gen, "ghost" in pokemon.get_types())
                     for move_name in pokemon_info["moves"]
                 ]
                 for move in pokemon.alt_moves:
@@ -236,136 +236,36 @@ class TeamState:
                     pokemon_info["ability"] if "ability" in pokemon_info else pokemon_info["baseAbility"]
                 )
             # If active has been mistracked, we assume that the active pokemon is using an illusion.
+            hp, status = PokemonState.parse_condition(pokemon_info["condition"])
             if pokemon.active != pokemon_info["active"]:
-                hp, status = PokemonState.parse_condition(pokemon_info["condition"])
                 pokemon.hp = hp
                 pokemon.status = status
                 pokemon.active = pokemon_info["active"]
                 pokemon.illusion = True
-            # Conducting harsh consistency checks if illusion pokemon isn't interfering.
+            # Conducting consistency checks if illusion pokemon isn't interfering.
             elif pokemon.active == pokemon_info["active"] and not pokemon.illusion:
-                TeamState.__check_condition_consistency(pokemon, pokemon_info)
-                TeamState.__check_stats_consistency(pokemon, pokemon_info)
+                assert pokemon.hp == hp
+                assert pokemon.status == status
+                assert pokemon.stats == pokemon_info["stats"]
+                assert len(pokemon.get_moves()) <= 4
                 if pokemon.active and "active" in request and "pp" in request["active"][0]["moves"][0]:
-                    self.__check_moves_consistency(pokemon, request["active"], just_unmaxed)
-                    TeamState.__check_can_special_consistency(pokemon, request["active"])
-                TeamState.__check_ability_consistency(pokemon, pokemon_info)
-                TeamState.__check_item_consistency(pokemon, pokemon_info)
-
-    ###################################################################################################################
-    # Helper functions
-
-    @staticmethod
-    def __check_condition_consistency(pokemon: PokemonState, pokemon_info: Any):
-        hp, status = PokemonState.parse_condition(pokemon_info["condition"])
-        if pokemon.hp != hp:
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded {pokemon.name} to have hp = {pokemon.hp}, but it has "
-                f"hp = {hp}."
-            )
-        elif pokemon.status != status:
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded {pokemon.name} to have status = {pokemon.status}, but it "
-                f"has status = {status}."
-            )
-
-    @staticmethod
-    def __check_stats_consistency(pokemon: PokemonState, pokemon_info: Any):
-        if pokemon.stats != pokemon_info["stats"]:
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded pokemon {pokemon.name} to have stats = {pokemon.stats}, "
-                f"but it has stats = {pokemon_info['stats']}."
-            )
-
-    def __check_moves_consistency(self, pokemon: PokemonState, active_info: Any, just_unmaxed: bool):
-        if len(pokemon.moves) > 4:
-            raise RuntimeError(f"Pokemon cannot have more than 4 moves: {[move.name for move in pokemon.moves]}.")
-        elif len(pokemon.alt_moves) > 4:
-            raise RuntimeError(
-                f"Pokemon cannot have more than 4 alt_moves: {[move.name for move in pokemon.alt_moves]}."
-            )
-        zmove_pp_needs_update = self.zmove_used and not self.zmove_pp_updated
-        for move_info in active_info[0]["moves"]:
-            move = TeamState.__get_matching_move(pokemon, move_info)
-            if zmove_pp_needs_update or pokemon.maxed or just_unmaxed or pokemon.gen <= 3:
-                move.pp = move_info["pp"]
-            TeamState.__check_move_consistency(move, move_info)
-        if zmove_pp_needs_update:
-            self.zmove_pp_updated = True
-
-    @staticmethod
-    def __check_move_consistency(move: MoveState, move_info: Any):
-        if move.pp != move_info["pp"]:
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded move {move.name} to have pp = {move.pp}, but it has "
-                f"pp = {move_info['pp']}."
-            )
-        elif move.is_disabled() != move_info["disabled"]:
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded move {move.name} to have disabled = {move.is_disabled()}, "
-                f"but it has disabled = {move_info['disabled']}."
-            )
-
-    @staticmethod
-    def __get_matching_move(pokemon: PokemonState, move_info: Any):
-        move_list = [
-            move for move in pokemon.get_moves() if move.identifier == MoveState.get_identifier(move_info["move"])
-        ]
-        if len(move_list) > 0:
-            return move_list[0]
-        else:
-            raise RuntimeError(
-                f"Mismatch of request and records. Pokemon {pokemon.name} has move "
-                f"{MoveState.get_identifier(move_info['move'])} that isn't recorded in moveset "
-                f"{[move.identifier for move in pokemon.get_moves()]}."
-            )
-
-    @staticmethod
-    def __check_ability_consistency(pokemon: PokemonState, pokemon_info: Any):
-        if pokemon.ability != pokemon_info["baseAbility"]:
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded {pokemon.name} to have baseAbility = {pokemon.ability}, "
-                f"but it has baseAbility = {pokemon_info['baseAbility']}."
-            )
-        if "ability" in pokemon_info and pokemon.get_ability() != pokemon_info["ability"]:
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded {pokemon.name} to have ability = {pokemon.get_ability()}, "
-                f"but it has ability = {pokemon_info['ability']}."
-            )
-
-    @staticmethod
-    def __check_item_consistency(pokemon: PokemonState, pokemon_info: Any):
-        if pokemon.item != (pokemon_info["item"] or None):
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded {pokemon.name} to have item = {pokemon.item}, but it "
-                f"has item = {pokemon_info['item'] or None}."
-            )
-
-    @staticmethod
-    def __check_can_special_consistency(pokemon: PokemonState, active_info: Any):
-        if pokemon.can_mega != ("canMegaEvo" in active_info[0]):
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded pokemon {pokemon.name} to have can_mega = "
-                f"{pokemon.can_mega}, but it has can_mega = {'canMegaEvo' in active_info[0]}."
-            )
-        elif pokemon.can_zmove != ("canZMove" in active_info[0]):
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded pokemon {pokemon.name} to have can_zmove = "
-                f"{pokemon.can_zmove}, but it has can_zmove = {'canZMove' in active_info[0]}."
-            )
-        elif pokemon.can_burst != ("canUltraBurst" in active_info[0]):
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded pokemon {pokemon.name} to have can_burst = "
-                f"{pokemon.can_burst}, but it has can_burst = {'canUltraBurst' in active_info[0]}."
-            )
-
-        elif pokemon.can_max != ("canDynamax" in active_info[0]):
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded pokemon {pokemon.name} to have can_max = "
-                f"{pokemon.can_max}, but it has can_max = {'canDynamax' in active_info[0]}."
-            )
-        elif pokemon.can_tera != ("canTerastallize" in active_info[0]):
-            raise RuntimeError(
-                f"Mismatch of request and records. Recorded pokemon {pokemon.name} to have can_tera = "
-                f"{pokemon.can_tera}, but it has can_tera = {'canTerastallize' in active_info[0]}."
-            )
+                    zmove_pp_needs_update = self.zmove_used and not self.zmove_pp_updated
+                    for move, move_info in zip(pokemon.get_moves(), request["active"][0]["moves"]):
+                        if zmove_pp_needs_update or pokemon.maxed or just_unmaxed or pokemon.gen <= 3:
+                            move.pp = move_info["pp"]
+                        else:
+                            assert move.pp == move_info["pp"]
+                        assert move.maxpp == move_info["maxpp"]
+                        assert move.target == move_info["target"]
+                        assert move.is_disabled() == move_info["disabled"]
+                    if zmove_pp_needs_update:
+                        self.zmove_pp_updated = True
+                    assert pokemon.can_mega == ("canMegaEvo" in request["active"][0])
+                    assert pokemon.can_zmove == ("canZMove" in request["active"][0])
+                    assert pokemon.can_burst == ("canUltraBurst" in request["active"][0])
+                    assert pokemon.can_max == ("canDynamax" in request["active"][0])
+                    assert pokemon.can_tera == ("canTerastallize" in request["active"][0])
+                assert pokemon.ability == pokemon_info["baseAbility"]
+                if "ability" in pokemon_info:
+                    assert pokemon.get_ability() == pokemon_info["ability"]
+                assert pokemon.item == (pokemon_info["item"] or None)

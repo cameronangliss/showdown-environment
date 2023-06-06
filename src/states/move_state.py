@@ -18,12 +18,12 @@ class MoveState:
     item_disabled: bool = False
     self_disabled: bool = False
 
-    def __init__(self, name: str, gen: int, is_ghost: bool, copied: bool = False):
+    def __init__(self, name: str, gen: int, is_ghost: bool, from_mimic: bool = False):
         self.identifier = MoveState.get_identifier(name)
         details = movedex[f"gen{gen}"][self.identifier]
         self.name = details["name"]
         self.gen = gen
-        if copied:
+        if from_mimic:
             pp = details["pp"]
         elif gen == 1 or gen == 2:
             pp = min(int(1.6 * details["pp"]), 61) if details["pp"] > 1 else 1

@@ -425,7 +425,7 @@ class PokemonState:
                         move.encore_disabled = True
             case "Mimic":
                 mimic_move = [move for move in self.get_moves() if move.name == "Mimic"][0]
-                new_move = MoveState(info[1], self.gen, "ghost" in self.get_types(), copied=True)
+                new_move = MoveState(info[1], self.gen, "ghost" in self.get_types(), from_mimic=True)
                 if self.transformed:
                     mimic_move = new_move
                 else:
