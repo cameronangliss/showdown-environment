@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Any
 
 from dex import movedex, typedex
 
@@ -113,6 +114,18 @@ class MoveState:
             elif old_item not in choice_items:
                 self.remove_item()
                 self.item_disabled = not (maxed or self.just_used)
+
+    ###################################################################################################################
+    # Consistency checking
+
+    def check_consistency(self, move_info: Any, zmove_pp_needs_update: Any, maxed: bool, just_unmaxed: bool):
+        if zmove_pp_needs_update or maxed or just_unmaxed or self.gen <= 3:
+            self.pp = move_info["pp"]
+        else:
+            assert self.pp == move_info["pp"]
+        assert self.maxpp == move_info["maxpp"]
+        assert self.target == move_info["target"]
+        assert self.is_disabled() == move_info["disabled"]
 
     ###################################################################################################################
     # Processes MoveState object into a feature vector to be fed into the model's input layer

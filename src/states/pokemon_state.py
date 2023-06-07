@@ -248,25 +248,6 @@ class PokemonState:
             self.can_tera = False
 
     ###################################################################################################################
-    # Processes PokemonState object into a feature vector to be fed into the model's input layer
-
-    def process(self) -> list[float]:
-        gender_features = [
-            float(gender_bool) for gender_bool in [self.gender == "M", self.gender == "F", self.gender == None]
-        ]
-        all_types = typedex[f"gen{self.gen}"].keys()
-        type_features = [float(t in self.get_types()) for t in all_types]
-        hp_features = [self.hp / self.max_hp] if self.from_opponent else [self.hp / self.max_hp, self.max_hp / 1000]
-        status_conditions = ["psn", "tox", "par", "slp", "brn", "frz", "fnt"]
-        status_features = [float(self.status == status_condition) for status_condition in status_conditions]
-        stats = [stat / 255 if self.from_opponent else stat / 1000 for stat in self.get_stats().values()]
-        move_feature_lists = [move.process() for move in self.get_moves()]
-        move_feature_lists.extend([[0.0] * 22] * (4 - len(move_feature_lists)))
-        move_features = reduce(lambda features1, features2: features1 + features2, move_feature_lists)
-        features = gender_features + hp_features + status_features + stats + type_features + move_features
-        return features
-
-    ###################################################################################################################
     # Self-updating methods used when reading through the lines of the protocol
 
     def switch_in(self, hp: int, status: str | None):
@@ -461,3 +442,46 @@ class PokemonState:
             self.maxed = False
             for move in self.get_moves():
                 move.keep_item(self.get_item())
+
+    ###################################################################################################################
+    # Consistency checking
+
+    def check_consistency(
+        self, pokemon_info: Any, active_info: Any | None, zmove_pp_needs_update: bool, just_unmaxed: bool
+    ):
+        hp, status = PokemonState.parse_condition(pokemon_info["condition"])
+        assert self.hp == hp
+        assert self.status == status
+        assert self.stats == pokemon_info["stats"]
+        assert len(self.get_moves()) <= 4
+        if self.active and active_info is not None and "pp" in active_info[0]["moves"][0]:
+            for move, move_info in zip(self.get_moves(), active_info[0]["moves"]):
+                move.check_consistency(move_info, zmove_pp_needs_update, self.maxed, just_unmaxed)
+            assert self.can_mega == ("canMegaEvo" in active_info[0])
+            assert self.can_zmove == ("canZMove" in active_info[0])
+            assert self.can_burst == ("canUltraBurst" in active_info[0])
+            assert self.can_max == ("canDynamax" in active_info[0])
+            assert self.can_tera == ("canTerastallize" in active_info[0])
+        assert self.ability == pokemon_info["baseAbility"]
+        if "ability" in pokemon_info:
+            assert self.get_ability() == pokemon_info["ability"]
+        assert self.item == (pokemon_info["item"] or None)
+
+    ###################################################################################################################
+    # Processes PokemonState object into a feature vector to be fed into the model's input layer
+
+    def process(self) -> list[float]:
+        gender_features = [
+            float(gender_bool) for gender_bool in [self.gender == "M", self.gender == "F", self.gender == None]
+        ]
+        all_types = typedex[f"gen{self.gen}"].keys()
+        type_features = [float(t in self.get_types()) for t in all_types]
+        hp_features = [self.hp / self.max_hp] if self.from_opponent else [self.hp / self.max_hp, self.max_hp / 1000]
+        status_conditions = ["psn", "tox", "par", "slp", "brn", "frz", "fnt"]
+        status_features = [float(self.status == status_condition) for status_condition in status_conditions]
+        stats = [stat / 255 if self.from_opponent else stat / 1000 for stat in self.get_stats().values()]
+        move_feature_lists = [move.process() for move in self.get_moves()]
+        move_feature_lists.extend([[0.0] * 22] * (4 - len(move_feature_lists)))
+        move_features = reduce(lambda features1, features2: features1 + features2, move_feature_lists)
+        features = gender_features + hp_features + status_features + stats + type_features + move_features
+        return features

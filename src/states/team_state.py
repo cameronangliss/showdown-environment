@@ -10,6 +10,7 @@ class TeamState:
     __ident: str
     __gen: int
     __team: list[PokemonState]
+    opponent_team: list[PokemonState]
     __pressure: bool = False
     mega_used: bool = False
     zmove_used: bool = False
@@ -47,22 +48,6 @@ class TeamState:
         return json.dumps([json.loads(pokemon.get_json_str()) for pokemon in self.__team])
 
     ###################################################################################################################
-    # Processes TeamState object into a feature vector to be fed into the model's input layer
-
-    def process(self) -> list[float]:
-        pokemon_feature_lists = [pokemon.process() for pokemon in self.__team]
-        pokemon_feature_lists.extend([[0.0] * 123] * (6 - len(pokemon_feature_lists)))
-        pokemon_features = reduce(lambda features1, features2: features1 + features2, pokemon_feature_lists)
-        special_used_features = [
-            float(self.mega_used),
-            float(self.zmove_used),
-            float(self.max_used),
-            float(self.tera_used),
-        ]
-        features = pokemon_features + special_used_features
-        return features
-
-    ###################################################################################################################
     # Self-updating methods used when reading through the lines of the protocol and the request
 
     def update(self, protocol: list[str], request: Any | None = None):
@@ -73,6 +58,8 @@ class TeamState:
             active_name = active_pokemon.name if active_pokemon else ""
             just_unmaxed = f"|-end|{self.__ident}a: {active_name}|Dynamax" in protocol_lines
             self.__update_from_request(request, just_unmaxed)
+            if not any([pokemon.illusion for pokemon in self.__team]):
+                self.check_consistency(request, just_unmaxed)
 
     def __update_from_protocol(self, protocol: list[str]):
         protocol_lines = "|".join(protocol).split("\n")
@@ -254,30 +241,31 @@ class TeamState:
                 pokemon.status = status
                 pokemon.active = pokemon_info["active"]
                 pokemon.illusion = True
-            # Conducting consistency checks if illusion pokemon isn't interfering.
-            elif pokemon.active == pokemon_info["active"] and not pokemon.illusion:
-                assert pokemon.hp == hp
-                assert pokemon.status == status
-                assert pokemon.stats == pokemon_info["stats"]
-                assert len(pokemon.get_moves()) <= 4
-                if pokemon.active and "active" in request and "pp" in request["active"][0]["moves"][0]:
-                    zmove_pp_needs_update = self.zmove_used and not self.zmove_pp_updated
-                    for move, move_info in zip(pokemon.get_moves(), request["active"][0]["moves"]):
-                        if zmove_pp_needs_update or pokemon.maxed or just_unmaxed or pokemon.gen <= 3:
-                            move.pp = move_info["pp"]
-                        else:
-                            assert move.pp == move_info["pp"]
-                        assert move.maxpp == move_info["maxpp"]
-                        assert move.target == move_info["target"]
-                        assert move.is_disabled() == move_info["disabled"]
-                    if zmove_pp_needs_update:
-                        self.zmove_pp_updated = True
-                    assert pokemon.can_mega == ("canMegaEvo" in request["active"][0])
-                    assert pokemon.can_zmove == ("canZMove" in request["active"][0])
-                    assert pokemon.can_burst == ("canUltraBurst" in request["active"][0])
-                    assert pokemon.can_max == ("canDynamax" in request["active"][0])
-                    assert pokemon.can_tera == ("canTerastallize" in request["active"][0])
-                assert pokemon.ability == pokemon_info["baseAbility"]
-                if "ability" in pokemon_info:
-                    assert pokemon.get_ability() == pokemon_info["ability"]
-                assert pokemon.item == (pokemon_info["item"] or None)
+
+    ###################################################################################################################
+    # Consistency checking
+
+    def check_consistency(self, request: Any, just_unmaxed: bool):
+        team_info = [pokemon_info for pokemon_info in request["side"]["pokemon"]]
+        for pokemon, pokemon_info in zip(self.__team, team_info):
+            zmove_pp_needs_update = self.zmove_used and not self.zmove_pp_updated
+            active_info = request["active"] if "active" in request else None
+            pokemon.check_consistency(pokemon_info, active_info, zmove_pp_needs_update, just_unmaxed)
+            if zmove_pp_needs_update:
+                self.zmove_pp_updated = True
+
+    ###################################################################################################################
+    # Processes TeamState object into a feature vector to be fed into the model's input layer
+
+    def process(self) -> list[float]:
+        pokemon_feature_lists = [pokemon.process() for pokemon in self.__team]
+        pokemon_feature_lists.extend([[0.0] * 123] * (6 - len(pokemon_feature_lists)))
+        pokemon_features = reduce(lambda features1, features2: features1 + features2, pokemon_feature_lists)
+        special_used_features = [
+            float(self.mega_used),
+            float(self.zmove_used),
+            float(self.max_used),
+            float(self.tera_used),
+        ]
+        features = pokemon_features + special_used_features
+        return features
