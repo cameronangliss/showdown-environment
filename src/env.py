@@ -61,31 +61,32 @@ class Env:
         state2: State,
         action1: int | None,
         action2: int | None,
-    ) -> tuple[State, State, int, bool]:
+    ) -> tuple[State, State, int, int, bool]:
         await self.player.choose(action1, state1.request["rqid"])
         await self._alt_player.choose(action2, state2.request["rqid"])
-        new_state1 = await self.player.observe(state1)
-        new_state2 = await self._alt_player.observe(state2)
-        done = "win" in new_state1.protocol or "tie" in new_state1.protocol
-        reward = self.__get_reward(new_state1)
-        return new_state1, new_state2, reward, done
+        next_state1 = await self.player.observe(state1)
+        next_state2 = await self._alt_player.observe(state2)
+        reward1, reward2 = self.__get_rewards(next_state1)
+        done = "win" in next_state1.protocol or "tie" in next_state1.protocol
+        return next_state1, next_state2, reward1, reward2, done
 
     async def close(self):
         await self.player.close()
         await self._alt_player.close()
+        open("debug.log", "w").close()
 
     ###################################################################################################################
     # Helper methods
 
-    def __get_reward(self, state: State) -> int:
+    def __get_rewards(self, state: State) -> tuple[int, int]:
         if "win" in state.protocol:
             i = state.protocol.index("win")
             winner = state.protocol[i + 1].strip()
             if winner == self.player.username:
-                return 1
+                return 1, -1
             else:
-                return -1
+                return -1, 1
         elif "tie" in state.protocol:
-            return 0
+            return 0, 0
         else:
-            return 0
+            return 0, 0
