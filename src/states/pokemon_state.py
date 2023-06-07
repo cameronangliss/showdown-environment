@@ -186,7 +186,7 @@ class PokemonState:
                 "active": self.active,
                 "stats": self.get_stats(),
                 "moves": [json.loads(move.get_json_str()) for move in self.get_moves()],
-                "ability": self.get_ability(),
+                "ability": self.__get_ability(),
                 "item": self.item,
             }
         )
@@ -217,10 +217,10 @@ class PokemonState:
         else:
             raise RuntimeError(f"Pokemon {self.name} cannot have move just used = {[move.name for move in moves]}")
 
-    def get_ability(self) -> str | None:
+    def __get_ability(self) -> str | None:
         return self.alt_ability or self.ability
 
-    def get_item(self) -> str | None:
+    def __get_item(self) -> str | None:
         return None if self.item_off else self.item
 
     ###################################################################################################################
@@ -257,13 +257,13 @@ class PokemonState:
             self.hp = hp
             self.status = status
             self.active = True
-            item = self.get_item()
+            item = self.__get_item()
             if item is not None:
                 for move in self.get_moves():
                     move.add_item(item)
 
     def switch_out(self):
-        current_ability = self.get_ability()
+        current_ability = self.__get_ability()
         if current_ability is not None and current_ability == "regenerator" and self.status != "fnt":
             self.hp = min(int(self.hp + self.max_hp / 3), self.max_hp)
         self.active = False
@@ -299,7 +299,7 @@ class PokemonState:
             sleep_move.pp = max(sleep_move.pp - pp_used, 0)
             self.__update_last_used(sleep_move.name)
             for self_move in self.get_moves():
-                self_move.keep_item(self.get_item())
+                self_move.keep_item(self.__get_item())
         elif (info and info[0][:6] == "[from]" and full_name not in info[0][6:]) or full_name == "Struggle":
             pass
         elif full_name in [move.name for move in self.get_moves()]:
@@ -308,7 +308,7 @@ class PokemonState:
             move.pp = max(move.pp - pp_used, 0)
             self.__update_last_used(move.name)
             for self_move in self.get_moves():
-                self_move.keep_item(self.get_item())
+                self_move.keep_item(self.__get_item())
                 if self_move.name == "Gigaton Hammer":
                     self_move.self_disabled = move.name == "Gigaton Hammer"
         elif movedex[f"gen{self.gen}"][MoveState.get_identifier(full_name)]["isZ"]:
@@ -325,7 +325,7 @@ class PokemonState:
                 self.moves.append(new_move)
             self.__update_last_used(new_move.name)
             for self_move in self.get_moves():
-                self_move.keep_item(self.get_item())
+                self_move.keep_item(self.__get_item())
                 if self_move.name == "Gigaton Hammer":
                     self_move.self_disabled = new_move.name == "Gigaton Hammer"
         else:
@@ -340,17 +340,17 @@ class PokemonState:
             self.alt_ability = None
 
     def update_ability(self, new_ability: str):
-        if self.get_ability() is None:
+        if self.__get_ability() is None:
             self.alt_ability = PokemonState.__get_ability_identifier(new_ability)
         else:
-            ability_info = abilitydex[f"gen{self.gen}"][self.get_ability()]
+            ability_info = abilitydex[f"gen{self.gen}"][self.__get_ability()]
             if not ("isPermanent" in ability_info and ability_info["isPermanent"]):
                 self.alt_ability = PokemonState.__get_ability_identifier(new_ability)
 
     def update_item(self, new_item: str, info: list[str]):
         if not (info and info[0] == "[from] ability: Frisk"):
             new_item_identifier = PokemonState.__get_item_identifier(new_item)
-            item = self.get_item()
+            item = self.__get_item()
             for move in self.get_moves():
                 if item is None:
                     move.add_item(new_item)
@@ -361,7 +361,7 @@ class PokemonState:
 
     def end_item(self, item: str, info: list[str]):
         item_identifier = PokemonState.__get_item_identifier(item)
-        if self.get_item() == item_identifier:
+        if self.__get_item() == item_identifier:
             for move in self.get_moves():
                 move.remove_item()
             if info and info[0] == "[from] move: Knock Off" and self.gen in [3, 4]:
@@ -424,7 +424,7 @@ class PokemonState:
             case "Dynamax":
                 self.maxed = True
                 for move in self.get_moves():
-                    move.keep_item(self.get_item(), maxed=True)
+                    move.keep_item(self.__get_item(), maxed=True)
             case _:
                 pass
 
@@ -441,7 +441,7 @@ class PokemonState:
         elif info[0] == "Dynamax":
             self.maxed = False
             for move in self.get_moves():
-                move.keep_item(self.get_item())
+                move.keep_item(self.__get_item())
 
     ###################################################################################################################
     # Consistency checking
@@ -464,7 +464,7 @@ class PokemonState:
             assert self.can_tera == ("canTerastallize" in active_info[0])
         assert self.ability == pokemon_info["baseAbility"]
         if "ability" in pokemon_info:
-            assert self.get_ability() == pokemon_info["ability"]
+            assert self.__get_ability() == pokemon_info["ability"]
         assert self.item == (pokemon_info["item"] or None)
 
     ###################################################################################################################
