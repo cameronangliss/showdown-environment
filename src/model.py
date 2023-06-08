@@ -47,6 +47,7 @@ class Model(nn.Module):
             layers.append(nn.Linear(self.__hidden_dims[i], self.__hidden_dims[i + 1]))
         layers.append(nn.Linear(self.__hidden_dims[-1], self.__output_dim))
         self.__layers = nn.ModuleList(layers)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.__alpha)
 
     def __forward(self, x: Tensor) -> Tensor:  # type: ignore
         for layer in self.__layers:
@@ -55,7 +56,6 @@ class Model(nn.Module):
 
     def __update(self, experience: Experience):
         if experience.action is not None:
-            optimizer = torch.optim.SGD(self.parameters(), lr=self.__alpha)
             if experience.done:
                 q_target = torch.tensor(experience.reward)
             else:
@@ -67,18 +67,18 @@ class Model(nn.Module):
             q_estimate = q_values[experience.action]
             td_error = q_target - q_estimate
             loss = td_error**2
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
             loss.backward()  # type: ignore
-            optimizer.step()
+            self.optimizer.step()
 
     ###################################################################################################################
     # Training methods
 
     async def attempt_improve(self, env: Env, experiences: list[Experience]) -> tuple[list[Experience], int]:
+        duplicate_model = deepcopy(self)
         # gathering data
         print("Gathering experiences...")
-        duplicate_model = deepcopy(self)
-        experiences, _ = await self.__run_episodes(duplicate_model, env, "gen4randombattle")
+        experiences, _ = await self.__run_episodes(duplicate_model, env)
         # training
         print(f"Training on {len(experiences)} experiences...")
         for _ in range(10**4):
@@ -86,7 +86,7 @@ class Model(nn.Module):
             for experience in experience_sample:
                 self.__update(experience)
         # evaluating
-        _, num_wins = await self.__run_episodes(duplicate_model, env, "gen4randombattle")
+        _, num_wins = await self.__run_episodes(duplicate_model, env)
         print(f"Win rate: {num_wins}/100")
         if num_wins < 55:
             print("Improvement failed.")
@@ -95,12 +95,13 @@ class Model(nn.Module):
             print("Improvement succeeded!")
         return experiences, num_wins
 
-    async def __run_episodes(self, alt_model: Model, env: Env, format_str: str) -> tuple[list[Experience], int]:
+    async def __run_episodes(self, alt_model: Model, env: Env) -> tuple[list[Experience], int]:
+        formats = [f"gen{i}randombattle" for i in range(1, 5)]
         await env.setup()
         experiences: list[Experience] = []
         num_wins = 0
         for i in range(100):
-            new_experiences, winner = await self.__run_episode(alt_model, env, format_str)
+            new_experiences, winner = await self.__run_episode(alt_model, env, random.choice(formats))
             experiences += new_experiences
             time = datetime.now().strftime("%H:%M:%S")
             print(f"{time}: {winner} wins game {i + 1}")
