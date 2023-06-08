@@ -429,19 +429,23 @@ class PokemonState:
                 pass
 
     def end(self, info: list[str]):
-        if info[0] == "Disable":
-            move = [move for move in self.get_moves() if move.disable_disabled][0]
-            move.disable_disabled = False
-        elif info[0] == "Encore":
-            for move in self.get_moves():
-                move.encore_disabled = False
-        elif info[0] == "move: Taunt":
-            for move in self.get_moves():
-                move.taunt_disabled = False
-        elif info[0] == "Dynamax":
-            self.maxed = False
-            for move in self.get_moves():
-                move.keep_item(self.__get_item())
+        cause = info[0][6:] if info[0][:6] == "move: " else info[0]
+        match cause:
+            case "Disable":
+                move = [move for move in self.get_moves() if move.disable_disabled][0]
+                move.disable_disabled = False
+            case "Encore":
+                for move in self.get_moves():
+                    move.encore_disabled = False
+            case "Taunt":
+                for move in self.get_moves():
+                    move.taunt_disabled = False
+            case "Dynamax":
+                self.maxed = False
+                for move in self.get_moves():
+                    move.keep_item(self.__get_item())
+            case _:
+                pass
 
     ###################################################################################################################
     # Consistency checking
@@ -450,22 +454,32 @@ class PokemonState:
         self, pokemon_info: Any, active_info: Any | None, zmove_pp_needs_update: bool, just_unmaxed: bool
     ):
         hp, status = PokemonState.parse_condition(pokemon_info["condition"])
-        assert self.hp == hp
-        assert self.status == status
-        assert self.stats == pokemon_info["stats"]
-        assert len(self.get_moves()) <= 4
+        assert self.hp == hp, f"{self.hp} != {hp}"
+        assert self.status == status, f"{self.status} != {status}"
+        assert self.stats == pokemon_info["stats"], f"{self.stats} != {pokemon_info['stats']}"
+        assert len(self.get_moves()) <= 4, f"{len(self.get_moves())} > 4"
         if self.active and active_info is not None and "pp" in active_info[0]["moves"][0]:
             for move, move_info in zip(self.get_moves(), active_info[0]["moves"]):
                 move.check_consistency(move_info, zmove_pp_needs_update, self.maxed, just_unmaxed)
-            assert self.can_mega == ("canMegaEvo" in active_info[0])
-            assert self.can_zmove == ("canZMove" in active_info[0])
-            assert self.can_burst == ("canUltraBurst" in active_info[0])
-            assert self.can_max == ("canDynamax" in active_info[0])
-            assert self.can_tera == ("canTerastallize" in active_info[0])
-        assert self.ability == pokemon_info["baseAbility"]
+            assert self.can_mega == (
+                "canMegaEvo" in active_info[0]
+            ), f"{self.can_mega} != {'canMegaEvo' in active_info[0]}"
+            assert self.can_zmove == (
+                "canZMove" in active_info[0]
+            ), f"{self.can_zmove} != {'canZMove' in active_info[0]}"
+            assert self.can_burst == (
+                "canUltraBurst" in active_info[0]
+            ), f"{self.can_burst} != {'canUltraBurst' in active_info[0]}"
+            assert self.can_max == (
+                "canDynamax" in active_info[0]
+            ), f"{self.can_max} != {'canDynamax' in active_info[0]}"
+            assert self.can_tera == (
+                "canTerastallize" in active_info[0]
+            ), f"{self.can_tera} != {'canTerastallize' in active_info[0]}"
+        assert self.ability == pokemon_info["baseAbility"], f"{self.ability} != {pokemon_info['baseAbility']}"
         if "ability" in pokemon_info:
-            assert self.__get_ability() == pokemon_info["ability"]
-        assert self.item == (pokemon_info["item"] or None)
+            assert self.__get_ability() == pokemon_info["ability"], f"{self.__get_ability} != {pokemon_info['ability']}"
+        assert self.item == (pokemon_info["item"] or None), f"{self.item} != {pokemon_info['item'] or None}"
 
     ###################################################################################################################
     # Processes PokemonState object into a feature vector to be fed into the model's input layer

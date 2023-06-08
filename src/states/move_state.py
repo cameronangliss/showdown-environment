@@ -24,9 +24,9 @@ class MoveState:
         details = movedex[f"gen{gen}"][self.identifier]
         self.name = details["name"]
         self.gen = gen
-        if from_mimic:
+        if from_mimic and gen > 2:
             pp = details["pp"]
-        elif gen == 1 or gen == 2:
+        elif gen <= 2:
             pp = min(int(1.6 * details["pp"]), 61) if details["pp"] > 1 else 1
         else:
             pp = int(1.6 * details["pp"]) if details["pp"] > 1 else 1
@@ -122,10 +122,10 @@ class MoveState:
         if zmove_pp_needs_update or maxed or just_unmaxed or self.gen <= 3:
             self.pp = move_info["pp"]
         else:
-            assert self.pp == move_info["pp"]
-        assert self.maxpp == move_info["maxpp"]
-        assert self.target == move_info["target"]
-        assert self.is_disabled() == move_info["disabled"]
+            assert self.pp == move_info["pp"], f"{self.pp} != {move_info['pp']}"
+        assert self.maxpp == move_info["maxpp"], f"{self.maxpp} != {move_info['maxpp']}"
+        assert self.target == move_info["target"], f"{self.target} != {move_info['target']}"
+        assert self.is_disabled() == move_info["disabled"], f"{self.is_disabled()} != {move_info['disabled']}"
 
     ###################################################################################################################
     # Processes MoveState object into a feature vector to be fed into the model's input layer
