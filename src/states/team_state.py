@@ -119,8 +119,7 @@ class TeamState:
                     case "-enditem":
                         active_pokemon.end_item(split_line[3], split_line[4:])
                     case "-prepare":
-                        if self.__gen <= 2:
-                            active_pokemon.preparing = True
+                        active_pokemon.preparing = True
                     case "-mega":
                         self.mega_used = True
                         active_pokemon.mega_evolve(split_line[4] or None)
