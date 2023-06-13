@@ -1,27 +1,41 @@
 import asyncio
+import json
+import logging
 import random
-from dataclasses import dataclass
-from logging import Logger
 
-from player import Player, PopupError
+from client import PopupError
+from player import Player
 from states.state import State
 
 
-@dataclass
 class Env:
     player: Player
     _alt_player: Player
-    logger: Logger
-    __cynthia_avatars = [
-        "cynthia-anime",
-        "cynthia-anime2",
-        "cynthia-gen4",
-        "cynthia-gen7",
-        "cynthia-masters",
-        "cynthia-masters2",
-        "cynthia-masters3",
-        "cynthia",
-    ]
+    logger: logging.Logger
+    __cynthia_avatars: list[str]
+
+    def __init__(self):
+        with open("config.json") as f:
+            config = json.load(f)
+        logging.basicConfig(
+            level=logging.INFO,
+            filename="debug.log",
+            filemode="w",
+            format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s()\n%(message)s\n",
+        )
+        self.logger = logging.getLogger()
+        self.player = Player(config["username"], config["password"], self.logger)
+        self._alt_player = Player(config["alt_username"], config["alt_password"], self.logger)
+        self.__cynthia_avatars = [
+            "cynthia-anime",
+            "cynthia-anime2",
+            "cynthia-gen4",
+            "cynthia-gen7",
+            "cynthia-masters",
+            "cynthia-masters2",
+            "cynthia-masters3",
+            "cynthia",
+        ]
 
     ###################################################################################################################
     # OpenAI Gym-style methods
@@ -73,7 +87,6 @@ class Env:
     async def close(self):
         await self.player.close()
         await self._alt_player.close()
-        open("debug.log", "w").close()
 
     ###################################################################################################################
     # Helper methods

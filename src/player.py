@@ -2,54 +2,43 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import dataclass
-from enum import Enum, auto
 from logging import Logger
-from typing import Any
 
 import requests
-import websockets.client as ws
 
+from client import Client, MessageType
 from states.state import State
 
 
-class MessageType(Enum):
-    LOGIN = auto()
-    GAMES = auto()
-    CHALLENGE = auto()
-    CANCEL = auto()
-    ACCEPT = auto()
-    OBSERVE = auto()
-    LEAVE = auto()
-
-
-class PopupError(Exception):
-    def __init__(self, *args: Any):
-        super().__init__(*args)
-
-
-@dataclass
 class Player:
     username: str
     _password: str
     _logger: Logger
-    _websocket: ws.WebSocketClientProtocol | None = None
-    _room: str | None = None
-    __action_space = (
-        [f"switch {i}" for i in range(1, 7)]
-        + [f"move {i}" for i in range(1, 5)]
-        + [f"move {i} mega" for i in range(1, 5)]
-        + [f"move {i} zmove" for i in range(1, 5)]
-        + [f"move {i} max" for i in range(1, 5)]
-        + [f"move {i} terastallize" for i in range(1, 5)]
-    )
+    _client: Client
+    _room: str | None
+    __action_space: list[str]
+
+    def __init__(self, username: str, password: str, logger: Logger):
+        self.username = username
+        self._password = password
+        self._logger = logger
+        self._client = Client(username, logger)
+        self._room = None
+        self.__action_space = (
+            [f"switch {i}" for i in range(1, 7)]
+            + [f"move {i}" for i in range(1, 5)]
+            + [f"move {i} mega" for i in range(1, 5)]
+            + [f"move {i} zmove" for i in range(1, 5)]
+            + [f"move {i} max" for i in range(1, 5)]
+            + [f"move {i} terastallize" for i in range(1, 5)]
+        )
 
     ###################################################################################################################
     # OpenAI Gym-style methods
 
     async def setup(self):
         self._room = None
-        await self.connect()
+        await self._client.connect()
         await self.login()
         await self.forfeit_games()
 
@@ -60,16 +49,8 @@ class Player:
     ###################################################################################################################
     # Commands to be used by Player when communicating with PokemonShowdown website
 
-    async def connect(self):
-        while True:
-            try:
-                self._websocket = await ws.connect("wss://sim3.psim.us/showdown/websocket")
-                break
-            except TimeoutError:
-                self._logger.error("Connection attempt failed, retrying now")
-
     async def login(self):
-        split_message = await self.__find_message(MessageType.LOGIN)
+        split_message = await self._client.find_message(self._room, MessageType.LOGIN)
         client_id = split_message[2]
         challstr = split_message[3]
         response = requests.post(
@@ -82,13 +63,13 @@ class Player:
         )
         response_json = json.loads(response.text[1:])
         assertion = response_json.get("assertion")
-        await self.__send_message(f"/trn {self.username},0,{assertion}")
+        await self._client.send_message(self._room, f"/trn {self.username},0,{assertion}")
 
     async def forfeit_games(self):
         # The first games message is always empty, so this is here to pass by that message.
-        await self.__find_message(MessageType.GAMES)
+        await self._client.find_message(self._room, MessageType.GAMES)
         try:
-            split_message = await asyncio.wait_for(self.__find_message(MessageType.GAMES), timeout=5)
+            split_message = await asyncio.wait_for(self._client.find_message(self._room, MessageType.GAMES), timeout=5)
         except TimeoutError:
             self._logger.info("Second updatesearch message not received. This should mean the user just logged in.")
         else:
@@ -98,49 +79,49 @@ class Player:
                 prev_room = self._room
                 for room in battle_rooms:
                     await self.join(room)
-                    await self.__send_message("/forfeit")
+                    await self._client.send_message(self._room, "/forfeit")
                     await self.leave()
                 if prev_room:
                     await self.join(prev_room)
 
     async def set_avatar(self, avatar: str):
-        await self.__send_message(f"/avatar {avatar}")
+        await self._client.send_message(self._room, f"/avatar {avatar}")
 
     async def challenge(self, opponent: Player, battle_format: str, team: str | None = None):
-        await self.__send_message(f"/utm {team}")
-        await self.__send_message(f"/challenge {opponent.username}, {battle_format}")
+        await self._client.send_message(self._room, f"/utm {team}")
+        await self._client.send_message(self._room, f"/challenge {opponent.username}, {battle_format}")
         # Waiting for confirmation that challenge was sent
-        await self.__find_message(MessageType.CHALLENGE)
+        await self._client.find_message(self._room, MessageType.CHALLENGE)
 
     async def cancel(self, opponent: Player):
-        await self.__send_message(f"/cancelchallenge {opponent.username}")
+        await self._client.send_message(self._room, f"/cancelchallenge {opponent.username}")
         # Waiting for confirmation that challenge was cancelled
-        await self.__find_message(MessageType.CANCEL)
+        await self._client.find_message(self._room, MessageType.CANCEL)
 
     async def accept(self, opponent: Player, team: str | None = None) -> str:
         # Waiting for confirmation that challenge was received
-        await self.__find_message(MessageType.ACCEPT)
-        await self.__send_message(f"/utm {team}")
-        await self.__send_message(f"/accept {opponent.username}")
+        await self._client.find_message(self._room, MessageType.ACCEPT)
+        await self._client.send_message(self._room, f"/utm {team}")
+        await self._client.send_message(self._room, f"/accept {opponent.username}")
         # The first games message is always empty, so this is here to pass by that message.
-        await self.__find_message(MessageType.GAMES)
-        split_message = await self.__find_message(MessageType.GAMES)
+        await self._client.find_message(self._room, MessageType.GAMES)
+        split_message = await self._client.find_message(self._room, MessageType.GAMES)
         games = json.loads(split_message[2])["games"]
         room = list(games.keys())[0]
         return room
 
     async def join(self, room: str):
-        await self.__send_message(f"/join {room}")
+        await self._client.send_message(self._room, f"/join {room}")
         self._room = room
 
     async def timer_on(self):
-        await self.__send_message("/timer on")
+        await self._client.send_message(self._room, "/timer on")
 
     async def observe(self, state: State | None = None) -> State:
-        split_message = await self.__find_message(MessageType.OBSERVE)
+        split_message = await self._client.find_message(self._room, MessageType.OBSERVE)
         if split_message[1] == "request":
             request = json.loads(split_message[2])
-            protocol = await self.__find_message(MessageType.OBSERVE)
+            protocol = await self._client.find_message(self._room, MessageType.OBSERVE)
         else:
             request = None
             protocol = split_message
@@ -153,92 +134,14 @@ class Player:
 
     async def choose(self, action: int | None, rqid: int):
         if action is not None:
-            await self.__send_message(f"/choose {self.__action_space[action]}|{rqid}")
+            await self._client.send_message(self._room, f"/choose {self.__action_space[action]}|{rqid}")
 
     async def leave(self):
         if self._room:
-            await self.__send_message(f"/leave {self._room}")
+            await self._client.send_message(self._room, f"/leave {self._room}")
             # gets rid of all messages having to do with the room being left
-            await self.__find_message(MessageType.LEAVE)
+            await self._client.find_message(self._room, MessageType.LEAVE)
             self._room = None
 
     async def logout(self):
-        await self.__send_message("/logout")
-
-    ###################################################################################################################
-    # Helper methods
-
-    async def __send_message(self, message: str):
-        room = self._room or ""
-        message = f"{room}|{message}"
-        self._logger.info(f"{self.username.upper()} -> SERVER:\n{message}")
-        if self._websocket:
-            await self._websocket.send(message)
-        else:
-            raise ConnectionError("Cannot send message without established websocket")
-
-    async def __receive_message(self) -> str:
-        if self._websocket:
-            response = str(await self._websocket.recv())
-        else:
-            raise ConnectionError("Cannot receive message without established websocket")
-        self._logger.info(f"SERVER -> {self.username.upper()}:\n{response}")
-        return response
-
-    async def __find_message(self, message_type: MessageType) -> list[str]:
-        while True:
-            message = await self.__receive_message()
-            split_message = message.split("|")
-            match message_type:
-                case MessageType.LOGIN:
-                    if split_message[1] == "challstr":
-                        return split_message
-                case MessageType.GAMES:
-                    if split_message[1] == "popup":
-                        # Popups encountered when searching for games message in the past:
-                        # 1. Due to high load, you are limited to 12 battles and team validations every 3 minutes.
-                        # NOTE: This popup occurs in response to the player accepting a challenge, but manifests when looking for
-                        # the games message.
-                        raise PopupError(split_message[2])
-                    elif split_message[1] == "updatesearch":
-                        return split_message
-                case MessageType.CHALLENGE:
-                    if split_message[1] == "popup":
-                        # Popups encountered when searching for challenge message in the past:
-                        # 1. Due to high load, you are limited to 12 battles and team validations every 3 minutes.
-                        # 2. You challenged less than 10 seconds after your last challenge! It's cancelled in case it's a misclick.
-                        # 3. You are already challenging someone. Cancel that challenge before challenging someone else.
-                        # 4. The server is restarting. Battles will be available again in a few minutes.
-                        raise PopupError(split_message[2])
-                    elif (
-                        split_message[1] == "pm"
-                        and split_message[2] == f" {self.username}"
-                        and "wants to battle!" in split_message[4]
-                    ):
-                        return split_message
-                case MessageType.CANCEL:
-                    if split_message[1] == "popup":
-                        # Popups encountered when searching for cancel message in the past:
-                        # 1. You are not challenging <opponent_username>. Maybe they accepted/rejected before you cancelled?
-                        raise PopupError(split_message[2])
-                    elif (
-                        split_message[1] == "pm"
-                        and split_message[2] == f" {self.username}"
-                        and "cancelled the challenge." in split_message[4]
-                    ):
-                        return split_message
-                case MessageType.ACCEPT:
-                    if (
-                        split_message[1] == "pm"
-                        and split_message[3] == f" {self.username}"
-                        and "wants to battle!" in split_message[4]
-                    ):
-                        return split_message
-                case MessageType.OBSERVE:
-                    is_request = split_message[1] == "request" and split_message[2]
-                    is_protocol = "\n" in split_message
-                    if is_request or is_protocol:
-                        return split_message
-                case MessageType.LEAVE:
-                    if self._room and self._room in split_message[0] and split_message[1] == "deinit":
-                        return split_message
+        await self._client.send_message(self._room, "/logout")

@@ -74,11 +74,11 @@ class Model(nn.Module):
     ###################################################################################################################
     # Training methods
 
-    async def attempt_improve(self, env: Env, experiences: list[Experience]) -> tuple[list[Experience], int]:
+    async def attempt_improve(self, experiences: list[Experience]) -> tuple[list[Experience], int]:
         duplicate_model = deepcopy(self)
         # gathering data
         print("Gathering experiences...")
-        experiences, _ = await self.__run_episodes(duplicate_model, env)
+        experiences, _ = await self.__run_episodes(duplicate_model)
         # training
         print(f"Training on {len(experiences)} experiences...")
         for _ in range(10**4):
@@ -86,7 +86,7 @@ class Model(nn.Module):
             for experience in experience_sample:
                 self.__update(experience)
         # evaluating
-        _, num_wins = await self.__run_episodes(duplicate_model, env)
+        _, num_wins = await self.__run_episodes(duplicate_model)
         print(f"Win rate: {num_wins}/100")
         if num_wins < 55:
             print("Improvement failed.")
@@ -95,8 +95,9 @@ class Model(nn.Module):
             print("Improvement succeeded!")
         return experiences, num_wins
 
-    async def __run_episodes(self, alt_model: Model, env: Env) -> tuple[list[Experience], int]:
+    async def __run_episodes(self, alt_model: Model) -> tuple[list[Experience], int]:
         formats = [f"gen{i}randombattle" for i in range(1, 5)]
+        env = Env()
         await env.setup()
         experiences: list[Experience] = []
         num_wins = 0
