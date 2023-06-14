@@ -119,13 +119,17 @@ class MoveState:
     # Consistency checking
 
     def check_consistency(self, move_info: Any, zmove_pp_needs_update: Any, maxed: bool, just_unmaxed: bool):
-        if zmove_pp_needs_update or maxed or just_unmaxed or self.gen <= 3:
-            self.pp = move_info["pp"]
-        else:
-            assert self.pp == move_info["pp"], f"{self.pp} != {move_info['pp']}"
-        assert self.maxpp == move_info["maxpp"], f"{self.maxpp} != {move_info['maxpp']}"
-        assert self.target == move_info["target"], f"{self.target} != {move_info['target']}"
-        assert self.is_disabled() == move_info["disabled"], f"{self.is_disabled()} != {move_info['disabled']}"
+        if "pp" in move_info:
+            if zmove_pp_needs_update or maxed or just_unmaxed or self.gen <= 3:
+                self.pp = move_info["pp"]
+            else:
+                assert self.pp == move_info["pp"], f"{self.pp} != {move_info['pp']}"
+        if "maxpp" in move_info:
+            assert self.maxpp == move_info["maxpp"], f"{self.maxpp} != {move_info['maxpp']}"
+        if "target" in move_info:
+            assert self.target == move_info["target"], f"{self.target} != {move_info['target']}"
+        if "disabled" in move_info:
+            assert self.is_disabled() == move_info["disabled"], f"{self.is_disabled()} != {move_info['disabled']}"
 
     ###################################################################################################################
     # Processes MoveState object into a feature vector to be fed into the model's input layer

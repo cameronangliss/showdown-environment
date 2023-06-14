@@ -458,7 +458,7 @@ class PokemonState:
         assert self.status == status, f"{self.status} != {status}"
         assert self.stats == pokemon_info["stats"], f"{self.stats} != {pokemon_info['stats']}"
         assert len(self.get_moves()) <= 4, f"{len(self.get_moves())} > 4"
-        if self.active and active_info is not None and "pp" in active_info[0]["moves"][0]:
+        if self.active and active_info is not None and active_info[0]["moves"][0]["move"] != "Struggle":
             for move, move_info in zip(self.get_moves(), active_info[0]["moves"]):
                 move.check_consistency(move_info, zmove_pp_needs_update, self.maxed, just_unmaxed)
             assert self.can_mega == (
