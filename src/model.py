@@ -90,7 +90,7 @@ class Model(nn.Module):
         print(f"Win rate: {num_wins}/100")
         if num_wins < 55:
             print("Improvement failed.")
-            self = duplicate_model
+            self.__dict__ = duplicate_model.__dict__
         else:
             print("Improvement succeeded!")
         return experiences, num_wins
@@ -109,7 +109,8 @@ class Model(nn.Module):
             if winner == env.player.username:
                 num_wins += 1
         await env.close()
-        return experiences, num_wins
+        meaningful_experiences = list(filter(lambda experience: experience.action is not None, experiences))
+        return meaningful_experiences, num_wins
 
     async def __run_episode(self, alt_model: Model, env: Env, format_str: str) -> tuple[list[Experience], str | None]:
         experiences: list[Experience] = []
