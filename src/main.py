@@ -4,7 +4,7 @@ import os
 
 import torch
 
-from model import Experience, Model
+from model import Model
 
 
 async def main():
@@ -28,14 +28,9 @@ async def main():
 
     # train model
     iterations = int(config["iterations"])
-    experiences: list[Experience] = []
     for _ in range(iterations):
-        new_experiences, num_wins = await model.attempt_improve(experiences)
-        if num_wins < 55:
-            experiences += new_experiences
-        else:
-            experiences = []
-            torch.save(model.state_dict(), f"saves/{file_name}.pt")  # type: ignore
+        await model.improve()
+        torch.save(model.state_dict(), f"saves/{file_name}.pt")  # type: ignore
 
 
 if __name__ == "__main__":

@@ -74,15 +74,22 @@ class Model(nn.Module):
     ###################################################################################################################
     # Training methods
 
+    async def improve(self):
+        experiences = []
+        num_wins = 0
+        while num_wins < 55:
+            experiences, num_wins = await self.attempt_improve(experiences)
+
     async def attempt_improve(self, experiences: list[Experience]) -> tuple[list[Experience], int]:
         duplicate_model = deepcopy(self)
         # gathering data
         print("Gathering experiences...")
-        experiences, _ = await self.__run_episodes(duplicate_model)
+        new_experiences, _ = await self.__run_episodes(duplicate_model)
+        experiences += new_experiences
         # training
         print(f"Training on {len(experiences)} experiences...")
-        for _ in range(10**4):
-            experience_sample = random.sample(experiences, k=100)
+        for _ in range(1000):
+            experience_sample = random.sample(experiences, k=round(len(experiences) / 100))
             for experience in experience_sample:
                 self.__update(experience)
         # evaluating
