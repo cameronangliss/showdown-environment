@@ -396,6 +396,10 @@ class PokemonState:
     def start(self, info: list[str]):
         cause = info[0][6:] if info[0][:6] in ["move: ", "item: "] else info[0]
         match cause:
+            case "Bide":
+                for move in self.get_moves():
+                    if move.name != "Bide":
+                        move.bide_disabled = True
             case "Disable":
                 move = [move for move in self.get_moves() if move.name == self.__get_full_move_name(info[1])][0]
                 move.disable_disabled = True
@@ -431,6 +435,9 @@ class PokemonState:
     def end(self, info: list[str]):
         cause = info[0][6:] if info[0][:6] == "move: " else info[0]
         match cause:
+            case "Bide":
+                for move in self.get_moves():
+                    move.bide_disabled = False
             case "Disable":
                 move = [move for move in self.get_moves() if move.disable_disabled][0]
                 move.disable_disabled = False

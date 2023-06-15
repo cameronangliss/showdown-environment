@@ -14,6 +14,7 @@ class MoveState:
     target: str
     just_used: bool = False
     disable_disabled: bool = False
+    bide_disabled: bool = False
     encore_disabled: bool = False
     taunt_disabled: bool = False
     item_disabled: bool = False
@@ -48,11 +49,17 @@ class MoveState:
     def is_disabled(self, maxed: bool = False) -> bool:
         return (
             self.pp == 0
-            or (self.disable_disabled and not maxed)
-            or (self.encore_disabled and not maxed)
-            or (self.taunt_disabled and not maxed)
+            or (
+                (
+                    self.disable_disabled
+                    or self.bide_disabled
+                    or self.encore_disabled
+                    or self.taunt_disabled
+                    or self.self_disabled
+                )
+                and not maxed
+            )
             or self.item_disabled
-            or (self.self_disabled and not maxed)
         )
 
     def __get_category(self) -> str:
