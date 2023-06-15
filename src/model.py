@@ -103,13 +103,13 @@ class Model(nn.Module):
         return experiences, num_wins
 
     async def __run_episodes(self, alt_model: Model) -> tuple[list[Experience], int]:
-        formats = [f"gen{i}randombattle" for i in range(1, 5)]
+        # formats = [f"gen{i}randombattle" for i in range(1, 5)]
         env = Env()
         await env.setup()
         experiences: list[Experience] = []
         num_wins = 0
         for i in range(100):
-            new_experiences, winner = await self.__run_episode(alt_model, env, random.choice(formats))
+            new_experiences, winner = await self.__run_episode(alt_model, env, "gen4randombattle")
             experiences += new_experiences
             time = datetime.now().strftime("%H:%M:%S")
             print(f"{time}: {winner} wins game {i + 1}")
