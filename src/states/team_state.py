@@ -73,10 +73,9 @@ class TeamState:
             elif len(split_line) > 2 and split_line[2][:2] == self.__ident:
                 match split_line[1]:
                     case "move":
-                        if active_pokemon.preparing:
-                            active_pokemon.preparing = False
-                        else:
+                        if not active_pokemon.preparing:
                             active_pokemon.use_move(split_line[3], split_line[5:], self.__pressure)
+                        active_pokemon.preparing = False
                     case "switch":
                         hp, status = PokemonState.parse_condition(split_line[4])
                         self.__switch(split_line[2][5:], split_line[3], hp, status)
@@ -120,6 +119,10 @@ class TeamState:
                         active_pokemon.end_item(split_line[3], split_line[4:])
                     case "-prepare":
                         active_pokemon.preparing = True
+                    case "-anim":
+                        active_pokemon.preparing = False
+                    case "cant":
+                        active_pokemon.preparing = False
                     case "-mega":
                         self.mega_used = True
                         active_pokemon.mega_evolve(split_line[4] or None)
