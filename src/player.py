@@ -7,7 +7,7 @@ from logging import Logger
 import requests
 
 from client import Client, MessageType
-from states.state import State
+from state.state import State
 
 
 class Player:

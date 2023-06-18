@@ -5,7 +5,7 @@ import random
 
 from client import PopupError
 from player import Player
-from states.state import State
+from state.state import State
 
 
 class Env:

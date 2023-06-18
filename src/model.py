@@ -11,7 +11,7 @@ from torch import Tensor
 from websockets.exceptions import ConnectionClosedError
 
 from env import Env
-from states.state import State
+from state.state import State
 
 
 class Experience(NamedTuple):

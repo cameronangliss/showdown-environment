@@ -7,7 +7,7 @@ from functools import reduce
 from typing import Any
 
 from dex import abilitydex, itemdex, movedex, pokedex, typedex
-from states.move_state import MoveState
+from state.move_state import MoveState
 
 
 @dataclass

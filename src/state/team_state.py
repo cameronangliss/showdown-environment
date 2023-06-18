@@ -2,8 +2,8 @@ import json
 from functools import reduce
 from typing import Any
 
-from states.move_state import MoveState
-from states.pokemon_state import PokemonState
+from state.move_state import MoveState
+from state.pokemon_state import PokemonState
 
 
 class TeamState:
