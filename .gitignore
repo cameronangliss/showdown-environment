@@ -1,6 +1,4 @@
 .vscode
-json
-node_modules
 saves
 src/__pycache__
 config.json
