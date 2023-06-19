@@ -27,6 +27,7 @@ packaging==23.1
 pathspec==0.11.1
 platformdirs==3.6.0
 requests==2.31.0
+state @ git+https://github.com/cameronangliss/state@05ed15c45ddfc9d44add3793406b2cf9bd33c96d
 sympy==1.12
 torch==2.0.1
 triton==2.0.0

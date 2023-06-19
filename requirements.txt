@@ -3,3 +3,5 @@ isort
 requests
 torch
 websockets
+
+git+https://github.com/cameronangliss/state
