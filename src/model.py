@@ -7,11 +7,11 @@ from typing import NamedTuple
 
 import torch
 import torch.nn as nn
+from state import State
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError
 
 from env import Env
-from state.state import State
 
 
 class Experience(NamedTuple):

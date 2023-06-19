@@ -5,9 +5,9 @@ import json
 from logging import Logger
 
 import requests
+from state import State
 
 from client import Client, MessageType
-from state.state import State
 
 
 class Player:

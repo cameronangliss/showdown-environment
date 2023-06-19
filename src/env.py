@@ -3,9 +3,10 @@ import json
 import logging
 import random
 
+from state import State
+
 from client import PopupError
 from player import Player
-from state.state import State
 
 
 class Env:
