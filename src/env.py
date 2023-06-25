@@ -88,6 +88,7 @@ class Env:
     async def close(self):
         await self.player.close()
         await self._alt_player.close()
+        open("debug.log", "w").close()
 
     ###################################################################################################################
     # Helper methods
