@@ -27,8 +27,8 @@ async def main():
         model.load_state_dict(torch.load(f"saves/{file_name}.pt"))  # type: ignore
 
     # train model
-    iterations = int(config["iterations"])
-    for _ in range(iterations):
+    improvements = int(config["improvements"])
+    for _ in range(improvements):
         await model.improve()
         torch.save(model.state_dict(), f"saves/{file_name}.pt")  # type: ignore
 
