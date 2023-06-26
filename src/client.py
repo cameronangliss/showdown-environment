@@ -38,7 +38,7 @@ class Client:
     async def send_message(self, room: str | None, message: str):
         room_str = room or ""
         message = f"{room_str}|{message}"
-        self._logger.info(f"{self._username.upper()} -> SERVER:\n{message}")
+        self._logger.info(message)
         if self._websocket:
             await self._websocket.send(message)
         else:
@@ -49,7 +49,7 @@ class Client:
             response = str(await self._websocket.recv())
         else:
             raise ConnectionError("Cannot receive message without established websocket")
-        self._logger.info(f"SERVER -> {self._username.upper()}:\n{response}")
+        self._logger.info(response)
         return response
 
     async def find_message(self, room: str | None, message_type: MessageType) -> list[str]:

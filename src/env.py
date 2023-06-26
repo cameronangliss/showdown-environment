@@ -13,30 +13,22 @@ class Env:
     player: Player
     _alt_player: Player
     logger: logging.Logger
-    __cynthia_avatars: list[str]
 
     def __init__(self):
-        with open("config.json") as f:
-            config = json.load(f)
+        # building logger
         logging.basicConfig(
-            level=logging.INFO,
             filename="debug.log",
             filemode="w",
-            format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s()\n%(message)s\n",
+            format="%(name)s %(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s()\n%(message)s\n",
+            level=logging.INFO,
         )
-        self.logger = logging.getLogger()
-        self.player = Player(config["username"], config["password"], self.logger)
-        self._alt_player = Player(config["alt_username"], config["alt_password"], self.logger)
-        self.__cynthia_avatars = [
-            "cynthia-anime",
-            "cynthia-anime2",
-            "cynthia-gen4",
-            "cynthia-gen7",
-            "cynthia-masters",
-            "cynthia-masters2",
-            "cynthia-masters3",
-            "cynthia",
-        ]
+        self.logger = logging.getLogger("Environment")
+
+        # construct players
+        with open("config.json") as f:
+            config = json.load(f)
+        self.player = Player(config["username"], config["password"])
+        self._alt_player = Player(config["alt_username"], config["alt_password"])
 
     ###################################################################################################################
     # OpenAI Gym-style methods
@@ -48,7 +40,17 @@ class Env:
     async def reset(self, format_str: str) -> tuple[State, State]:
         await self.player.leave()
         await self._alt_player.leave()
-        [avatar1, avatar2, *_] = random.sample(self.__cynthia_avatars, k=2)
+        cynthia_avatars = [
+            "cynthia-anime",
+            "cynthia-anime2",
+            "cynthia-gen4",
+            "cynthia-gen7",
+            "cynthia-masters",
+            "cynthia-masters2",
+            "cynthia-masters3",
+            "cynthia",
+        ]
+        [avatar1, avatar2, *_] = random.sample(cynthia_avatars, k=2)
         await self.player.set_avatar(avatar1)
         await self._alt_player.set_avatar(avatar2)
         while True:
@@ -88,7 +90,10 @@ class Env:
     async def close(self):
         await self.player.close()
         await self._alt_player.close()
-        open("debug.log", "w").close()
+
+        # resetting logger
+        for handler in logging.getLogger().handlers:
+            logging.getLogger().removeHandler(handler)
 
     ###################################################################################################################
     # Helper methods

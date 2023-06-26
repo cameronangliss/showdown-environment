@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from logging import Logger
+import logging
 
 import requests
 from state import State
@@ -13,25 +13,17 @@ from client import Client, MessageType
 class Player:
     username: str
     _password: str
-    _logger: Logger
+    _logger: logging.Logger
     _client: Client
     _room: str | None
-    __action_space: list[str]
 
-    def __init__(self, username: str, password: str, logger: Logger):
+    def __init__(self, username: str, password: str):
+        # assigning other properties
         self.username = username
         self._password = password
-        self._logger = logger
-        self._client = Client(username, logger)
+        self._logger = logging.getLogger(username)
+        self._client = Client(username, self._logger)
         self._room = None
-        self.__action_space = (
-            [f"switch {i}" for i in range(1, 7)]
-            + [f"move {i}" for i in range(1, 5)]
-            + [f"move {i} mega" for i in range(1, 5)]
-            + [f"move {i} zmove" for i in range(1, 5)]
-            + [f"move {i} max" for i in range(1, 5)]
-            + [f"move {i} terastallize" for i in range(1, 5)]
-        )
 
     ###################################################################################################################
     # OpenAI Gym-style methods
@@ -133,8 +125,16 @@ class Player:
         return state
 
     async def choose(self, action: int | None, rqid: int):
+        action_space = (
+            [f"switch {i}" for i in range(1, 7)]
+            + [f"move {i}" for i in range(1, 5)]
+            + [f"move {i} mega" for i in range(1, 5)]
+            + [f"move {i} zmove" for i in range(1, 5)]
+            + [f"move {i} max" for i in range(1, 5)]
+            + [f"move {i} terastallize" for i in range(1, 5)]
+        )
         if action is not None:
-            await self._client.send_message(self._room, f"/choose {self.__action_space[action]}|{rqid}")
+            await self._client.send_message(self._room, f"/choose {action_space[action]}|{rqid}")
 
     async def leave(self):
         if self._room:
