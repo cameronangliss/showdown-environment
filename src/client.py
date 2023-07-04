@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import Enum, auto
 from logging import Logger
 from typing import Any
@@ -21,35 +20,39 @@ class MessageType(Enum):
     LEAVE = auto()
 
 
-@dataclass
 class Client:
-    _username: str
-    _logger: Logger
-    _websocket: ws.WebSocketClientProtocol | None = None
+    __websocket: ws.WebSocketClientProtocol | None
+    __username: str
+    __logger: Logger
+
+    def __init__(self, username: str, logger: Logger):
+        self.__websocket = None
+        self.__username = username
+        self.__logger = logger
 
     async def connect(self):
         while True:
             try:
-                self._websocket = await ws.connect("wss://sim3.psim.us/showdown/websocket")
+                self.__websocket = await ws.connect("wss://sim3.psim.us/showdown/websocket")
                 break
             except TimeoutError:
-                self._logger.error("Connection attempt failed, retrying now")
+                self.__logger.error("Connection attempt failed, retrying now")
 
     async def send_message(self, room: str | None, message: str):
         room_str = room or ""
         message = f"{room_str}|{message}"
-        self._logger.info(message)
-        if self._websocket:
-            await self._websocket.send(message)
+        self.__logger.info(message)
+        if self.__websocket:
+            await self.__websocket.send(message)
         else:
             raise ConnectionError("Cannot send message without established websocket")
 
     async def receive_message(self) -> str:
-        if self._websocket:
-            response = str(await self._websocket.recv())
+        if self.__websocket:
+            response = str(await self.__websocket.recv())
         else:
             raise ConnectionError("Cannot receive message without established websocket")
-        self._logger.info(response)
+        self.__logger.info(response)
         return response
 
     async def find_message(self, room: str | None, message_type: MessageType) -> list[str]:
@@ -79,7 +82,7 @@ class Client:
                         raise PopupError(split_message[2])
                     elif (
                         split_message[1] == "pm"
-                        and split_message[2] == f" {self._username}"
+                        and split_message[2] == f" {self.__username}"
                         and "wants to battle!" in split_message[4]
                     ):
                         return split_message
@@ -90,14 +93,14 @@ class Client:
                         raise PopupError(split_message[2])
                     elif (
                         split_message[1] == "pm"
-                        and split_message[2] == f" {self._username}"
+                        and split_message[2] == f" {self.__username}"
                         and "cancelled the challenge." in split_message[4]
                     ):
                         return split_message
                 case MessageType.ACCEPT:
                     if (
                         split_message[1] == "pm"
-                        and split_message[3] == f" {self._username}"
+                        and split_message[3] == f" {self.__username}"
                         and "wants to battle!" in split_message[4]
                     ):
                         return split_message
