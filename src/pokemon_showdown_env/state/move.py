@@ -2,7 +2,7 @@ import json
 import re
 from typing import Any
 
-from data.dex import movedex, typedex
+from pokemon_showdown_env.data.dex import movedex, typedex
 
 
 class Move:

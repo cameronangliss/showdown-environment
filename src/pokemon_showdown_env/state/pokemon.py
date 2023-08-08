@@ -6,8 +6,7 @@ from dataclasses import dataclass
 from functools import reduce
 from typing import Any
 
-from data.dex import abilitydex, itemdex, movedex, pokedex, typedex
-
+from pokemon_showdown_env.data.dex import abilitydex, itemdex, movedex, pokedex, typedex
 from pokemon_showdown_env.state.move import Move
 
 
