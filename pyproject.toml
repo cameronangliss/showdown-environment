@@ -1,5 +1,19 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pokemon_showdown_env"
+version = "0.1.0"
+authors = [{ name = "Cameron Angliss", email = "cameronangliss99@gmail.com" }]
+
 [tool.black]
 line-length = 120
 
 [tool.isort]
 profile = "black"
+multi_line_output = 3
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.11"

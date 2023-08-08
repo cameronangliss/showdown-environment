@@ -7,17 +7,17 @@ from typing import NamedTuple
 
 import torch
 import torch.nn as nn
-from state import State
+from pokemon_showdown_env.state.battle import Battle
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError
 
-from env import Env
+from pokemon_showdown_env.showdown.environment import Env
 
 
 class Experience(NamedTuple):
-    state: State
+    state: Battle
     action: int | None
-    next_state: State
+    next_state: Battle
     reward: int
     done: bool
 
@@ -113,7 +113,7 @@ class Model(nn.Module):
             experiences += new_experiences
             time = datetime.now().strftime("%H:%M:%S")
             print(f"{time}: {winner} wins game {i + 1}")
-            if winner == env.player.username:
+            if winner == env.agent.username:
                 num_wins += 1
         await env.close()
         meaningful_experiences = list(filter(lambda experience: experience.action is not None, experiences))
@@ -150,7 +150,7 @@ class Model(nn.Module):
             winner = None
             return [], winner
 
-    def __get_action(self, state: State) -> int | None:
+    def __get_action(self, state: Battle) -> int | None:
         action_space = state.get_valid_action_ids()
         if action_space:
             if random.random() < self.__epsilon:

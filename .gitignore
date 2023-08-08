@@ -1,5 +1,6 @@
 .vscode
+__pycache__
+node_modules
 saves
-src/__pycache__
 config.json
 debug.log
