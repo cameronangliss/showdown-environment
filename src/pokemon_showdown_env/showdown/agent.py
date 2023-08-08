@@ -58,9 +58,7 @@ class Agent(Client):
         # The first games message is always empty, so this is here to pass by that message.
         await self.find_message(self.__room, MessageType.GAMES)
         try:
-            split_message = await asyncio.wait_for(
-                self.find_message(self.__room, MessageType.GAMES), timeout=5
-            )
+            split_message = await asyncio.wait_for(self.find_message(self.__room, MessageType.GAMES), timeout=5)
         except TimeoutError:
             self.__logger.info("Second updatesearch message not received. This should mean the user just logged in.")
         else:

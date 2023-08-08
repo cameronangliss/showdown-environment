@@ -7,11 +7,11 @@ from typing import NamedTuple
 
 import torch
 import torch.nn as nn
-from pokemon_showdown_env.state.battle import Battle
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError
 
 from pokemon_showdown_env.environment import Env
+from pokemon_showdown_env.state.battle import Battle
 
 
 class Experience(NamedTuple):
