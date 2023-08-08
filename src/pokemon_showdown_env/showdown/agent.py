@@ -5,9 +5,9 @@ import json
 import logging
 
 import requests
-from state.battle import Battle
 
 from pokemon_showdown_env.showdown.client import Client, MessageType
+from pokemon_showdown_env.state.battle import Battle
 
 
 class Agent(Client):

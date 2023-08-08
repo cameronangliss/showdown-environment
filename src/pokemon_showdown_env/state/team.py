@@ -2,7 +2,7 @@ import json
 from functools import reduce
 from typing import Any
 
-from pokemon import Pokemon
+from pokemon_showdown_env.state.pokemon import Pokemon
 
 
 class Team:
