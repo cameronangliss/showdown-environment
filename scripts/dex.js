@@ -1,7 +1,7 @@
 const { Dex } = require('pokemon-showdown');
 const fs = require('fs');
 
-relPathToJsonFolder = '../src/pokemon_showdown_env/data/json'
+relPathToJsonFolder = 'src/pokemon_showdown_env/data/json'
 
 function transformData(jsonList) {
     result = {};
