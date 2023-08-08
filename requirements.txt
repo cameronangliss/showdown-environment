@@ -1,8 +1,6 @@
-black
-isort
+black==23.7.0
+isort==5.12.0
 numpy
 requests
 torch
 websockets
-
-git+https://github.com/cameronangliss/state
