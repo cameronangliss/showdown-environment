@@ -11,7 +11,7 @@ from pokemon_showdown_env.state.battle import Battle
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError
 
-from pokemon_showdown_env.showdown.environment import Env
+from pokemon_showdown_env.environment import Env
 
 
 class Experience(NamedTuple):
