@@ -10,7 +10,7 @@ import torch.nn as nn
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError
 
-from pokemon_showdown_env.environment import Env
+from pokemon_showdown_env.showdown.environment import Environment
 from pokemon_showdown_env.state.battle import Battle
 
 
@@ -104,7 +104,7 @@ class Model(nn.Module):
 
     async def __run_episodes(self, alt_model: Model) -> tuple[list[Experience], int]:
         # formats = [f"gen{i}randombattle" for i in range(1, 5)]
-        env = Env()
+        env = Environment()
         await env.setup()
         experiences: list[Experience] = []
         num_wins = 0
@@ -119,7 +119,9 @@ class Model(nn.Module):
         meaningful_experiences = list(filter(lambda experience: experience.action is not None, experiences))
         return meaningful_experiences, num_wins
 
-    async def __run_episode(self, alt_model: Model, env: Env, format_str: str) -> tuple[list[Experience], str | None]:
+    async def __run_episode(
+        self, alt_model: Model, env: Environment, format_str: str
+    ) -> tuple[list[Experience], str | None]:
         experiences: list[Experience] = []
         try:
             state1, state2 = await env.reset(format_str)

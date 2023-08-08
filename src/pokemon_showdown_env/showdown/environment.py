@@ -8,7 +8,7 @@ from pokemon_showdown_env.showdown.client import PopupError
 from pokemon_showdown_env.state.battle import Battle
 
 
-class Env:
+class Environment:
     agent: Agent
     __alt_agent: Agent
     logger: logging.Logger
