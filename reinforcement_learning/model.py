@@ -49,6 +49,10 @@ class Model(nn.Module):
         self.__layers = nn.ModuleList(layers)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.__alpha)
 
+        # Move the model to GPU if available
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.to(device=self.device)
+
     def __forward(self, x: Tensor) -> Tensor:  # type: ignore
         for layer in self.__layers:
             x = torch.relu(layer.forward(x))
@@ -57,13 +61,13 @@ class Model(nn.Module):
     def __update(self, experience: Experience):
         if experience.action is not None:
             if experience.done:
-                q_target = torch.tensor(experience.reward)
+                q_target = torch.tensor(experience.reward).to(device=self.device)
             else:
-                next_features = torch.tensor(experience.next_state.process())
-                next_q_values = self.__forward(next_features)
+                next_features = torch.tensor(experience.next_state.process()).to(device=self.device)
+                next_q_values = self.__forward(next_features).to(device=self.device)
                 q_target = experience.reward + self.__gamma * torch.max(next_q_values)  # type: ignore
-            features = torch.tensor(experience.state.process())
-            q_values = self.__forward(features)
+            features = torch.tensor(experience.state.process()).to(device=self.device)
+            q_values = self.__forward(features).to(device=self.device)
             q_estimate = q_values[experience.action]
             td_error = q_target - q_estimate
             loss = td_error**2
@@ -158,8 +162,8 @@ class Model(nn.Module):
             if random.random() < self.__epsilon:
                 action = random.choice(action_space)
             else:
-                features = torch.tensor(state.process())
-                outputs = self.__forward(features)
+                features = torch.tensor(state.process()).to(device=self.device)
+                outputs = self.__forward(features).to(device=self.device)
                 valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_space))
                 max_output_id = int(torch.argmax(valid_outputs).item())
                 action = action_space[max_output_id]
