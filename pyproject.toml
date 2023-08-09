@@ -19,4 +19,4 @@ include = ["src"]
 pythonVersion = "3.11"
 
 [tool.setuptools.package-data]
-pokemon_showdown_env = ["src/pokemon_showdown_env/data/json/**"]
+pokemon_showdown_env = ["data/json/**"]
