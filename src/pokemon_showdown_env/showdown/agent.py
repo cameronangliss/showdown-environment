@@ -12,19 +12,19 @@ from pokemon_showdown_env.state.battle import Battle
 
 class Agent(Client):
     username: str
-    __password: str
-    __logger: Logger
-    __room: str | None
+    password: str
+    logger: Logger
+    room: str | None
 
     def __init__(self, username: str, password: str):
         super().__init__(username)
-        self.__password = password
+        self.password = password
 
     ###################################################################################################################
     # OpenAI Gym-style methods
 
     async def setup(self):
-        self.__room = None
+        self.room = None
         await self.connect()
         await self.login()
         await self.forfeit_games()
@@ -44,7 +44,7 @@ class Agent(Client):
             "https://play.pokemonshowdown.com/api/login",
             {
                 "name": self.username,
-                "pass": self.__password,
+                "pass": self.password,
                 "challstr": f"{client_id}|{challstr}",
             },
         )
@@ -58,12 +58,12 @@ class Agent(Client):
         try:
             split_message = await asyncio.wait_for(self.find_message(MessageType.GAMES), timeout=5)
         except TimeoutError:
-            self.__logger.info("Second updatesearch message not received. This should mean the user just logged in.")
+            self.logger.info("Second updatesearch message not received. This should mean the user just logged in.")
         else:
             games = json.loads(split_message[2])["games"]
             if games:
                 battle_rooms = list(games.keys())
-                prev_room = self.__room
+                prev_room = self.room
                 for room in battle_rooms:
                     await self.join(room)
                     await self.send_message("/forfeit")
@@ -99,7 +99,7 @@ class Agent(Client):
 
     async def join(self, room: str):
         await self.send_message(f"/join {room}")
-        self.__room = room
+        self.room = room
 
     async def timer_on(self):
         await self.send_message("/timer on")
@@ -116,7 +116,7 @@ class Agent(Client):
             state.update(protocol, request)
         else:
             state = Battle(protocol, request)
-        self.__logger.info(state.get_json_str())
+        self.logger.info(state.get_json_str())
         return state
 
     async def choose(self, action: int | None, rqid: int):
@@ -132,11 +132,11 @@ class Agent(Client):
             await self.send_message(f"/choose {action_space[action]}|{rqid}")
 
     async def leave(self):
-        if self.__room:
-            await self.send_message(f"/leave {self.__room}")
+        if self.room:
+            await self.send_message(f"/leave {self.room}")
             # gets rid of all messages having to do with the room being left
             await self.find_message(MessageType.LEAVE)
-            self.__room = None
+            self.room = None
 
     async def logout(self):
         await self.send_message("/logout")

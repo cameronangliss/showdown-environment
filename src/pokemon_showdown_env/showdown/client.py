@@ -22,39 +22,39 @@ class MessageType(Enum):
 
 class Client:
     username: str
-    __logger: logging.Logger
-    __room: str | None
-    __websocket: ws.WebSocketClientProtocol | None
+    logger: logging.Logger
+    room: str | None
+    websocket: ws.WebSocketClientProtocol | None
 
     def __init__(self, username: str):
         self.username = username
-        self.__logger = logging.getLogger(username)
-        self.__room = None
-        self.__websocket = None
+        self.logger = logging.getLogger(username)
+        self.room = None
+        self.websocket = None
 
     async def connect(self):
         while True:
             try:
-                self.__websocket = await ws.connect("wss://sim3.psim.us/showdown/websocket")
+                self.websocket = await ws.connect("wss://sim3.psim.us/showdown/websocket")
                 break
             except TimeoutError:
-                self.__logger.error("Connection attempt failed, retrying now")
+                self.logger.error("Connection attempt failed, retrying now")
 
     async def send_message(self, message: str):
-        room_str = self.__room or ""
+        room_str = self.room or ""
         message = f"{room_str}|{message}"
-        self.__logger.info(message)
-        if self.__websocket:
-            await self.__websocket.send(message)
+        self.logger.info(message)
+        if self.websocket:
+            await self.websocket.send(message)
         else:
             raise ConnectionError("Cannot send message without established websocket")
 
     async def receive_message(self) -> str:
-        if self.__websocket:
-            response = str(await self.__websocket.recv())
+        if self.websocket:
+            response = str(await self.websocket.recv())
         else:
             raise ConnectionError("Cannot receive message without established websocket")
-        self.__logger.info(response)
+        self.logger.info(response)
         return response
 
     async def find_message(self, message_type: MessageType) -> list[str]:
@@ -112,5 +112,5 @@ class Client:
                     if is_request or is_protocol:
                         return split_message
                 case MessageType.LEAVE:
-                    if self.__room is not None and self.__room in split_message[0] and split_message[1] == "deinit":
+                    if self.room is not None and self.room in split_message[0] and split_message[1] == "deinit":
                         return split_message
