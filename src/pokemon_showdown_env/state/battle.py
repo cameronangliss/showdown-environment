@@ -1,8 +1,9 @@
 import json
 from typing import Any
 
-from pokemon_showdown_env.state.team import Team
 import torch
+
+from pokemon_showdown_env.state.team import Team
 
 
 class Battle:

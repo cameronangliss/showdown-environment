@@ -5,6 +5,7 @@ from copy import deepcopy
 from datetime import datetime
 from typing import NamedTuple
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
@@ -163,7 +164,7 @@ class Model(nn.Module):
             else:
                 features = state.process()
                 outputs = self.__forward(features)
-                valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_space))
-                max_output_id = int(torch.argmax(valid_outputs).item())
-                action = action_space[max_output_id]
+                valid_outputs = [outputs[valid_index] for valid_index in action_space]
+                max_output_index = int(np.argmax(valid_outputs))
+                action = action_space[max_output_index]
             return action
