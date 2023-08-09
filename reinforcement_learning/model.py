@@ -5,7 +5,6 @@ from copy import deepcopy
 from datetime import datetime
 from typing import NamedTuple
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
@@ -51,7 +50,8 @@ class Model(nn.Module):
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.__alpha)
 
         # Move the model to GPU if available
-        self.to(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.to(self.device)
 
     def __forward(self, x: Tensor) -> Tensor:  # type: ignore
         for layer in self.__layers:
@@ -164,7 +164,7 @@ class Model(nn.Module):
             else:
                 features = state.process()
                 outputs = self.__forward(features)
-                valid_outputs = [outputs[valid_index] for valid_index in action_space]
-                max_output_index = int(np.argmax(valid_outputs))
-                action = action_space[max_output_index]
+                valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_space).to(self.device))
+                max_output_id = int(torch.argmax(valid_outputs).item())
+                action = action_space[max_output_id]
             return action
