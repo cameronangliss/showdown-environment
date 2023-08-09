@@ -15,9 +15,9 @@ from pokemon_showdown_env.state.battle import Battle
 
 
 class Experience(NamedTuple):
-    state: Battle
+    processed_state: Tensor
     action: int | None
-    next_state: Battle
+    next_processed_state: Tensor
     reward: int
     done: bool
 
@@ -50,8 +50,7 @@ class Model(nn.Module):
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.__alpha)
 
         # Move the model to GPU if available
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.to(device=self.device)
+        self.to(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
 
     def __forward(self, x: Tensor) -> Tensor:  # type: ignore
         for layer in self.__layers:
@@ -61,13 +60,13 @@ class Model(nn.Module):
     def __update(self, experience: Experience):
         if experience.action is not None:
             if experience.done:
-                q_target = torch.tensor(experience.reward).to(device=self.device)
+                q_target = torch.tensor(experience.reward)
             else:
-                next_features = torch.tensor(experience.next_state.process()).to(device=self.device)
-                next_q_values = self.__forward(next_features).to(device=self.device)
+                next_features = experience.next_processed_state
+                next_q_values = self.__forward(next_features)
                 q_target = experience.reward + self.__gamma * torch.max(next_q_values)  # type: ignore
-            features = torch.tensor(experience.state.process()).to(device=self.device)
-            q_values = self.__forward(features).to(device=self.device)
+            features = torch.tensor(experience.processed_state)
+            q_values = self.__forward(features)
             q_estimate = q_values[experience.action]
             td_error = q_target - q_estimate
             loss = td_error**2
@@ -139,8 +138,8 @@ class Model(nn.Module):
                     action1,
                     action2,
                 )
-                experience1 = Experience(state1, action1, next_state1, reward1, done)
-                experience2 = Experience(state2, action2, next_state2, reward2, done)
+                experience1 = Experience(state1.process(), action1, next_state1.process(), reward1, done)
+                experience2 = Experience(state2.process(), action2, next_state2.process(), reward2, done)
                 experiences += [experience1, experience2]
                 state1, state2 = next_state1, next_state2
             try:
@@ -162,8 +161,8 @@ class Model(nn.Module):
             if random.random() < self.__epsilon:
                 action = random.choice(action_space)
             else:
-                features = torch.tensor(state.process()).to(device=self.device)
-                outputs = self.__forward(features).to(device=self.device)
+                features = state.process()
+                outputs = self.__forward(features)
                 valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_space))
                 max_output_id = int(torch.argmax(valid_outputs).item())
                 action = action_space[max_output_id]

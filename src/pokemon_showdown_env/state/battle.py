@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 from pokemon_showdown_env.state.team import Team
+import torch
 
 
 class Battle:
@@ -89,12 +90,12 @@ class Battle:
     ###################################################################################################################
     # Processes State object into a feature vector to be fed into the model's input layer
 
-    def process(self) -> list[float]:
+    def process(self) -> torch.Tensor:
         team_features = self.__team.process()
         opponent_features = self.__opponent_team.process()
         global_features = self.__process_globals()
         features = team_features + opponent_features + global_features
-        return features
+        return torch.tensor(features).to(device="cuda" if torch.cuda.is_available() else "cpu")
 
     def __process_globals(self) -> list[float]:
         gen_features = [float(n == self.__gen) for n in range(1, 10)]
