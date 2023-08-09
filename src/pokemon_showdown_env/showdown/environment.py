@@ -3,14 +3,14 @@ import json
 import logging
 import random
 
-from pokemon_showdown_env.showdown.agent import Agent
+from pokemon_showdown_env.showdown.player import Player
 from pokemon_showdown_env.showdown.client import PopupError
 from pokemon_showdown_env.state.battle import Battle
 
 
 class Environment:
-    agent: Agent
-    __alt_agent: Agent
+    agent: Player
+    __alt_agent: Player
     logger: logging.Logger
 
     def __init__(self):
@@ -26,8 +26,8 @@ class Environment:
         # construct players
         with open("config.json") as f:
             config = json.load(f)
-        self.agent = Agent(config["username"], config["password"])
-        self.__alt_agent = Agent(config["alt_username"], config["alt_password"])
+        self.agent = Player(config["username"], config["password"])
+        self.__alt_agent = Player(config["alt_username"], config["alt_password"])
 
     ###################################################################################################################
     # OpenAI Gym-style methods

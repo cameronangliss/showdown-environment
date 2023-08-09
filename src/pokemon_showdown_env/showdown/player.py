@@ -10,7 +10,7 @@ from pokemon_showdown_env.showdown.client import Client, MessageType
 from pokemon_showdown_env.state.battle import Battle
 
 
-class Agent(Client):
+class Player(Client):
     username: str
     password: str
     logger: Logger
@@ -74,18 +74,18 @@ class Agent(Client):
     async def set_avatar(self, avatar: str):
         await self.send_message(f"/avatar {avatar}")
 
-    async def challenge(self, opponent: Agent, battle_format: str, team: str | None = None):
+    async def challenge(self, opponent: Player, battle_format: str, team: str | None = None):
         await self.send_message(f"/utm {team}")
         await self.send_message(f"/challenge {opponent.username}, {battle_format}")
         # Waiting for confirmation that challenge was sent
         await self.find_message(MessageType.CHALLENGE)
 
-    async def cancel(self, opponent: Agent):
+    async def cancel(self, opponent: Player):
         await self.send_message(f"/cancelchallenge {opponent.username}")
         # Waiting for confirmation that challenge was cancelled
         await self.find_message(MessageType.CANCEL)
 
-    async def accept(self, opponent: Agent, team: str | None = None) -> str:
+    async def accept(self, opponent: Player, team: str | None = None) -> str:
         # Waiting for confirmation that challenge was received
         await self.find_message(MessageType.ACCEPT)
         await self.send_message(f"/utm {team}")
