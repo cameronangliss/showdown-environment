@@ -21,13 +21,13 @@ class MessageType(Enum):
 
 
 class Client:
-    __username: str
+    username: str
     __logger: logging.Logger
     __room: str | None
     __websocket: ws.WebSocketClientProtocol | None
 
     def __init__(self, username: str):
-        self.__username = username
+        self.username = username
         self.__logger = logging.getLogger(username)
         self.__room = None
         self.__websocket = None
@@ -84,7 +84,7 @@ class Client:
                         raise PopupError(split_message[2])
                     elif (
                         split_message[1] == "pm"
-                        and split_message[2] == f" {self.__username}"
+                        and split_message[2] == f" {self.username}"
                         and "wants to battle!" in split_message[4]
                     ):
                         return split_message
@@ -95,14 +95,14 @@ class Client:
                         raise PopupError(split_message[2])
                     elif (
                         split_message[1] == "pm"
-                        and split_message[2] == f" {self.__username}"
+                        and split_message[2] == f" {self.username}"
                         and "cancelled the challenge." in split_message[4]
                     ):
                         return split_message
                 case MessageType.ACCEPT:
                     if (
                         split_message[1] == "pm"
-                        and split_message[3] == f" {self.__username}"
+                        and split_message[3] == f" {self.username}"
                         and "wants to battle!" in split_message[4]
                     ):
                         return split_message
