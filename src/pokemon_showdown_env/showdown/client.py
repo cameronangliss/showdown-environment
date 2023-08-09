@@ -1,5 +1,5 @@
+import logging
 from enum import Enum, auto
-from logging import Logger
 from typing import Any
 
 import websockets.client as ws
@@ -21,13 +21,15 @@ class MessageType(Enum):
 
 
 class Client:
-    username: str
-    __logger: Logger
+    __username: str
+    __logger: logging.Logger
+    __room: str | None
     __websocket: ws.WebSocketClientProtocol | None
 
-    def __init__(self, username: str, logger: Logger):
-        self.username = username
-        self.__logger = logger
+    def __init__(self, username: str):
+        self.__username = username
+        self.__logger = logging.getLogger(username)
+        self.__room = None
         self.__websocket = None
 
     async def connect(self):
@@ -38,8 +40,8 @@ class Client:
             except TimeoutError:
                 self.__logger.error("Connection attempt failed, retrying now")
 
-    async def send_message(self, room: str | None, message: str):
-        room_str = room or ""
+    async def send_message(self, message: str):
+        room_str = self.__room or ""
         message = f"{room_str}|{message}"
         self.__logger.info(message)
         if self.__websocket:
@@ -55,7 +57,7 @@ class Client:
         self.__logger.info(response)
         return response
 
-    async def find_message(self, room: str | None, message_type: MessageType) -> list[str]:
+    async def find_message(self, message_type: MessageType) -> list[str]:
         while True:
             message = await self.receive_message()
             split_message = message.split("|")
@@ -82,7 +84,7 @@ class Client:
                         raise PopupError(split_message[2])
                     elif (
                         split_message[1] == "pm"
-                        and split_message[2] == f" {self.username}"
+                        and split_message[2] == f" {self.__username}"
                         and "wants to battle!" in split_message[4]
                     ):
                         return split_message
@@ -93,14 +95,14 @@ class Client:
                         raise PopupError(split_message[2])
                     elif (
                         split_message[1] == "pm"
-                        and split_message[2] == f" {self.username}"
+                        and split_message[2] == f" {self.__username}"
                         and "cancelled the challenge." in split_message[4]
                     ):
                         return split_message
                 case MessageType.ACCEPT:
                     if (
                         split_message[1] == "pm"
-                        and split_message[3] == f" {self.username}"
+                        and split_message[3] == f" {self.__username}"
                         and "wants to battle!" in split_message[4]
                     ):
                         return split_message
@@ -110,5 +112,5 @@ class Client:
                     if is_request or is_protocol:
                         return split_message
                 case MessageType.LEAVE:
-                    if room is not None and room in split_message[0] and split_message[1] == "deinit":
+                    if self.__room is not None and self.__room in split_message[0] and split_message[1] == "deinit":
                         return split_message
