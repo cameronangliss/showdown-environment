@@ -17,3 +17,6 @@ multi_line_output = 3
 [tool.pyright]
 include = ["src"]
 pythonVersion = "3.11"
+
+[tool.setuptools]
+include = ["src/pokemon_showdown_env/data/json/**"]
