@@ -3,8 +3,8 @@ import json
 import logging
 import random
 
-from pokemon_showdown_env.showdown.player import Player
 from pokemon_showdown_env.showdown.client import PopupError
+from pokemon_showdown_env.showdown.player import Player
 from pokemon_showdown_env.state.battle import Battle
 
 
