@@ -58,9 +58,9 @@ class Team:
                     hp, status = Pokemon.parse_condition(split_line[4])
                     self.__switch(split_line[2][5:], split_line[3], hp, status)
             elif len(split_line) > 2 and split_line[2][:2] == self.__ident:
-                self.__update_team(split_line, active_pokemon, request)
+                self.__update_with_player_message(split_line, active_pokemon, request)
             elif len(split_line) > 2 and split_line[2][:2] != self.__ident:
-                self.__update_opponent(split_line, active_pokemon)
+                self.__update_with_opponent_message(split_line, active_pokemon)
             if active_pokemon is not None:
                 active_pokemon.update_special_options(
                     self.__mega_used, self.__zmove_used, self.__burst_used, self.__max_used, self.__tera_used
@@ -84,7 +84,7 @@ class Team:
             if not any([pokemon.illusion for pokemon in self.__team]):
                 self.check_consistency(request, just_unmaxed)
 
-    def __update_team(self, split_line: list[str], active_pokemon: Pokemon, request: Any | None):
+    def __update_with_player_message(self, split_line: list[str], active_pokemon: Pokemon, request: Any | None):
         match split_line[1]:
             case "move":
                 if not active_pokemon.preparing:
@@ -169,7 +169,7 @@ class Team:
             case _:
                 pass
 
-    def __update_opponent(self, split_line: list[str], active_pokemon: Pokemon):
+    def __update_with_opponent_message(self, split_line: list[str], active_pokemon: Pokemon):
         match split_line[1]:
             case "switch":
                 if self.__pressure:
@@ -251,10 +251,13 @@ class Team:
         pokemon_feature_lists.extend([[0.0] * 123] * (6 - len(pokemon_feature_lists)))
         pokemon_features = reduce(lambda features1, features2: features1 + features2, pokemon_feature_lists)
         special_used_features = [
-            float(self.__mega_used),
-            float(self.__zmove_used),
-            float(self.__max_used),
-            float(self.__tera_used),
+            float(attribute)
+            for attribute in [
+                self.__mega_used,
+                self.__zmove_used,
+                self.__max_used,
+                self.__tera_used,
+            ]
         ]
         features = pokemon_features + special_used_features
         return features
