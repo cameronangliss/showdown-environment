@@ -78,16 +78,21 @@ class Move:
         )
 
     def get_pp_used(self, pressure: bool) -> int:
-        if pressure and self.__target in [
-            "all",
-            "allAdjacent",
-            "allAdjacentFoes",
-            "any",
-            "normal",
-            "randomNormal",
-            "scripted",
-        ]:
-            pp_used = 2
+        if pressure:
+            if self.__target in [
+                "all",
+                "allAdjacent",
+                "allAdjacentFoes",
+                "any",
+                "normal",
+                "randomNormal",
+                "scripted",
+            ]:
+                pp_used = 2
+            elif self.name in ["Imprison", "Snatch", "Spikes", "Stealth Rock", "Toxic Spikes"]:
+                pp_used = 2
+            else:
+                pp_used = 1
         else:
             pp_used = 1
         return pp_used
