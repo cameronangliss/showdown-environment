@@ -18,5 +18,5 @@ multi_line_output = 3
 include = ["src"]
 pythonVersion = "3.11"
 
-[tool.setuptools]
-include = ["src/pokemon_showdown_env/data/json/**"]
+[tool.setuptools.package-data]
+pokemon_showdown_env = ["src/pokemon_showdown_env/data/json/**"]
