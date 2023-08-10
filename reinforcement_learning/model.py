@@ -66,7 +66,7 @@ class Model(nn.Module):
                 next_features = experience.next_processed_state
                 next_q_values = self.__forward(next_features)
                 q_target = experience.reward + self.__gamma * torch.max(next_q_values)  # type: ignore
-            features = torch.tensor(experience.processed_state)
+            features = experience.processed_state
             q_values = self.__forward(features)
             q_estimate = q_values[experience.action]
             td_error = q_target - q_estimate
