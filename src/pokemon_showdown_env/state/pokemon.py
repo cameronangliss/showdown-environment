@@ -284,54 +284,39 @@ class Pokemon:
 
     def use_move(self, name: str, info: list[str], pressure: bool):
         full_name = self.__get_full_move_name(name)
-        # Known "[from]" instances:
-        #     "[from]lockedmove": pp isn't used when locked into a move
-        #     "[from]move: <unowned_move>": this can happen when using a move like Copycat
-        #     "[from]move: Sleep Talk": indicates that another move is being used due to Sleep Talk
-        if info and info[0] == "[from]move: Sleep Talk":
-            sleep_move = [move for move in self.get_moves() if move.name == "Sleep Talk"][0]
-            matching_moves = [move for move in self.get_moves() if move.name == full_name]
-            if len(matching_moves) == 1:
-                move_used = matching_moves[0]
-            else:
-                move_used = Move(full_name, self.gen, "ghost" in self.get_types())
-            pp_used = move_used.get_pp_used(pressure) - 1
-            sleep_move.pp = max(sleep_move.pp - pp_used, 0)
-            self.__update_last_used(sleep_move.name)
-            for self_move in self.get_moves():
-                self_move.keep_item(self.__get_item())
-        elif (info and info[0][:6] == "[from]" and full_name not in info[0][6:]) or full_name == "Struggle":
-            pass
-        elif full_name in [move.name for move in self.get_moves()]:
-            move = [move for move in self.get_moves() if full_name == move.name][0]
-            pp_used = move.get_pp_used(pressure)
-            move.pp = max(move.pp - pp_used, 0)
-            self.__update_last_used(move.name)
-            for self_move in self.get_moves():
-                self_move.keep_item(self.__get_item())
-                if self_move.name == "Gigaton Hammer":
-                    self_move.self_disabled = move.name == "Gigaton Hammer"
-        elif movedex[f"gen{self.gen}"][Move.get_identifier(full_name)]["isZ"]:
-            pass
-        elif full_name.split()[0] in ["Max", "G-Max"]:
-            pass
-        elif self.from_opponent:
-            new_move = Move(full_name, self.gen, "ghost" in self.get_types())
-            pp_used = new_move.get_pp_used(pressure)
-            new_move.pp = max(new_move.pp - pp_used, 0)
-            if self.transformed:
-                self.alt_moves.append(new_move)
-            else:
-                self.moves.append(new_move)
-            self.__update_last_used(new_move.name)
-            for self_move in self.get_moves():
-                self_move.keep_item(self.__get_item())
-                if self_move.name == "Gigaton Hammer":
-                    self_move.self_disabled = new_move.name == "Gigaton Hammer"
+        # avoiding edge cases
+        if (
+            full_name == "Struggle"
+            or (info and info[0][:6] == "[from]" and full_name not in info[0][6:] and "Sleep Talk" not in info[0][6:])
+            or movedex[f"gen{self.gen}"][Move.get_identifier(full_name)]["isZ"]
+            or full_name.split()[0] in ["Max", "G-Max"]
+        ):
+            return
+        # get move
+        if full_name in [move.name for move in self.get_moves()]:
+            move = [move for move in self.get_moves() if move.name == full_name][0]
         else:
-            raise RuntimeError(
-                f"Chosen move {full_name} is not in pokemon {self.name}'s moveset: {[move.name for move in self.get_moves()]}."
-            )
+            move = Move(full_name, self.gen, "ghost" in self.get_types())
+            if self.transformed:
+                self.alt_moves.append(move)
+            else:
+                self.moves.append(move)
+        # update pp
+        pp_used = move.get_pp_used(pressure)
+        if info and info[0] == "[from]move: Sleep Talk":
+            pp_used -= 1  # accounting for sleep talk receiving two protocol messages when used
+            sleep_talk = [move for move in self.get_moves() if move.name == "Sleep Talk"][0]
+            sleep_talk.pp = max(sleep_talk.pp - pp_used, 0)
+        else:
+            move.pp = max(move.pp - pp_used, 0)
+        # other updates
+        self.__update_last_used(move.name)
+        for self_move in self.get_moves():
+            self_move.keep_item(self.__get_item())
+            if self_move.name == "Gigaton Hammer":
+                self_move.self_disabled = move.name == "Gigaton Hammer"
+            for self_move in self.get_moves():
+                self_move.keep_item(self.__get_item())
 
     def update_condition(self, hp: int, status: str | None):
         self.hp = hp
