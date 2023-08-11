@@ -88,7 +88,7 @@ class Model(nn.Module):
         duplicate_model = deepcopy(self)
         # gathering data
         print("Gathering experiences...")
-        new_experiences, _ = await self.__run_episodes(duplicate_model)
+        new_experiences, _ = await self.__run_episodes(duplicate_model, 100)
         experiences += new_experiences
         # training
         print(f"Training on {len(experiences)} experiences...")
@@ -97,7 +97,7 @@ class Model(nn.Module):
             for experience in experience_sample:
                 self.__update(experience)
         # evaluating
-        _, num_wins = await self.__run_episodes(duplicate_model)
+        _, num_wins = await self.__run_episodes(duplicate_model, 100, min_win_rate=0.55)
         print(f"Win rate: {num_wins}/100")
         if num_wins < 55:
             print("Improvement failed.")
@@ -106,19 +106,25 @@ class Model(nn.Module):
             print("Improvement succeeded!")
         return experiences, num_wins
 
-    async def __run_episodes(self, alt_model: Model) -> tuple[list[Experience], int]:
+    async def __run_episodes(
+        self, alt_model: Model, num_episodes: int, min_win_rate: float | None = None
+    ) -> tuple[list[Experience], int]:
         # formats = [f"gen{i}randombattle" for i in range(1, 5)]
         env = Environment()
         await env.setup()
         experiences: list[Experience] = []
         num_wins = 0
-        for i in range(100):
+        for i in range(num_episodes):
             new_experiences, winner = await self.__run_episode(alt_model, env, "gen4randombattle")
             experiences += new_experiences
             time = datetime.now().strftime("%H:%M:%S")
             print(f"{time}: {winner} wins game {i + 1}")
             if winner == env.agent.username:
                 num_wins += 1
+            if min_win_rate is not None and (
+                num_wins / num_episodes >= min_win_rate or (i - num_wins) / num_episodes > 1 - min_win_rate
+            ):
+                break
         await env.close()
         meaningful_experiences = list(filter(lambda experience: experience.action is not None, experiences))
         return meaningful_experiences, num_wins
