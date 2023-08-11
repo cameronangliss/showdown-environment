@@ -8,7 +8,7 @@ from typing import NamedTuple
 import torch
 import torch.nn as nn
 from torch import Tensor
-from websockets.exceptions import ConnectionClosedError
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 from pokemon_showdown_env.showdown.environment import Environment
 from pokemon_showdown_env.state.battle import Battle
@@ -150,7 +150,7 @@ class Model(nn.Module):
             else:
                 winner = state1.protocol[winner_id + 1].strip()
             return experiences, winner
-        except ConnectionClosedError:
+        except (ConnectionClosedError, ConnectionClosedOK):
             env.logger.error("Connection closed unexpectedly")
             await env.setup()
             winner = None
