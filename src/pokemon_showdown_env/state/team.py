@@ -126,7 +126,7 @@ class Team:
             case "-formechange":
                 if request is not None:
                     new_pokemon_info = [pokemon for pokemon in request["side"]["pokemon"] if pokemon["active"]][0]
-                    active_pokemon.stats = new_pokemon_info["stats"]
+                    active_pokemon.alt_stats = new_pokemon_info["stats"]
             case "-ability":
                 active_pokemon.update_ability(split_line[3])
             case "-item":
