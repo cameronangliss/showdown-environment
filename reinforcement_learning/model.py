@@ -145,8 +145,20 @@ class Model(nn.Module):
                     action1,
                     action2,
                 )
-                experience1 = Experience(state1.process(), action1, next_state1.process(), reward1, done)
-                experience2 = Experience(state2.process(), action2, next_state2.process(), reward2, done)
+                experience1 = Experience(
+                    torch.tensor(state1.process()).to(self.device),
+                    action1,
+                    torch.tensor(next_state1.process()).to(self.device),
+                    reward1,
+                    done,
+                )
+                experience2 = Experience(
+                    torch.tensor(state2.process()).to(self.device),
+                    action2,
+                    torch.tensor(next_state2.process()).to(self.device),
+                    reward2,
+                    done,
+                )
                 experiences += [experience1, experience2]
                 state1, state2 = next_state1, next_state2
             try:
@@ -168,7 +180,7 @@ class Model(nn.Module):
             if random.random() < self.__epsilon:
                 action = random.choice(action_space)
             else:
-                features = state.process()
+                features = torch.tensor(state.process()).to(self.device)
                 outputs = self.__forward(features)
                 valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_space).to(self.device))
                 max_output_id = int(torch.argmax(valid_outputs).item())
