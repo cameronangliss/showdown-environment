@@ -10,8 +10,8 @@ import torch.nn as nn
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
-from pokemon_showdown_env.showdown.environment import Environment
-from pokemon_showdown_env.state.battle import Battle
+from poke_dojo.showdown.environment import Environment
+from poke_dojo.state.battle import Battle
 
 
 class Experience(NamedTuple):

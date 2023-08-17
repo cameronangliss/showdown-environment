@@ -6,8 +6,8 @@ from logging import Logger
 
 import requests
 
-from pokemon_showdown_env.showdown.client import Client, MessageType
-from pokemon_showdown_env.state.battle import Battle
+from poke_dojo.showdown.client import Client, MessageType
+from poke_dojo.state.battle import Battle
 
 
 class Player(Client):

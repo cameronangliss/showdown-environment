@@ -20,4 +20,4 @@ include = ["src"]
 pythonVersion = "3.11"
 
 [tool.setuptools.package-data]
-pokemon_showdown_env = ["data/json/**"]
+poke_dojo = ["data/json/**"]
