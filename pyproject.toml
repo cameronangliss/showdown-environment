@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pokemon_showdown_env"
+name = "poke_dojo"
 version = "0.1.0"
 authors = [{ name = "Cameron Angliss", email = "cameronangliss99@gmail.com" }]
 
