@@ -86,13 +86,8 @@ class Team:
 
     def __update_with_player_message(self, split_line: list[str], active_pokemon: Pokemon, request: Any | None):
         match split_line[1]:
-            case "move":
-                if not active_pokemon.preparing:
-                    active_pokemon.use_move(split_line[3], split_line[5:], self.__pressure)
+            case "cant":
                 active_pokemon.preparing = False
-            case "switch":
-                hp, status = Pokemon.parse_condition(split_line[4])
-                self.__switch(split_line[2][5:], split_line[3], hp, status)
             case "drag":
                 hp, status = Pokemon.parse_condition(split_line[4])
                 self.__switch(split_line[2][5:], split_line[3], hp, status)
@@ -100,21 +95,28 @@ class Team:
                 fainted_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
                 fainted_pokemon = [pokemon for pokemon in self.__team if pokemon.name == fainted_pokemon_name][0]
                 fainted_pokemon.update_condition(0, "fnt")
+            case "move":
+                if not active_pokemon.preparing:
+                    active_pokemon.use_move(split_line[3], split_line[5:], self.__pressure)
+                active_pokemon.preparing = False
             case "replace":
                 self.__replace(split_line[2][5:], split_line[3])
-            case "-damage":
-                hp, status = Pokemon.parse_condition(split_line[3])
-                active_pokemon.update_condition(hp, status)
-            case "-heal":
-                healed_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
-                healed_pokemon = [pokemon for pokemon in self.__team if pokemon.name == healed_pokemon_name][0]
-                hp, status = Pokemon.parse_condition(split_line[3])
-                healed_pokemon.update_condition(hp, status)
-            case "-sethp":
-                hp, status = Pokemon.parse_condition(split_line[3])
-                active_pokemon.update_condition(hp, status)
-            case "-status":
-                active_pokemon.update_condition(active_pokemon.hp, split_line[3])
+            case "switch":
+                hp, status = Pokemon.parse_condition(split_line[4])
+                self.__switch(split_line[2][5:], split_line[3], hp, status)
+            case "-ability":
+                active_pokemon.update_ability(split_line[3])
+            case "-activate":
+                if len(split_line) > 3:
+                    if split_line[3] == "ability: Mummy" and self.__pressure:
+                        self.__pressure = False
+                    if split_line[3] == "Dynamax":
+                        self.__max_used = True
+                active_pokemon.start(split_line[3:])
+            case "-anim":
+                active_pokemon.preparing = False
+            case "-burst":
+                self.__burst_used = True
             case "-curestatus":
                 cured_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
                 cured_pokemon = [pokemon for pokemon in self.__team if pokemon.name == cured_pokemon_name][0]
@@ -123,72 +125,70 @@ class Team:
                 for pokemon in self.__team:
                     if pokemon.status != "fnt":
                         pokemon.update_condition(pokemon.hp, None)
+            case "-damage":
+                hp, status = Pokemon.parse_condition(split_line[3])
+                active_pokemon.update_condition(hp, status)
+            case "-end":
+                active_pokemon.end(split_line[3:])
+            case "-enditem":
+                active_pokemon.end_item(split_line[3], split_line[4:])
             case "-formechange":
                 if request is not None:
                     new_pokemon_info = [pokemon for pokemon in request["side"]["pokemon"] if pokemon["active"]][0]
                     active_pokemon.alt_stats = new_pokemon_info["stats"]
-            case "-ability":
-                active_pokemon.update_ability(split_line[3])
+            case "-heal":
+                healed_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
+                healed_pokemon = [pokemon for pokemon in self.__team if pokemon.name == healed_pokemon_name][0]
+                hp, status = Pokemon.parse_condition(split_line[3])
+                healed_pokemon.update_condition(hp, status)
             case "-item":
                 active_pokemon.update_item(split_line[3], split_line[4:])
-            case "-enditem":
-                active_pokemon.end_item(split_line[3], split_line[4:])
-            case "-prepare":
-                active_pokemon.preparing = True
-            case "-anim":
-                active_pokemon.preparing = False
-            case "cant":
-                active_pokemon.preparing = False
             case "-mega":
                 self.__mega_used = True
                 active_pokemon.mega_evolve(split_line[4] or None)
+            case "-prepare":
+                active_pokemon.preparing = True
             case "-primal":
                 active_pokemon.primal_reversion()
-            case "-zpower":
-                self.__zmove_used = True
-            case "-burst":
-                self.__burst_used = True
+            case "-sethp":
+                hp, status = Pokemon.parse_condition(split_line[3])
+                active_pokemon.update_condition(hp, status)
+            case "-start":
+                if len(split_line) > 3 and split_line[3] == "Dynamax":
+                    self.__max_used = True
+                active_pokemon.start(split_line[3:])
+            case "-status":
+                active_pokemon.update_condition(active_pokemon.hp, split_line[3])
             case "-terastallize":
                 self.__tera_used = True
             case "-transform":
                 copied_pokemon_name = split_line[3][split_line[3].index(" ") + 1 :]
                 active_pokemon.transform(copied_pokemon_name, request)
-            case "-start":
-                if len(split_line) > 3 and split_line[3] == "Dynamax":
-                    self.__max_used = True
-                active_pokemon.start(split_line[3:])
-            case "-activate":
-                if len(split_line) > 3:
-                    if split_line[3] == "ability: Mummy" and self.__pressure:
-                        self.__pressure = False
-                    if split_line[3] == "Dynamax":
-                        self.__max_used = True
-                active_pokemon.start(split_line[3:])
-            case "-end":
-                active_pokemon.end(split_line[3:])
+            case "-zpower":
+                self.__zmove_used = True
             case _:
                 pass
 
     def __update_with_opponent_message(self, split_line: list[str], active_pokemon: Pokemon):
         match split_line[1]:
-            case "switch":
-                if self.__pressure:
-                    self.__pressure = False
             case "drag":
                 if self.__pressure:
                     self.__pressure = False
             case "faint":
                 if self.__pressure:
                     self.__pressure = False
+            case "switch":
+                if self.__pressure:
+                    self.__pressure = False
             case "-ability":
                 if split_line[3] == "Pressure":
                     self.__pressure = True
-            case "-item":
-                if len(split_line) > 4 and split_line[4] in ["[from] move: Thief", "[from] ability: Magician"]:
-                    active_pokemon.end_item(split_line[3], split_line[4:])
             case "-activate":
                 if len(split_line) > 3 and split_line[3] == "ability: Mummy":
                     active_pokemon.alt_ability = "mummy"
+            case "-item":
+                if len(split_line) > 4 and split_line[4] in ["[from] move: Thief", "[from] ability: Magician"]:
+                    active_pokemon.end_item(split_line[3], split_line[4:])
             case _:
                 pass
 
