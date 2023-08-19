@@ -135,6 +135,10 @@ class Team:
             case "-formechange":
                 if request is not None:
                     new_pokemon_info = [pokemon for pokemon in request["side"]["pokemon"] if pokemon["active"]][0]
+                    print("new pokemon info:", new_pokemon_info)
+                    print("current stats:", active_pokemon.stats)
+                    print("current alt_stats:", active_pokemon.alt_stats)
+                    print("new stats:", new_pokemon_info["stats"])
                     active_pokemon.alt_stats = new_pokemon_info["stats"]
             case "-heal":
                 healed_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
