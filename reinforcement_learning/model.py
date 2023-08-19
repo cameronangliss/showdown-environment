@@ -5,6 +5,7 @@ from copy import deepcopy
 from datetime import datetime
 from typing import NamedTuple
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
@@ -15,9 +16,11 @@ from poke_dojo.state.battle import Battle
 
 
 class Experience(NamedTuple):
-    processed_state: Tensor
+    turn: int
+    total_turns: int
+    state_tensor: Tensor
     action: int | None
-    next_processed_state: Tensor
+    next_state_tensor: Tensor
     reward: int
     done: bool
 
@@ -63,11 +66,9 @@ class Model(nn.Module):
             if experience.done:
                 q_target = torch.tensor(experience.reward)
             else:
-                next_features = experience.next_processed_state
-                next_q_values = self.__forward(next_features)
+                next_q_values = self.__forward(experience.next_state_tensor)
                 q_target = experience.reward + self.__gamma * torch.max(next_q_values)  # type: ignore
-            features = experience.processed_state
-            q_values = self.__forward(features)
+            q_values = self.__forward(experience.state_tensor)
             q_estimate = q_values[experience.action]
             td_error = q_target - q_estimate
             loss = td_error**2
@@ -93,7 +94,10 @@ class Model(nn.Module):
         # training
         print(f"Training on {len(experiences)} experiences...")
         for _ in range(1000):
-            experience_sample = random.sample(experiences, k=round(len(experiences) / 100))
+            progress_percents = [exp.turn / exp.total_turns for exp in experiences]
+            prob_weights = [prog_perc**0.5 for prog_perc in progress_percents]
+            normed_prob_weights = [weight / sum(prob_weights) for weight in prob_weights]
+            experience_sample = np.random.choice(experiences, size=round(len(experiences) / 100), p=normed_prob_weights)
             for experience in experience_sample:
                 self.__update(experience)
         # evaluating
@@ -135,8 +139,10 @@ class Model(nn.Module):
         experiences: list[Experience] = []
         try:
             state1, state2 = await env.reset(format_str)
+            turn = 0
             done = False
             while not done:
+                turn += 1
                 action1 = self.__get_action(state1)
                 action2 = alt_model.__get_action(state2)
                 next_state1, next_state2, reward1, reward2, done = await env.step(
@@ -146,6 +152,8 @@ class Model(nn.Module):
                     action2,
                 )
                 experience1 = Experience(
+                    turn,
+                    0,  # temporary value
                     torch.tensor(state1.process()).to(self.device),
                     action1,
                     torch.tensor(next_state1.process()).to(self.device),
@@ -153,6 +161,8 @@ class Model(nn.Module):
                     done,
                 )
                 experience2 = Experience(
+                    turn,
+                    0,  # temporary value
                     torch.tensor(state2.process()).to(self.device),
                     action2,
                     torch.tensor(next_state2.process()).to(self.device),
@@ -161,6 +171,8 @@ class Model(nn.Module):
                 )
                 experiences += [experience1, experience2]
                 state1, state2 = next_state1, next_state2
+            for experience in experiences:
+                experience._replace(total_turns=turn)
             try:
                 winner_id = state1.protocol.index("win")
             except ValueError:
