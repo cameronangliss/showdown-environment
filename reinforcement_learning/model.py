@@ -172,7 +172,7 @@ class Model(nn.Module):
                 experiences += [experience1, experience2]
                 state1, state2 = next_state1, next_state2
             for experience in experiences:
-                experience._replace(total_turns=turn)
+                experience = experience._replace(total_turns=turn)
             try:
                 winner_id = state1.protocol.index("win")
             except ValueError:
