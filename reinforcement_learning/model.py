@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import random
 from copy import deepcopy
 from datetime import datetime
@@ -93,7 +92,7 @@ class Model(nn.Module):
         experiences += new_experiences
         # training
         progress_percents = [exp.turn / exp.total_turns for exp in experiences]
-        prob_weights = [math.sqrt(prog_perc) for prog_perc in progress_percents]
+        prob_weights = [prog_perc**2 for prog_perc in progress_percents]
         normed_prob_weights = [weight / sum(prob_weights) for weight in prob_weights]
         print(f"Training on {len(experiences)} experiences.")
         print(f"Progress: 0.0%", end="\r")
@@ -102,7 +101,6 @@ class Model(nn.Module):
             for experience in experience_sample:
                 self.__update(experience)
             print(f"Progress: {i / 10}%", end="\r")
-        print()
         # evaluating
         _, num_wins = await self.__run_episodes(duplicate_model, 100, min_win_rate=0.55)
         print(f"Win rate: {num_wins}/100")
