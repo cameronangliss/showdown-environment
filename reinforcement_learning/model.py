@@ -91,7 +91,7 @@ class Model(nn.Module):
         new_experiences, _ = await self.__run_episodes(duplicate_model, 100)
         experiences += new_experiences
         # training
-        prob_weights = [1 if exp.turn == exp.total_turns else 1 / len(experiences) for exp in experiences]
+        prob_weights = [1 if exp.turn == exp.total_turns else 1 / exp.total_turns for exp in experiences]
         normed_prob_weights = [weight / sum(prob_weights) for weight in prob_weights]
         print(f"Training on {len(experiences)} experiences.")
         print(f"Progress: 0.0%", end="\r")
