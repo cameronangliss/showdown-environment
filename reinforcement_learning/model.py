@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import math
 import random
 from copy import deepcopy
 from datetime import datetime
 from typing import NamedTuple
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
@@ -89,15 +89,15 @@ class Model(nn.Module):
         duplicate_model = deepcopy(self)
         # gathering data
         print("Gathering experiences...")
-        new_experiences, _ = await self.__run_episodes(duplicate_model, 100)
+        new_experiences, _ = await self.__run_episodes(duplicate_model, 1)
         experiences += new_experiences
         # training
         print(f"Training on {len(experiences)} experiences...")
         for _ in range(1000):
             progress_percents = [exp.turn / exp.total_turns for exp in experiences]
-            prob_weights = [prog_perc**0.5 for prog_perc in progress_percents]
+            prob_weights = [math.sqrt(prog_perc) for prog_perc in progress_percents]
             normed_prob_weights = [weight / sum(prob_weights) for weight in prob_weights]
-            experience_sample = np.random.choice(experiences, size=round(len(experiences) / 100), p=normed_prob_weights)
+            experience_sample = random.choices(experiences, normed_prob_weights, k=round(len(experiences) / 100))
             for experience in experience_sample:
                 self.__update(experience)
         # evaluating
