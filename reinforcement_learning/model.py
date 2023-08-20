@@ -89,7 +89,7 @@ class Model(nn.Module):
         duplicate_model = deepcopy(self)
         # gathering data
         print("Gathering experiences...")
-        new_experiences, _ = await self.__run_episodes(duplicate_model, 1)
+        new_experiences, _ = await self.__run_episodes(duplicate_model, 100)
         experiences += new_experiences
         # training
         print(f"Training on {len(experiences)} experiences...")
