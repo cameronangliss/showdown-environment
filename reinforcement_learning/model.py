@@ -28,27 +28,20 @@ class Model(nn.Module):
     __alpha: float
     __epsilon: float
     __gamma: float
-    __input_dim: int
-    __hidden_dims: list[int]
-    __output_dim: int
     __layers: nn.ModuleList
 
-    def __init__(self, alpha: float, epsilon: float, gamma: float, hidden_dims: list[int]):
-        super(Model, self).__init__()  # type: ignore
-
+    def __init__(self, alpha: float, epsilon: float, gamma: float):
+        super().__init__()  # type: ignore
         self.__alpha = alpha
         self.__epsilon = epsilon
         self.__gamma = gamma
-        self.__input_dim = 1502
-        self.__hidden_dims = hidden_dims if hidden_dims else [100]
-        self.__output_dim = 26
-
-        layers: list[nn.Module] = []
-        layers.append(nn.Linear(self.__input_dim, self.__hidden_dims[0]))
-        for i in range(len(self.__hidden_dims) - 1):
-            layers.append(nn.Linear(self.__hidden_dims[i], self.__hidden_dims[i + 1]))
-        layers.append(nn.Linear(self.__hidden_dims[-1], self.__output_dim))
-        self.__layers = nn.ModuleList(layers)
+        self.layers = nn.Sequential(
+            nn.Linear(1502, 100),
+            nn.ReLU(),
+            nn.Linear(100, 100),
+            nn.ReLU(),
+            nn.Linear(100, 26)
+        )
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.__alpha)
 
         # Move the model to GPU if available

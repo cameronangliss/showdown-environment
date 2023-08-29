@@ -15,11 +15,10 @@ async def main():
     alpha = float(config["alpha"])
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
-    hidden_dims = json.loads(config["hidden_dims"])
-    model = Model(alpha, epsilon, gamma, hidden_dims)
+    model = Model(alpha, epsilon, gamma)
 
     # load saved model with the same settings as `model` if one exists
-    file_name = f"{alpha}_{epsilon}_{gamma}_{hidden_dims}"
+    file_name = f"{alpha}_{epsilon}_{gamma}"
     if not os.path.exists("saves"):
         os.makedirs("saves")
     elif os.path.exists(f"saves/{file_name}.pt"):
