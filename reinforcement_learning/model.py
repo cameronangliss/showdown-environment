@@ -89,7 +89,7 @@ class Model(nn.Module):
             experience_sample = random.sample(selected_experiences, k=round(len(selected_experiences) / 100))
             for experience in experience_sample:
                 self.__update(experience)
-            print(f"Progress: {i / 10}%", end="\r")
+            print(f"Progress: {(i + 1) / 10}%", end="\r")
         # evaluating
         _, num_wins = await self.__run_episodes(duplicate_model, 100, min_win_rate=0.55)
         print(f"Win rate: {num_wins}/100")
