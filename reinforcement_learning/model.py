@@ -82,11 +82,12 @@ class Model(nn.Module):
         new_experiences, _ = await self.__run_episodes(duplicate_model, 100)
         experiences += new_experiences
         # training
-        choose_weights = [1 if exp.turn == exp.total_turns else 1 / exp.total_turns for exp in experiences]
+        choose_weights = [(exp.turn / exp.total_turns)**2 for exp in experiences]
+        normed_weights = [weight / sum(choose_weights) for weight in choose_weights]
         print(f"Training on {len(experiences)} experiences.")
         print(f"Progress: 0.0%", end="\r")
         for i in range(1000):
-            experience_sample = random.choices(experiences, weights=choose_weights, k=round(len(experiences) / 100))
+            experience_sample = random.choices(experiences, weights=normed_weights, k=round(len(experiences) / 100))
             for experience in experience_sample:
                 self.__update(experience)
             print(f"Progress: {(i + 1) / 10}%", end="\r")
