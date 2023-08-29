@@ -49,9 +49,7 @@ class Model(nn.Module):
         self.to(self.device)
 
     def __forward(self, x: Tensor) -> Tensor:  # type: ignore
-        for layer in self.__layers:
-            x = torch.relu(layer.forward(x))
-        return x
+        return self.layers(x)
 
     def __update(self, experience: Experience):
         if experience.action is not None:
