@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from enum import Enum, auto
 from typing import Any
@@ -37,8 +38,9 @@ class Client:
             try:
                 self.websocket = await ws.connect("wss://sim3.psim.us/showdown/websocket")
                 break
-            except TimeoutError:
+            except (ConnectionRefusedError, TimeoutError):
                 self.logger.error("Connection attempt failed, retrying now")
+                await asyncio.sleep(10)
 
     async def send_message(self, message: str):
         room_str = self.room or ""
