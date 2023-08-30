@@ -23,6 +23,9 @@ async def main():
         os.makedirs("saves")
     elif os.path.exists(f"saves/{file_name}.pt"):
         model.load_state_dict(torch.load(f"saves/{file_name}.pt"))  # type: ignore
+        print("Saved model has successfully loaded.")
+    else:
+        print("New model initialized.")
 
     # train model
     num_improve = int(config["num_improve"])
