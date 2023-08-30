@@ -71,7 +71,7 @@ class Model(nn.Module):
         while num_wins < 55:
             experiences, num_wins = await self.attempt_improve(experiences)
 
-    async def attempt_improve(self, experiences: list[Experience]) -> tuple[list[Experience], int]:
+    async def attempt_improve(self, experiences: list[Experience]) -> tuple[list[Experience], float]:
         duplicate_model = deepcopy(self)
         # gathering data
         print("Gathering experiences...")
@@ -97,7 +97,7 @@ class Model(nn.Module):
 
     async def __run_episodes(
         self, alt_model: Model, num_episodes: int, min_win_rate: float | None = None
-    ) -> tuple[list[Experience], int]:
+    ) -> tuple[list[Experience], float]:
         env = Environment()
         await env.setup()
         experiences: list[Experience] = []
@@ -107,6 +107,8 @@ class Model(nn.Module):
             experiences += new_experiences
             time = datetime.now().strftime("%H:%M:%S")
             print(f"{time}: {winner} wins game {i + 1}")
+            if winner is None:
+                num_wins += 0.5
             if winner == env.agent.username:
                 num_wins += 1
             if min_win_rate is not None and (
