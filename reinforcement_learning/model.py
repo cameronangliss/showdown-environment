@@ -36,11 +36,7 @@ class Model(nn.Module):
         self.__epsilon = epsilon
         self.__gamma = gamma
         self.__layers = nn.Sequential(
-            nn.Linear(1502, 100),
-            nn.ReLU(),
-            nn.Linear(100, 100),
-            nn.ReLU(),
-            nn.Linear(100, 26)
+            nn.Linear(1502, 100), nn.ReLU(), nn.Linear(100, 100), nn.ReLU(), nn.Linear(100, 26)
         )
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.__alpha)
 
@@ -82,7 +78,7 @@ class Model(nn.Module):
         new_experiences, _ = await self.__run_episodes(duplicate_model, 100)
         experiences += new_experiences
         # training
-        choose_weights = [(exp.turn / exp.total_turns)**2 for exp in experiences]
+        choose_weights = [(exp.turn / exp.total_turns) ** 2 for exp in experiences]
         normed_weights = [weight / sum(choose_weights) for weight in choose_weights]
         print(f"Training on {len(experiences)} experiences.")
         print(f"Progress: 0.0%", end="\r")
