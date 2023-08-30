@@ -287,7 +287,6 @@ class Pokemon:
         # avoiding edge cases
         if (
             full_name == "Struggle"
-            or (info and info[0][:6] == "[from]" and full_name not in info[0][6:] and "Sleep Talk" not in info[0][6:])
             or movedex[f"gen{self.gen}"][Move.get_identifier(full_name)]["isZ"]
             or full_name.split()[0] in ["Max", "G-Max"]
         ):
@@ -302,13 +301,14 @@ class Pokemon:
             else:
                 self.moves.append(move)
         # update pp
-        pp_used = move.get_pp_used(pressure)
-        if info and info[0] == "[from]move: Sleep Talk":
-            pp_used -= 1  # accounting for sleep talk receiving two protocol messages when used
-            sleep_talk = [move for move in self.get_moves() if move.name == "Sleep Talk"][0]
-            sleep_talk.pp = max(sleep_talk.pp - pp_used, 0)
-        else:
-            move.pp = max(move.pp - pp_used, 0)
+        if not (info and info[0][:16] == "[from]lockedmove"):
+            pp_used = move.get_pp_used(pressure)
+            if info and info[0] == "[from]move: Sleep Talk":
+                pp_used -= 1  # accounting for sleep talk receiving two protocol messages when used
+                sleep_talk = [move for move in self.get_moves() if move.name == "Sleep Talk"][0]
+                sleep_talk.pp = max(sleep_talk.pp - pp_used, 0)
+            else:
+                move.pp = max(move.pp - pp_used, 0)
         # other updates
         self.__update_last_used(move.name)
         for self_move in self.get_moves():
