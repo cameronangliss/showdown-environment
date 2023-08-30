@@ -100,13 +100,12 @@ class Model(nn.Module):
     async def __run_episodes(
         self, alt_model: Model, num_episodes: int, min_win_rate: float | None = None
     ) -> tuple[list[Experience], int]:
-        # formats = [f"gen{i}randombattle" for i in range(1, 5)]
         env = Environment()
         await env.setup()
         experiences: list[Experience] = []
         num_wins = 0
         for i in range(num_episodes):
-            new_experiences, winner = await self.__run_episode(alt_model, env, "gen4randombattle")
+            new_experiences, winner = await self.__run_episode(alt_model, env, "gen4randombattle", min_win_rate is None)
             experiences += new_experiences
             time = datetime.now().strftime("%H:%M:%S")
             print(f"{time}: {winner} wins game {i + 1}")
@@ -121,7 +120,7 @@ class Model(nn.Module):
         return meaningful_experiences, num_wins
 
     async def __run_episode(
-        self, alt_model: Model, env: Environment, format_str: str
+        self, alt_model: Model, env: Environment, format_str: str, exploring: bool
     ) -> tuple[list[Experience], str | None]:
         experiences: list[Experience] = []
         try:
@@ -130,8 +129,8 @@ class Model(nn.Module):
             done = False
             while not done:
                 turn += 1
-                action1 = self.__get_action(state1)
-                action2 = alt_model.__get_action(state2)
+                action1 = self.__get_action(state1, exploring)
+                action2 = alt_model.__get_action(state2, exploring)
                 next_state1, next_state2, reward1, reward2, done = await env.step(
                     state1,
                     state2,
@@ -172,10 +171,10 @@ class Model(nn.Module):
             winner = None
             return [], winner
 
-    def __get_action(self, state: Battle) -> int | None:
+    def __get_action(self, state: Battle, exploring: bool) -> int | None:
         action_space = state.get_valid_action_ids()
         if action_space:
-            if random.random() < self.__epsilon:
+            if exploring and random.random() < self.__epsilon:
                 action = random.choice(action_space)
             else:
                 features = torch.tensor(state.process()).to(self.device)
