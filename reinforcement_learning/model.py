@@ -28,14 +28,14 @@ class Model(nn.Module):
     __alpha: float
     __epsilon: float
     __gamma: float
-    __layers: nn.ModuleList
+    __layers: nn.Sequential
 
     def __init__(self, alpha: float, epsilon: float, gamma: float):
         super().__init__()  # type: ignore
         self.__alpha = alpha
         self.__epsilon = epsilon
         self.__gamma = gamma
-        self.layers = nn.Sequential(
+        self.__layers = nn.Sequential(
             nn.Linear(1502, 100),
             nn.ReLU(),
             nn.Linear(100, 100),
@@ -49,7 +49,7 @@ class Model(nn.Module):
         self.to(self.device)
 
     def __forward(self, x: Tensor) -> Tensor:  # type: ignore
-        return self.layers(x)
+        return self.__layers(x)
 
     def __update(self, experience: Experience):
         if experience.action is not None:
