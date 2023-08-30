@@ -36,7 +36,7 @@ class Model(nn.Module):
         self.__epsilon = epsilon
         self.__gamma = gamma
         self.__layers = nn.Sequential(
-            nn.Linear(1502, 100), nn.ReLU(), nn.Linear(100, 100), nn.ReLU(), nn.Linear(100, 26)
+            nn.Linear(1502, 1000), nn.ReLU(), nn.Linear(1000, 1000), nn.ReLU(), nn.Linear(1000, 26)
         )
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.__alpha)
 
