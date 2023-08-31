@@ -454,7 +454,7 @@ class Pokemon:
         hp, status = Pokemon.parse_condition(pokemon_info["condition"])
         assert self.hp == hp, f"{self.hp} != {hp}"
         assert self.status == status, f"{self.status} != {status}"
-        assert self.stats == pokemon_info["stats"], f"{self.stats} != {pokemon_info['stats']}"
+        assert self.get_stats() == pokemon_info["stats"], f"{self.stats} != {pokemon_info['stats']}"
         assert len(self.get_moves()) <= 4, f"{len(self.get_moves())} > 4"
         if self.active and active_info is not None:
             if (
