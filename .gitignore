@@ -4,3 +4,4 @@ saves
 scripts/node_modules
 config.json
 debug.log
+exp.json

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import random
 from copy import deepcopy
 from datetime import datetime
@@ -66,7 +68,11 @@ class Model(nn.Module):
     # Training methods
 
     async def improve(self):
-        experiences = []
+        if not os.path.exists("exp.json"):
+            with open("exp.json", "w") as f:
+                json.dump([], f)
+        with open("exp.json") as f:
+            experiences = json.load(f)
         num_wins = 0
         while num_wins < 55:
             experiences, num_wins = await self.attempt_improve(experiences)
@@ -91,8 +97,12 @@ class Model(nn.Module):
         if num_wins < 55:
             print("Improvement failed.")
             self.__dict__ = duplicate_model.__dict__
+            with open("exp.json", "w") as f:
+                json.dump(experiences, f)
         else:
             print("Improvement succeeded!")
+            with open("exp.json", "w") as f:
+                json.dump([], f)
         return experiences, num_wins
 
     async def __run_episodes(
