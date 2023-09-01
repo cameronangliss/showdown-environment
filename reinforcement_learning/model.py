@@ -27,7 +27,7 @@ class Model(nn.Module):
         self.__alpha = alpha
         self.__epsilon = epsilon
         self.__gamma = gamma
-        layer_sizes = [1502] + hidden_layer_sizes + [26]
+        layer_sizes = [1502, *hidden_layer_sizes, 26]
         layers: list[nn.Module] = []
         for i in range(len(layer_sizes) - 1):
             layers += [nn.Linear(layer_sizes[i], layer_sizes[i + 1]), nn.ReLU()]
