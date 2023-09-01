@@ -5,25 +5,15 @@ import os
 import random
 from copy import deepcopy
 from datetime import datetime
-from typing import NamedTuple
 
 import torch
 import torch.nn as nn
+from experience import Experience
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 from poke_dojo.showdown.environment import Environment
 from poke_dojo.state.battle import Battle
-
-
-class Experience(NamedTuple):
-    turn: int
-    total_turns: int
-    state_tensor: Tensor
-    action: int | None
-    next_state_tensor: Tensor
-    reward: int
-    done: bool
 
 
 class Model(nn.Module):
@@ -54,9 +44,9 @@ class Model(nn.Module):
             if experience.done:
                 q_target = torch.tensor(experience.reward)
             else:
-                next_q_values = self.__forward(experience.next_state_tensor)
+                next_q_values = self.__forward(torch.tensor(experience.next_state.process()))
                 q_target = experience.reward + self.__gamma * torch.max(next_q_values)  # type: ignore
-            q_values = self.__forward(experience.state_tensor)
+            q_values = self.__forward(torch.tensor(experience.state.process()))
             q_estimate = q_values[experience.action]
             td_error = q_target - q_estimate
             loss = td_error**2
@@ -150,18 +140,18 @@ class Model(nn.Module):
                 experience1 = Experience(
                     turn,
                     0,  # temporary value
-                    torch.tensor(state1.process()).to(self.device),
+                    state1,
                     action1,
-                    torch.tensor(next_state1.process()).to(self.device),
+                    next_state1,
                     reward1,
                     done,
                 )
                 experience2 = Experience(
                     turn,
                     0,  # temporary value
-                    torch.tensor(state2.process()).to(self.device),
+                    state2,
                     action2,
-                    torch.tensor(next_state2.process()).to(self.device),
+                    next_state2,
                     reward2,
                     done,
                 )
