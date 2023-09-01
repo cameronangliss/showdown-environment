@@ -44,9 +44,9 @@ class Model(nn.Module):
             if experience.done:
                 q_target = torch.tensor(experience.reward)
             else:
-                next_q_values = self.__forward(torch.tensor(experience.next_state.process()))
+                next_q_values = self.__forward(torch.tensor(experience.next_state.process()).to(self.device))
                 q_target = experience.reward + self.__gamma * torch.max(next_q_values)  # type: ignore
-            q_values = self.__forward(torch.tensor(experience.state.process()))
+            q_values = self.__forward(torch.tensor(experience.state.process()).to(self.device))
             q_estimate = q_values[experience.action]
             td_error = q_target - q_estimate
             loss = td_error**2
