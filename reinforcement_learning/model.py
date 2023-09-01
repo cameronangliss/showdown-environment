@@ -8,7 +8,7 @@ from datetime import datetime
 
 import torch
 import torch.nn as nn
-from experience import Experience
+from experience import Experience, to_experience
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
@@ -40,19 +40,18 @@ class Model(nn.Module):
         return self.__layers(x)
 
     def __update(self, experience: Experience):
-        if experience.action is not None:
-            if experience.done:
-                q_target = torch.tensor(experience.reward)
-            else:
-                next_q_values = self.__forward(torch.tensor(experience.next_state.process()).to(self.device))
-                q_target = experience.reward + self.__gamma * torch.max(next_q_values)  # type: ignore
-            q_values = self.__forward(torch.tensor(experience.state.process()).to(self.device))
-            q_estimate = q_values[experience.action]
-            td_error = q_target - q_estimate
-            loss = td_error**2
-            self.optimizer.zero_grad()
-            loss.backward()  # type: ignore
-            self.optimizer.step()
+        if experience.done:
+            q_target = torch.tensor(experience.reward)
+        else:
+            next_q_values = self.__forward(experience.next_state_tensor)
+            q_target = experience.reward + self.__gamma * torch.max(next_q_values)  # type: ignore
+        q_values = self.__forward(experience.state_tensor)
+        q_estimate = q_values[experience.action]
+        td_error = q_target - q_estimate
+        loss = td_error**2
+        self.optimizer.zero_grad()
+        loss.backward()  # type: ignore
+        self.optimizer.step()
 
     ###################################################################################################################
     # Training methods
@@ -62,7 +61,7 @@ class Model(nn.Module):
             with open("exp.json", "w") as f:
                 json.dump([], f)
         with open("exp.json") as f:
-            experiences = json.load(f)
+            experiences = [to_experience(json_list) for json_list in json.load(f)]
         num_wins = 0
         while num_wins < 55:
             experiences, num_wins = await self.attempt_improve(experiences)
@@ -88,7 +87,7 @@ class Model(nn.Module):
             print("Improvement failed.")
             self.__dict__ = duplicate_model.__dict__
             with open("exp.json", "w") as f:
-                json.dump(experiences, f)
+                json.dump([exp.to_json_serializable() for exp in experiences], f)
         else:
             print("Improvement succeeded!")
             with open("exp.json", "w") as f:
@@ -140,18 +139,18 @@ class Model(nn.Module):
                 experience1 = Experience(
                     turn,
                     0,  # temporary value
-                    state1,
+                    torch.tensor(state1.process()).to(self.device),
                     action1,
-                    next_state1,
+                    torch.tensor(next_state1).to(self.device),
                     reward1,
                     done,
                 )
                 experience2 = Experience(
                     turn,
                     0,  # temporary value
-                    state2,
+                    torch.tensor(state2.process()).to(self.device),
                     action2,
-                    next_state2,
+                    torch.tensor(next_state2.process()).to(self.device),
                     reward2,
                     done,
                 )
