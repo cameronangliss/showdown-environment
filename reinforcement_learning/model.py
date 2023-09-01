@@ -141,7 +141,7 @@ class Model(nn.Module):
                     0,  # temporary value
                     torch.tensor(state1.process()).to(self.device),
                     action1,
-                    torch.tensor(next_state1).to(self.device),
+                    torch.tensor(next_state1.process()).to(self.device),
                     reward1,
                     done,
                 )
