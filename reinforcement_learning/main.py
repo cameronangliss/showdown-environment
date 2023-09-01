@@ -10,14 +10,12 @@ async def main():
     # load configuration
     with open("config.json") as f:
         config = json.load(f)
-
     # construct model
     alpha = float(config["alpha"])
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
     hidden_layer_sizes = json.loads(config["hidden_layer_sizes"])
     model = Model(alpha, epsilon, gamma, hidden_layer_sizes)
-
     # load saved model with the same settings as `model` if one exists
     file_name = f"{alpha}_{epsilon}_{gamma}"
     if not os.path.exists("saves"):
@@ -27,7 +25,6 @@ async def main():
         print("Saved model has successfully loaded.")
     else:
         print("New model initialized.")
-
     # train model
     num_improve = int(config["num_improve"])
     for _ in range(num_improve):
