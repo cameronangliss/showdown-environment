@@ -22,14 +22,16 @@ class Model(nn.Module):
     __gamma: float
     __layers: nn.Sequential
 
-    def __init__(self, alpha: float, epsilon: float, gamma: float):
+    def __init__(self, alpha: float, epsilon: float, gamma: float, hidden_layer_sizes: list[int]):
         super().__init__()  # type: ignore
         self.__alpha = alpha
         self.__epsilon = epsilon
         self.__gamma = gamma
-        self.__layers = nn.Sequential(
-            nn.Linear(1502, 1000), nn.ReLU(), nn.Linear(1000, 1000), nn.ReLU(), nn.Linear(1000, 26)
-        )
+        layer_sizes = [1502] + hidden_layer_sizes + [26]
+        layers: list[nn.Module] = []
+        for i in range(len(layer_sizes) - 1):
+            layers += [nn.Linear(layer_sizes[i], layer_sizes[i + 1]), nn.ReLU()]
+        self.__layers = nn.Sequential(*layers[:-1])
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.__alpha)
 
         # Move the model to GPU if available
@@ -74,7 +76,6 @@ class Model(nn.Module):
         experiences += new_experiences
         # training
         print(f"Training on {len(experiences)} experiences.")
-        print(f"Progress: 0.0%", end="\r")
         for i in range(1000):
             experience_sample = random.sample(experiences, k=round(len(experiences) / 100))
             for experience in experience_sample:
