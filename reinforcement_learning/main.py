@@ -20,8 +20,11 @@ async def main():
     file_name = f"{alpha}_{epsilon}_{gamma}"
     if not os.path.exists("saves"):
         os.makedirs("saves")
-    elif os.path.exists(f"saves/{file_name}.pt"):
-        model.load_state_dict(torch.load(f"saves/{file_name}.pt"))  # type: ignore
+    model_version = 0
+    while os.path.exists(f"saves/mk{model_version + 1}_{file_name}.pt"):
+        model_version += 1
+    if model_version > 0:
+        model.load_state_dict(torch.load(f"saves/mk{model_version}_{file_name}.pt"))  # type: ignore
         print("Saved model has successfully loaded.")
     else:
         print("New model initialized.")
@@ -29,7 +32,9 @@ async def main():
     num_improve = int(config["num_improve"])
     for _ in range(num_improve):
         await model.improve()
-        torch.save(model.state_dict(), f"saves/{file_name}.pt")  # type: ignore
+        model_version += 1
+        print(f"Model has been upgraded to mk{model_version}!")
+        torch.save(model.state_dict(), f"saves/mk{model_version}_{file_name}.pt")  # type: ignore
 
 
 if __name__ == "__main__":
