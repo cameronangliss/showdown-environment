@@ -26,7 +26,7 @@ class Model(nn.Module):
         self.__alpha = alpha
         self.__epsilon = epsilon
         self.__gamma = gamma
-        self.memory = Memory(10**5)
+        self.memory = Memory([], maxlen=10**5)
         layer_sizes = [1504, *hidden_layer_sizes, 26]
         layers: list[nn.Module] = []
         for i in range(len(layer_sizes) - 1):

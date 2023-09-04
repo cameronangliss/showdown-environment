@@ -1,6 +1,7 @@
 import random
-from torch import Tensor
 from typing import Deque, NamedTuple
+
+from torch import Tensor
 
 
 class Experience(NamedTuple):
@@ -12,8 +13,8 @@ class Experience(NamedTuple):
 
 
 class Memory(Deque[Experience]):
-    def __init__(self, maxlen: int):
-        super().__init__([], maxlen=maxlen)
+    def __init__(self, experiences: list[Experience], maxlen: int | None = None):
+        super().__init__(experiences, maxlen=maxlen)
 
     def sample(self, batch_size: int):
         return random.sample(self, batch_size)
