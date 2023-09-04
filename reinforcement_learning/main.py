@@ -25,9 +25,9 @@ async def main():
         model_version += 1
     if model_version > 0:
         model.load_state_dict(torch.load(f"saves/mk{model_version}_{file_name}.pt"))  # type: ignore
-        print("Saved model has successfully loaded.")
+        print(f"mk{model_version}_{file_name}.pt has been loaded.")
     else:
-        print("New model initialized.")
+        print(f"mk{model_version}_{file_name}.pt has been initialized.")
     # train model
     num_improve = int(config["num_improve"])
     for _ in range(num_improve):
