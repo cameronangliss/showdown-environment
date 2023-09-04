@@ -27,8 +27,7 @@ def encode_battle(battle: Battle) -> torch.Tensor:
     else:
         weather = None
     weather_features = torch.tensor([float(weather == weather_type) for weather_type in weather_types])
-    features = torch.cat([team_features, opponent_features, gen_features, weather_features])
-    return features.view(-1)
+    return torch.cat([team_features, opponent_features, gen_features, weather_features])
 
 
 def __encode_team(team: Team) -> torch.Tensor:
@@ -46,8 +45,7 @@ def __encode_team(team: Team) -> torch.Tensor:
             ]
         ]
     )
-    features = torch.cat([*encoded_team, special_used_features])
-    return features.view(-1)
+    return torch.cat([*encoded_team, special_used_features])
 
 
 def __encode_pokemon(pokemon: Pokemon) -> torch.Tensor:
@@ -72,8 +70,7 @@ def __encode_pokemon(pokemon: Pokemon) -> torch.Tensor:
     )
     encoded_moves = [__encode_move(move) for move in pokemon.get_moves()]
     encoded_moves += [torch.zeros(22)] * (4 - len(encoded_moves))
-    features = torch.cat([gender_features, hp_features, status_features, stats, type_features, *encoded_moves])
-    return features.view(-1)
+    return torch.cat([gender_features, hp_features, status_features, stats, type_features, *encoded_moves])
 
 
 def __encode_move(move: Move) -> torch.Tensor:
