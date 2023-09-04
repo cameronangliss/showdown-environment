@@ -7,8 +7,7 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 from encoders import encode_battle
-from experience import Experience
-from memory import Memory
+from memory import Experience, Memory
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
@@ -68,7 +67,7 @@ class Model(nn.Module):
         # gathering data
         print("Gathering experiences...")
         new_experiences, _ = await self.__run_episodes(duplicate_model, 100)
-        self.memory.push(new_experiences)
+        self.memory.extend(new_experiences)
         # training
         print(f"Training on {len(self.memory)} experiences.")
         for i in range(1000):
@@ -84,6 +83,7 @@ class Model(nn.Module):
             self.__dict__ = duplicate_model.__dict__
         else:
             print("Improvement succeeded!")
+            self.memory.clear()
         return num_wins
 
     async def __run_episodes(
