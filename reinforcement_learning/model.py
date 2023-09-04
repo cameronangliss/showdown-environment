@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import json
-import os
 import random
 from copy import deepcopy
 from datetime import datetime
 
 import torch
 import torch.nn as nn
-from experience import Experience, to_experience
+from experience import Experience
+from memory import Memory
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
@@ -27,13 +26,13 @@ class Model(nn.Module):
         self.__alpha = alpha
         self.__epsilon = epsilon
         self.__gamma = gamma
+        self.memory = Memory(10**5)
         layer_sizes = [1502, *hidden_layer_sizes, 26]
         layers: list[nn.Module] = []
         for i in range(len(layer_sizes) - 1):
             layers += [nn.Linear(layer_sizes[i], layer_sizes[i + 1]), nn.ReLU()]
         self.__layers = nn.Sequential(*layers[:-1])
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.__alpha)
-
         # Move the model to GPU if available
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(self.device)
@@ -59,41 +58,33 @@ class Model(nn.Module):
     # Training methods
 
     async def improve(self):
-        if not os.path.exists("exp.json"):
-            with open("exp.json", "w") as f:
-                json.dump([], f)
-        with open("exp.json") as f:
-            experiences = [to_experience(json_list) for json_list in json.load(f)]
         num_wins = 0
         while num_wins < 55:
-            experiences, num_wins = await self.attempt_improve(experiences)
+            num_wins = await self.attempt_improve()
 
-    async def attempt_improve(self, experiences: list[Experience]) -> tuple[list[Experience], float]:
+    async def attempt_improve(self) -> float:
         duplicate_model = deepcopy(self)
         # gathering data
         print("Gathering experiences...")
         new_experiences, _ = await self.__run_episodes(duplicate_model, 100)
-        experiences += new_experiences
+        self.memory.push(new_experiences)
         # training
-        print(f"Training on {len(experiences)} experiences.")
+        print(f"Training on {len(self.memory)} experiences.")
         for i in range(1000):
-            experience_sample = random.sample(experiences, k=round(len(experiences) / 100))
-            for experience in experience_sample:
-                self.__update(experience)
-            print(f"Progress: {(i + 1) / 10}%", end="\r")
+            for _ in range(round(len(self.memory) / 100)):
+                batch = self.memory.sample(round(len(self.memory) / 100))
+                for exp in batch:
+                    self.__update(exp)
+                print(f"Progress: {(i + 1) / 10}%", end="\r")
         # evaluating
         _, num_wins = await self.__run_episodes(duplicate_model, 100, min_win_rate=0.55)
         print(f"Win rate: {num_wins}/100")
         if num_wins < 55:
             print("Improvement failed.")
             self.__dict__ = duplicate_model.__dict__
-            with open("exp.json", "w") as f:
-                json.dump([exp.to_json_serializable() for exp in experiences], f)
         else:
             print("Improvement succeeded!")
-            with open("exp.json", "w") as f:
-                json.dump([], f)
-        return experiences, num_wins
+        return num_wins
 
     async def __run_episodes(
         self, alt_model: Model, num_episodes: int, min_win_rate: float | None = None
@@ -138,26 +129,21 @@ class Model(nn.Module):
                     action2,
                 )
                 experience1 = Experience(
-                    turn,
-                    0,  # temporary value
-                    torch.tensor(state1.process()).to(self.device),
+                    torch.tensor(state1.process()),
                     action1,
-                    torch.tensor(next_state1.process()).to(self.device),
+                    torch.tensor(next_state1.process()),
                     reward1,
                     done,
                 )
                 experience2 = Experience(
-                    turn,
-                    0,  # temporary value
-                    torch.tensor(state2.process()).to(self.device),
+                    torch.tensor(state2.process()),
                     action2,
-                    torch.tensor(next_state2.process()).to(self.device),
+                    torch.tensor(next_state2.process()),
                     reward2,
                     done,
                 )
                 experiences += [experience1, experience2]
                 state1, state2 = next_state1, next_state2
-            experiences = [exp._replace(total_turns=turn) for exp in experiences]
             try:
                 winner_id = state1.protocol.index("win")
             except ValueError:
