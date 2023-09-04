@@ -72,11 +72,10 @@ class Model(nn.Module):
         # training
         print(f"Training on {len(self.memory)} experiences.")
         for i in range(1000):
-            for _ in range(round(len(self.memory) / 100)):
-                batch = self.memory.sample(round(len(self.memory) / 100))
-                for exp in batch:
-                    self.__update(exp)
-                print(f"Progress: {(i + 1) / 10}%", end="\r")
+            batch = self.memory.sample(round(len(self.memory) / 100))
+            for exp in batch:
+                self.__update(exp)
+            print(f"Progress: {(i + 1) / 10}%", end="\r")
         # evaluating
         _, num_wins = await self.__run_episodes(duplicate_model, 100, min_win_rate=0.55)
         print(f"Win rate: {num_wins}/100")
