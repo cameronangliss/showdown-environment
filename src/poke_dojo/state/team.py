@@ -62,7 +62,7 @@ class Team:
                 self.__update_with_opponent_message(split_line, active_pokemon)
             if active_pokemon is not None:
                 active_pokemon.update_special_options(
-                    self.__mega_used, self.__zmove_used, self.__burst_used, self.__max_used, self.__tera_used
+                    self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
                 )
         active_pokemon = self.get_active()
         if active_pokemon is not None:
@@ -110,12 +110,12 @@ class Team:
                     if split_line[3] == "ability: Mummy" and self.__pressure:
                         self.__pressure = False
                     if split_line[3] == "Dynamax":
-                        self.__max_used = True
+                        self.max_used = True
                 active_pokemon.start(split_line[3:])
             case "-anim":
                 active_pokemon.preparing = False
             case "-burst":
-                self.__burst_used = True
+                self.burst_used = True
             case "-curestatus":
                 cured_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
                 cured_pokemon = [pokemon for pokemon in self.team if pokemon.name == cured_pokemon_name][0]
@@ -143,7 +143,7 @@ class Team:
             case "-item":
                 active_pokemon.update_item(split_line[3], split_line[4:])
             case "-mega":
-                self.__mega_used = True
+                self.mega_used = True
                 active_pokemon.mega_evolve(split_line[4] or None)
             case "-prepare":
                 active_pokemon.preparing = True
@@ -154,17 +154,17 @@ class Team:
                 active_pokemon.update_condition(hp, status)
             case "-start":
                 if len(split_line) > 3 and split_line[3] == "Dynamax":
-                    self.__max_used = True
+                    self.max_used = True
                 active_pokemon.start(split_line[3:])
             case "-status":
                 active_pokemon.update_condition(active_pokemon.hp, split_line[3])
             case "-terastallize":
-                self.__tera_used = True
+                self.tera_used = True
             case "-transform":
                 copied_pokemon_name = split_line[3][split_line[3].index(" ") + 1 :]
                 active_pokemon.transform(copied_pokemon_name, request)
             case "-zpower":
-                self.__zmove_used = True
+                self.zmove_used = True
             case _:
                 pass
 
@@ -236,7 +236,7 @@ class Team:
     def check_consistency(self, request: Any, just_unmaxed: bool):
         team_info = [pokemon_info for pokemon_info in request["side"]["pokemon"]]
         for pokemon, pokemon_info in zip(self.team, team_info):
-            zmove_pp_needs_update = self.__zmove_used and not self.__zmove_pp_updated
+            zmove_pp_needs_update = self.zmove_used and not self.__zmove_pp_updated
             active_info = request["active"] if "active" in request else None
             pokemon.check_consistency(pokemon_info, active_info, zmove_pp_needs_update, just_unmaxed)
             if zmove_pp_needs_update:
