@@ -3,10 +3,9 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from functools import reduce
 from typing import Any
 
-from poke_dojo.data.dex import abilitydex, itemdex, movedex, pokedex, typedex
+from poke_dojo.data.dex import abilitydex, itemdex, movedex, pokedex
 from poke_dojo.state.move import Move
 
 
@@ -482,22 +481,3 @@ class Pokemon:
         if "ability" in pokemon_info:
             assert self.__get_ability() == pokemon_info["ability"], f"{self.__get_ability} != {pokemon_info['ability']}"
         assert self.item == (pokemon_info["item"] or None), f"{self.item} != {pokemon_info['item'] or None}"
-
-    ###################################################################################################################
-    # Processes Pokemon object into a feature vector to be fed into the model's input layer
-
-    def process(self) -> list[float]:
-        gender_features = [
-            float(gender_bool) for gender_bool in [self.gender == "M", self.gender == "F", self.gender == None]
-        ]
-        all_types = typedex[f"gen{self.gen}"].keys()
-        type_features = [float(t in self.get_types()) for t in all_types]
-        hp_features = [self.hp / self.max_hp] if self.from_opponent else [self.hp / self.max_hp, self.max_hp / 1000]
-        status_conditions = ["psn", "tox", "par", "slp", "brn", "frz", "fnt"]
-        status_features = [float(self.status == status_condition) for status_condition in status_conditions]
-        stats = [stat / 255 if self.from_opponent else stat / 1000 for stat in self.get_stats().values()]
-        move_feature_lists = [move.process() for move in self.get_moves()]
-        move_feature_lists.extend([[0.0] * 22] * (4 - len(move_feature_lists)))
-        move_features = reduce(lambda features1, features2: features1 + features2, move_feature_lists)
-        features = gender_features + hp_features + status_features + stats + type_features + move_features
-        return features

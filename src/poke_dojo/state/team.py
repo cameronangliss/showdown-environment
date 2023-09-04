@@ -1,5 +1,4 @@
 import json
-from functools import reduce
 from typing import Any
 
 from poke_dojo.state.pokemon import Pokemon
@@ -8,19 +7,19 @@ from poke_dojo.state.pokemon import Pokemon
 class Team:
     __ident: str
     __gen: int
-    __team: list[Pokemon]
+    team: list[Pokemon]
     __pressure: bool = False
-    __mega_used: bool = False
-    __zmove_used: bool = False
+    mega_used: bool = False
+    zmove_used: bool = False
     __zmove_pp_updated: bool = False
-    __burst_used: bool = False
-    __max_used: bool = False
-    __tera_used: bool = False
+    burst_used: bool = False
+    max_used: bool = False
+    tera_used: bool = False
 
     def __init__(self, ident: str, gen: int, protocol: list[str], request: Any | None = None):
         self.__ident = ident
         self.__gen = gen
-        self.__team = (
+        self.team = (
             [
                 Pokemon.from_request(pokemon_json, self.__gen, self.__ident)
                 for pokemon_json in request["side"]["pokemon"]
@@ -34,7 +33,7 @@ class Team:
     # Getter methods
 
     def get_active(self) -> Pokemon | None:
-        actives = [mon for mon in self.__team if mon.active]
+        actives = [mon for mon in self.team if mon.active]
         if len(actives) == 0:
             return None
         if len(actives) == 1:
@@ -43,7 +42,7 @@ class Team:
             raise RuntimeError(f"Multiple active pokemon: {[active.name for active in actives]}")
 
     def get_json_str(self) -> str:
-        return json.dumps([json.loads(pokemon.get_json_str()) for pokemon in self.__team])
+        return json.dumps([json.loads(pokemon.get_json_str()) for pokemon in self.team])
 
     ###################################################################################################################
     # Self-updating methods used when reading through the lines of the protocol and the request
@@ -73,7 +72,7 @@ class Team:
             active_name = active_pokemon.name if active_pokemon else ""
             just_unmaxed = f"|-end|{self.__ident}a: {active_name}|Dynamax" in protocol_lines
             team_info = [pokemon_info for pokemon_info in request["side"]["pokemon"]]
-            for pokemon, pokemon_info in zip(self.__team, team_info):
+            for pokemon, pokemon_info in zip(self.team, team_info):
                 # If active has been mistracked, we assume that the active pokemon is using an illusion.
                 if pokemon.active != pokemon_info["active"]:
                     hp, status = Pokemon.parse_condition(pokemon_info["condition"])
@@ -81,7 +80,7 @@ class Team:
                     pokemon.status = status
                     pokemon.active = pokemon_info["active"]
                     pokemon.illusion = True
-            if not any([pokemon.illusion for pokemon in self.__team]):
+            if not any([pokemon.illusion for pokemon in self.team]):
                 self.check_consistency(request, just_unmaxed)
 
     def __update_with_player_message(self, split_line: list[str], active_pokemon: Pokemon, request: Any | None):
@@ -93,7 +92,7 @@ class Team:
                 self.__switch(split_line[2][5:], split_line[3], hp, status)
             case "faint":
                 fainted_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
-                fainted_pokemon = [pokemon for pokemon in self.__team if pokemon.name == fainted_pokemon_name][0]
+                fainted_pokemon = [pokemon for pokemon in self.team if pokemon.name == fainted_pokemon_name][0]
                 fainted_pokemon.update_condition(0, "fnt")
             case "move":
                 if not active_pokemon.preparing:
@@ -119,10 +118,10 @@ class Team:
                 self.__burst_used = True
             case "-curestatus":
                 cured_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
-                cured_pokemon = [pokemon for pokemon in self.__team if pokemon.name == cured_pokemon_name][0]
+                cured_pokemon = [pokemon for pokemon in self.team if pokemon.name == cured_pokemon_name][0]
                 cured_pokemon.update_condition(cured_pokemon.hp, None)
             case "-cureteam":
-                for pokemon in self.__team:
+                for pokemon in self.team:
                     if pokemon.status != "fnt":
                         pokemon.update_condition(pokemon.hp, None)
             case "-damage":
@@ -138,7 +137,7 @@ class Team:
                     active_pokemon.alt_stats = new_pokemon_info["stats"]
             case "-heal":
                 healed_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
-                healed_pokemon = [pokemon for pokemon in self.__team if pokemon.name == healed_pokemon_name][0]
+                healed_pokemon = [pokemon for pokemon in self.team if pokemon.name == healed_pokemon_name][0]
                 hp, status = Pokemon.parse_condition(split_line[3])
                 healed_pokemon.update_condition(hp, status)
             case "-item":
@@ -194,9 +193,9 @@ class Team:
 
     def __switch(self, incoming_pokemon_name: str, details: str, hp: int, status: str | None):
         # get incoming pokemon
-        if incoming_pokemon_name in [pokemon.name for pokemon in self.__team]:
-            incoming_pokemon = [pokemon for pokemon in self.__team if pokemon.name == incoming_pokemon_name][0]
-            incoming_index = self.__team.index(incoming_pokemon)
+        if incoming_pokemon_name in [pokemon.name for pokemon in self.team]:
+            incoming_pokemon = [pokemon for pokemon in self.team if pokemon.name == incoming_pokemon_name][0]
+            incoming_index = self.team.index(incoming_pokemon)
         else:
             incoming_pokemon = Pokemon.from_protocol(incoming_pokemon_name, details, self.__gen, self.__ident)
             incoming_index = None
@@ -205,20 +204,20 @@ class Team:
         if outgoing_pokemon is None:
             outgoing_index = None if incoming_index is None else 0
         else:
-            outgoing_index = self.__team.index(outgoing_pokemon)
+            outgoing_index = self.team.index(outgoing_pokemon)
             outgoing_pokemon.switch_out()
         incoming_pokemon.switch_in(hp, status)
         # place incoming pokemon in new position
         if outgoing_index is None:
-            self.__team.append(incoming_pokemon)
+            self.team.append(incoming_pokemon)
         else:
-            self.__team[outgoing_index] = incoming_pokemon
+            self.team[outgoing_index] = incoming_pokemon
         # place outgoing pokemon in new position
         if outgoing_pokemon is not None:
             if incoming_index is None:
-                self.__team.append(outgoing_pokemon)
+                self.team.append(outgoing_pokemon)
             else:
-                self.__team[incoming_index] = outgoing_pokemon
+                self.team[incoming_index] = outgoing_pokemon
 
     def __replace(self, pokemon: str, details: str):
         active_pokemon = self.get_active()
@@ -236,28 +235,9 @@ class Team:
 
     def check_consistency(self, request: Any, just_unmaxed: bool):
         team_info = [pokemon_info for pokemon_info in request["side"]["pokemon"]]
-        for pokemon, pokemon_info in zip(self.__team, team_info):
+        for pokemon, pokemon_info in zip(self.team, team_info):
             zmove_pp_needs_update = self.__zmove_used and not self.__zmove_pp_updated
             active_info = request["active"] if "active" in request else None
             pokemon.check_consistency(pokemon_info, active_info, zmove_pp_needs_update, just_unmaxed)
             if zmove_pp_needs_update:
                 self.__zmove_pp_updated = True
-
-    ###################################################################################################################
-    # Processes TeamState object into a feature vector to be fed into the model's input layer
-
-    def process(self) -> list[float]:
-        pokemon_feature_lists = [pokemon.process() for pokemon in self.__team]
-        pokemon_feature_lists.extend([[0.0] * 123] * (6 - len(pokemon_feature_lists)))
-        pokemon_features = reduce(lambda features1, features2: features1 + features2, pokemon_feature_lists)
-        special_used_features = [
-            float(attribute)
-            for attribute in [
-                self.__mega_used,
-                self.__zmove_used,
-                self.__max_used,
-                self.__tera_used,
-            ]
-        ]
-        features = pokemon_features + special_used_features
-        return features

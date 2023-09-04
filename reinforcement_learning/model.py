@@ -6,6 +6,7 @@ from datetime import datetime
 
 import torch
 import torch.nn as nn
+from encoders import encode_battle
 from experience import Experience
 from memory import Memory
 from torch import Tensor
@@ -27,7 +28,7 @@ class Model(nn.Module):
         self.__epsilon = epsilon
         self.__gamma = gamma
         self.memory = Memory(10**5)
-        layer_sizes = [1502, *hidden_layer_sizes, 26]
+        layer_sizes = [1504, *hidden_layer_sizes, 26]
         layers: list[nn.Module] = []
         for i in range(len(layer_sizes) - 1):
             layers += [nn.Linear(layer_sizes[i], layer_sizes[i + 1]), nn.ReLU()]
@@ -129,16 +130,16 @@ class Model(nn.Module):
                     action2,
                 )
                 experience1 = Experience(
-                    torch.tensor(state1.process()),
+                    encode_battle(state1).to(self.device),
                     action1,
-                    torch.tensor(next_state1.process()),
+                    encode_battle(next_state1).to(self.device),
                     reward1,
                     done,
                 )
                 experience2 = Experience(
-                    torch.tensor(state2.process()),
+                    encode_battle(state2).to(self.device),
                     action2,
-                    torch.tensor(next_state2.process()),
+                    encode_battle(next_state2).to(self.device),
                     reward2,
                     done,
                 )
@@ -163,7 +164,7 @@ class Model(nn.Module):
             if exploring and random.random() < self.__epsilon:
                 action = random.choice(action_space)
             else:
-                features = torch.tensor(state.process()).to(self.device)
+                features = encode_battle(state).to(self.device)
                 outputs = self.__forward(features)
                 valid_outputs = torch.index_select(outputs, dim=0, index=torch.tensor(action_space).to(self.device))
                 max_output_id = int(torch.argmax(valid_outputs).item())

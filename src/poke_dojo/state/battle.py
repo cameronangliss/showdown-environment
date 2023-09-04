@@ -7,17 +7,17 @@ from poke_dojo.state.team import Team
 class Battle:
     request: Any
     protocol: list[str]
-    __gen: int
-    __team: Team
-    __opponent_team: Team
+    gen: int
+    team: Team
+    opponent_team: Team
 
     def __init__(self, protocol: list[str], request: Any):
         self.protocol = protocol
         self.request = request
         ident, opponent_ident = ("p1", "p2") if request["side"]["id"] == "p1" else ("p2", "p1")
-        self.__gen = self.__get_gen()
-        self.__team = Team(ident, self.__gen, protocol, request)
-        self.__opponent_team = Team(opponent_ident, self.__gen, protocol)
+        self.gen = self.__get_gen()
+        self.team = Team(ident, self.gen, protocol, request)
+        self.opponent_team = Team(opponent_ident, self.gen, protocol)
 
     ###################################################################################################################
     # Getter methods
@@ -30,8 +30,8 @@ class Battle:
     def get_json_str(self) -> str:
         json_str = json.dumps(
             {
-                "##### team_state #####": json.loads(self.__team.get_json_str()),
-                "##### opponent_state #####": json.loads(self.__opponent_team.get_json_str()),
+                "##### team_state #####": json.loads(self.team.get_json_str()),
+                "##### opponent_state #####": json.loads(self.opponent_team.get_json_str()),
             },
             separators=(",", ":"),
         )
@@ -61,7 +61,7 @@ class Battle:
                 for i, move in enumerate(self.request["active"][0]["moves"])
                 if not ("disabled" in move and move["disabled"])
             ]
-            active_pokemon = self.__team.get_active()
+            active_pokemon = self.team.get_active()
             if active_pokemon:
                 valid_mega_ids = [i + 4 for i in valid_move_ids] if "canMegaEvo" in self.request["active"][0] else []
                 valid_zmove_ids = (
@@ -87,40 +87,10 @@ class Battle:
         return valid_action_ids
 
     ###################################################################################################################
-    # Processes State object into a feature vector to be fed into the model's input layer
-
-    def process(self) -> list[float]:
-        team_features = self.__team.process()
-        opponent_features = self.__opponent_team.process()
-        global_features = self.__process_globals()
-        features = team_features + opponent_features + global_features
-        return features
-
-    def __process_globals(self) -> list[float]:
-        gen_features = [float(n == self.__gen) for n in range(1, 10)]
-        weather_types = [
-            "RainDance",
-            "Sandstorm",
-            "SunnyDay",
-            "Snow",
-            "Hail",
-            "PrimordialSea",
-            "DesolateLand",
-            "DeltaStream",
-            "none",
-        ]
-        if "-weather" in self.protocol:
-            weather = self.protocol[self.protocol.index("-weather") + 1]
-        else:
-            weather = None
-        weather_features = [float(weather == weather_type) for weather_type in weather_types]
-        return gen_features + weather_features
-
-    ###################################################################################################################
     # Self-updating methods used when reading through the lines of the protocol and the request
 
     def update(self, protocol: list[str], request: Any | None):
         self.protocol = protocol
         self.request = request
-        self.__team.update(protocol, request)
-        self.__opponent_team.update(protocol)
+        self.team.update(protocol, request)
+        self.opponent_team.update(protocol)

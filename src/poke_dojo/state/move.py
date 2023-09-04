@@ -2,13 +2,13 @@ import json
 import re
 from typing import Any
 
-from poke_dojo.data.dex import movedex, typedex
+from poke_dojo.data.dex import movedex
 
 
 class Move:
     name: str
     identifier: str
-    __gen: int
+    gen: int
     pp: int
     maxpp: int
     __target: str
@@ -24,7 +24,7 @@ class Move:
         self.identifier = Move.get_identifier(name)
         details = movedex[f"gen{gen}"][self.identifier]
         self.name = details["name"]
-        self.__gen = gen
+        self.gen = gen
         if from_mimic and gen > 2:
             pp = details["pp"]
         elif gen <= 2:
@@ -63,7 +63,7 @@ class Move:
         )
 
     def __get_category(self) -> str:
-        return movedex[f"gen{self.__gen}"][self.identifier]["category"]
+        return movedex[f"gen{self.gen}"][self.identifier]["category"]
 
     def get_json_str(self) -> str:
         return json.dumps(
@@ -130,7 +130,7 @@ class Move:
             identifier = self.get_identifier(move_info["move"])
             assert self.identifier == identifier, f"{self.identifier} != {identifier}"
         if "pp" in move_info:
-            if zmove_pp_needs_update or maxed or just_unmaxed or self.__gen <= 3:
+            if zmove_pp_needs_update or maxed or just_unmaxed or self.gen <= 3:
                 self.pp = move_info["pp"]
             else:
                 assert self.pp == move_info["pp"], f"{self.identifier}: {self.pp} != {move_info['pp']}"
@@ -142,17 +142,3 @@ class Move:
             assert (
                 self.is_disabled() == move_info["disabled"]
             ), f"{self.identifier}: {self.is_disabled()} != {move_info['disabled']}"
-
-    ###################################################################################################################
-    # Processes MoveState object into a feature vector to be fed into the model's input layer
-
-    def process(self) -> list[float]:
-        pp_frac_feature = self.pp / self.maxpp
-        disabled_feature = float(self.is_disabled())
-        details = movedex[f"gen{self.__gen}"][self.identifier]
-        power_feature = details["basePower"] / 250
-        accuracy_feature = 1.0 if details["accuracy"] == True else details["accuracy"] / 100
-        all_types = typedex[f"gen{self.__gen}"].keys()
-        move_type = details["type"].lower()
-        type_features = [float(t == move_type) for t in all_types]
-        return [pp_frac_feature, disabled_feature, power_feature, accuracy_feature] + type_features
