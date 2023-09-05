@@ -292,30 +292,29 @@ class Pokemon:
             return
         # get move
         if full_name in [move.name for move in self.get_moves()]:
-            move = [move for move in self.get_moves() if move.name == full_name][0]
+            move_used = [move for move in self.get_moves() if move.name == full_name][0]
         else:
-            move = Move(full_name, self.gen, "ghost" in self.get_types())
+            move_used = Move(full_name, self.gen, "ghost" in self.get_types())
             if self.transformed:
-                self.alt_moves.append(move)
+                self.alt_moves.append(move_used)
             else:
-                self.moves.append(move)
+                self.moves.append(move_used)
         # update pp
         if not (info and info[0][:16] == "[from]lockedmove"):
-            pp_used = move.get_pp_used(pressure)
+            pp_used = move_used.get_pp_used(pressure)
             if info and info[0] == "[from]move: Sleep Talk":
                 pp_used -= 1  # accounting for sleep talk receiving two protocol messages when used
                 sleep_talk = [move for move in self.get_moves() if move.name == "Sleep Talk"][0]
                 sleep_talk.pp = max(sleep_talk.pp - pp_used, 0)
+                return
             else:
-                move.pp = max(move.pp - pp_used, 0)
+                move_used.pp = max(move_used.pp - pp_used, 0)
         # other updates
-        self.__update_last_used(move.name)
-        for self_move in self.get_moves():
-            self_move.keep_item(self.__get_item())
-            if self_move.name == "Gigaton Hammer":
-                self_move.self_disabled = move.name == "Gigaton Hammer"
-            for self_move in self.get_moves():
-                self_move.keep_item(self.__get_item())
+        self.__update_last_used(move_used.name)
+        for move in self.get_moves():
+            move.keep_item(self.__get_item())
+            if move.name == "Gigaton Hammer":
+                move.self_disabled = move_used.name == "Gigaton Hammer"
 
     def update_condition(self, hp: int, status: str | None):
         self.hp = hp
