@@ -80,7 +80,9 @@ class Model(nn.Module):
         print(f"Win rate: {num_wins}/100")
         if num_wins < 55:
             print("Improvement failed.")
+            current_memory = deepcopy(self.memory)
             self.__dict__ = duplicate_model.__dict__
+            self.memory = current_memory
         else:
             print("Improvement succeeded!")
             self.memory.clear()
