@@ -336,6 +336,7 @@ class Pokemon:
             new_item_identifier = Pokemon.__get_item_identifier(new_item)
             for move in self.get_moves():
                 move.update_item(self.__get_item(), new_item_identifier, tricking=self.tricking, maxed=self.maxed)
+                self.tricking = False
             self.item = new_item_identifier
             self.item_off = False
 

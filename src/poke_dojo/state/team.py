@@ -51,26 +51,13 @@ class Team:
         protocol_lines = "|".join(protocol).split("\n")
         for line in protocol_lines:
             split_line = line.split("|")
-            active_pokemon = self.get_active()
-            if active_pokemon is None:
-                if len(split_line) > 2 and split_line[1] == "switch" and split_line[2][:2] == self.__ident:
-                    hp, status = Pokemon.parse_condition(split_line[4])
-                    self.__switch(split_line[2][5:], split_line[3], hp, status)
-            elif len(split_line) > 2 and split_line[2][:2] == self.__ident:
-                self.__update_with_player_message(split_line, active_pokemon, request)
-            elif len(split_line) > 2 and split_line[2][:2] != self.__ident:
-                self.__update_with_opponent_message(split_line, active_pokemon)
-            if active_pokemon is not None:
-                active_pokemon.update_special_options(
-                    self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
-                )
-        active_pokemon = self.get_active()
-        if active_pokemon is not None:
-            active_pokemon.tricking = False
+            if len(split_line) > 2:
+                if split_line[2][:2] == self.__ident:
+                    self.__update_with_player_message(split_line, request)
+                else:
+                    self.__update_with_opponent_message(split_line)
+        # Using request to check our work and make adjustments if necessary
         if request:
-            active_pokemon = self.get_active()
-            active_name = active_pokemon.name if active_pokemon else ""
-            just_unmaxed = f"|-end|{self.__ident}a: {active_name}|Dynamax" in protocol_lines
             team_info = [pokemon_info for pokemon_info in request["side"]["pokemon"]]
             for pokemon, pokemon_info in zip(self.team, team_info):
                 # If active has been mistracked, we assume that the active pokemon is using an illusion.
@@ -81,9 +68,15 @@ class Team:
                     pokemon.active = pokemon_info["active"]
                     pokemon.illusion = True
             if not any([pokemon.illusion for pokemon in self.team]):
-                self.check_consistency(request, just_unmaxed)
+                self.check_consistency(request, protocol_lines)
 
-    def __update_with_player_message(self, split_line: list[str], active_pokemon: Pokemon, request: Any | None):
+    def __update_with_player_message(self, split_line: list[str], request: Any | None):
+        active_pokemon = self.get_active()
+        if active_pokemon is None:
+            if split_line[1] == "switch" and split_line[2][:2] == self.__ident:
+                hp, status = Pokemon.parse_condition(split_line[4])
+                self.__switch(split_line[2][5:], split_line[3], hp, status)
+            return
         match split_line[1]:
             case "cant":
                 active_pokemon.preparing = False
@@ -111,11 +104,19 @@ class Team:
                         self.__pressure = False
                     if split_line[3] == "Dynamax":
                         self.max_used = True
+                        for pokemon in self.team:
+                            pokemon.update_special_options(
+                                self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                            )
                 active_pokemon.start(split_line[3:])
             case "-anim":
                 active_pokemon.preparing = False
             case "-burst":
                 self.burst_used = True
+                for pokemon in self.team:
+                    pokemon.update_special_options(
+                        self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                    )
             case "-curestatus":
                 cured_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
                 cured_pokemon = [pokemon for pokemon in self.team if pokemon.name == cured_pokemon_name][0]
@@ -144,6 +145,10 @@ class Team:
                 active_pokemon.update_item(split_line[3], split_line[4:])
             case "-mega":
                 self.mega_used = True
+                for pokemon in self.team:
+                    pokemon.update_special_options(
+                        self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                    )
                 active_pokemon.mega_evolve(split_line[4] or None)
             case "-prepare":
                 active_pokemon.preparing = True
@@ -155,20 +160,36 @@ class Team:
             case "-start":
                 if len(split_line) > 3 and split_line[3] == "Dynamax":
                     self.max_used = True
+                    for pokemon in self.team:
+                        pokemon.update_special_options(
+                            self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                        )
                 active_pokemon.start(split_line[3:])
             case "-status":
                 active_pokemon.update_condition(active_pokemon.hp, split_line[3])
             case "-terastallize":
                 self.tera_used = True
+                for pokemon in self.team:
+                    pokemon.update_special_options(
+                        self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                    )
             case "-transform":
                 copied_pokemon_name = split_line[3][split_line[3].index(" ") + 1 :]
                 active_pokemon.transform(copied_pokemon_name, request)
             case "-zpower":
                 self.zmove_used = True
+                for pokemon in self.team:
+                    pokemon.update_special_options(
+                        self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                    )
             case _:
                 pass
+        
 
-    def __update_with_opponent_message(self, split_line: list[str], active_pokemon: Pokemon):
+    def __update_with_opponent_message(self, split_line: list[str]):
+        active_pokemon = self.get_active()
+        if active_pokemon is None:
+            return
         match split_line[1]:
             case "drag":
                 if self.__pressure:
@@ -233,7 +254,10 @@ class Team:
     ###################################################################################################################
     # Consistency checking
 
-    def check_consistency(self, request: Any, just_unmaxed: bool):
+    def check_consistency(self, request: Any, protocol_lines: list[str]):
+        active_pokemon = self.get_active()
+        active_name = active_pokemon.name if active_pokemon else ""
+        just_unmaxed = f"|-end|{self.__ident}a: {active_name}|Dynamax" in protocol_lines
         team_info = [pokemon_info for pokemon_info in request["side"]["pokemon"]]
         for pokemon, pokemon_info in zip(self.team, team_info):
             zmove_pp_needs_update = self.zmove_used and not self.__zmove_pp_updated
