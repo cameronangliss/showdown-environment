@@ -184,7 +184,6 @@ class Team:
                     )
             case _:
                 pass
-        
 
     def __update_with_opponent_message(self, split_line: list[str]):
         active_pokemon = self.get_active()
