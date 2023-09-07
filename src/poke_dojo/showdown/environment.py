@@ -63,7 +63,7 @@ class Environment:
                     await self.agent.cancel(self.__alt_agent)
                 except PopupError as e2:
                     self.logger.warning(e2)
-                await asyncio.sleep(5)
+                await asyncio.sleep(10)
         await self.agent.join(room)
         await self.__alt_agent.join(room)
         await self.agent.timer_on()

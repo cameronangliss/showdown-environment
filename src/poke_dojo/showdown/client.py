@@ -84,12 +84,15 @@ class Client:
                         # 3. You are already challenging someone. Cancel that challenge before challenging someone else.
                         # 4. The server is restarting. Battles will be available again in a few minutes.
                         raise PopupError(split_message[2])
-                    elif (
-                        split_message[1] == "pm"
-                        and split_message[2] == f" {self.username}"
-                        and "wants to battle!" in split_message[4]
-                    ):
-                        return split_message
+                    elif split_message[1] == "pm":
+                        if (
+                            split_message[2] == f"!{self.username}"
+                            and "Due to spam from your internet provider, you can't challenge others right now."
+                            in split_message[4]
+                        ):
+                            raise PopupError(split_message[4])
+                        elif split_message[2] == f" {self.username}" and "wants to battle!" in split_message[4]:
+                            return split_message
                 case MessageType.CANCEL:
                     if split_message[1] == "popup":
                         # Popups encountered when searching for cancel message in the past:
