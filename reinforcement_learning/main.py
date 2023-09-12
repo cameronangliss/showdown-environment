@@ -29,8 +29,7 @@ async def main():
     else:
         print(f"mk{model_version}_{file_name}.pt has been initialized.")
     # train model
-    num_improve = int(config["num_improve"])
-    for _ in range(num_improve):
+    while True:
         await model.improve()
         model_version += 1
         print(f"Model has been upgraded to mk{model_version}!")
