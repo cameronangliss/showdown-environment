@@ -1,4 +1,7 @@
+import sys
 import torch
+
+sys.path.append(".")
 
 from poke_dojo.data.dex import movedex, typedex
 from poke_dojo.state.battle import Battle

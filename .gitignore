@@ -1,6 +1,6 @@
 .vscode
-reinforcement_learning/__pycache__
 saves
 scripts/node_modules
+__pycache__
 config.json
 debug.log
