@@ -57,7 +57,7 @@ class Player(Client):
         await self.find_message(MessageType.GAMES)
         try:
             split_message = await asyncio.wait_for(self.find_message(MessageType.GAMES), timeout=5)
-        except TimeoutError:
+        except asyncio.exceptions.TimeoutError:
             self.logger.info("Second updatesearch message not received. This should mean the user just logged in.")
         else:
             games = json.loads(split_message[2])["games"]
