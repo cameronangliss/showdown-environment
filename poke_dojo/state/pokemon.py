@@ -267,7 +267,9 @@ class Pokemon:
             self.hp = min(int(self.hp + self.max_hp / 3), self.max_hp)
         self.active = False
         for move in self.moves:
+            move.just_used = False
             move.disable_disabled = False
+            move.bide_disabled = False
             move.encore_disabled = False
             move.taunt_disabled = False
             move.remove_item()
