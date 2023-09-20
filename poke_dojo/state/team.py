@@ -68,7 +68,10 @@ class Team:
                     pokemon.active = pokemon_info["active"]
                     pokemon.illusion = True
             if not any([pokemon.illusion for pokemon in self.team]):
-                self.check_consistency(request, protocol_lines)
+                try:
+                    self.check_consistency(request, protocol_lines)
+                except AssertionError as e:
+                    print(e)
 
     def __update_with_player_message(self, split_line: list[str], request: Any | None):
         active_pokemon = self.get_active()
