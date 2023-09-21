@@ -98,12 +98,12 @@ class Model(nn.Module):
         for i in range(num_episodes):
             new_experiences, winner = await self.__run_episode(alt_model, env, "gen4randombattle", min_win_rate is None)
             experiences += new_experiences
-            time = datetime.now().strftime("%H:%M:%S")
-            print(f"{time}: {winner} wins game {i + 1}")
             if winner is None:
                 num_wins += 0.5
             if winner == env.agent.username:
                 num_wins += 1
+            time = datetime.now().strftime("%H:%M:%S")
+            print(f"{time}: Win rate = {num_wins}/{i + 1}", end="\r")
             if min_win_rate is not None and (
                 num_wins / num_episodes >= min_win_rate or (i - num_wins) / num_episodes > 1 - min_win_rate
             ):
