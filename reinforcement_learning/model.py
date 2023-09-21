@@ -77,7 +77,6 @@ class Model(nn.Module):
             print(f"Progress: {(i + 1) / 10}%", end="\r")
         # evaluating
         _, num_wins = await self.__run_episodes(duplicate_model, 100, min_win_rate=0.55)
-        print(f"Win rate: {num_wins}/100")
         if num_wins < 55:
             print("Improvement failed.")
             current_memory = deepcopy(self.memory)
@@ -95,6 +94,8 @@ class Model(nn.Module):
         await env.setup()
         experiences: list[Experience] = []
         num_wins = 0
+        num_iters = 0
+        time = datetime.now().strftime("%H:%M:%S")
         for i in range(num_episodes):
             new_experiences, winner = await self.__run_episode(alt_model, env, "gen4randombattle", min_win_rate is None)
             experiences += new_experiences
@@ -104,10 +105,12 @@ class Model(nn.Module):
                 num_wins += 1
             time = datetime.now().strftime("%H:%M:%S")
             print(f"{time}: Win rate = {num_wins}/{i + 1}", end="\r")
+            num_iters += 1
             if min_win_rate is not None and (
                 num_wins / num_episodes >= min_win_rate or (i - num_wins) / num_episodes > 1 - min_win_rate
             ):
                 break
+        print(f"{time}: Win rate = {num_wins}/{num_iters}")
         await env.close()
         meaningful_experiences = list(filter(lambda experience: experience.action is not None, experiences))
         return meaningful_experiences, num_wins
