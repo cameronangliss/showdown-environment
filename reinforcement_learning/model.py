@@ -79,9 +79,6 @@ class Model(nn.Module):
         _, num_wins = await self.__run_episodes(duplicate_model, 100, min_win_rate=0.55)
         if num_wins < 55:
             print("Improvement failed.")
-            current_memory = deepcopy(self.memory)
-            self.__dict__ = duplicate_model.__dict__
-            self.memory = current_memory
         else:
             print("Improvement succeeded!")
             self.memory.clear()
