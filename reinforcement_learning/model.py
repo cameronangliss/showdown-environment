@@ -68,15 +68,20 @@ class Model(nn.Module):
         print("Gathering experiences...")
         new_experiences, _ = await self.__run_episodes(duplicate_model, 100)
         self.memory.extend(new_experiences)
+        print("Done!")
         # training
-        print(f"Training on {len(self.memory)} experiences.")
+        print(f"Training on {len(self.memory)} experiences...")
         for i in range(1000):
             batch = self.memory.sample(round(len(self.memory) / 100))
             for exp in batch:
                 self.__update(exp)
             print(f"Progress: {(i + 1) / 10}%", end="\r")
+        print("Done!")
         # evaluating
+        print("Evaluating improved model...")
         _, num_wins = await self.__run_episodes(duplicate_model, 100, min_win_rate=0.55)
+        print("Done!")
+        # printing result
         if num_wins < 55:
             print("Improvement failed.")
         else:
