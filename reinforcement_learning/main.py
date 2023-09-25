@@ -14,10 +14,11 @@ async def main():
     alpha = float(config["alpha"])
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
+    memory_length = int(float(config["memory_length"]))
     hidden_layer_sizes = json.loads(config["hidden_layer_sizes"])
-    model = Model(alpha, epsilon, gamma, hidden_layer_sizes)
+    model = Model(alpha, epsilon, gamma, memory_length, hidden_layer_sizes)
     # load saved model with the same settings as `model` if one exists
-    file_name = f"{alpha}_{epsilon}_{gamma}_{hidden_layer_sizes}"
+    file_name = f"{alpha}_{epsilon}_{gamma}_{memory_length}_{hidden_layer_sizes}"
     if not os.path.exists("saves"):
         os.makedirs("saves")
     model_version = 0

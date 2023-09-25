@@ -6,5 +6,6 @@
     "alpha": "",
     "epsilon": "",
     "gamma": "",
+    "memory_length": "",
     "hidden_layer_sizes": ""
 }

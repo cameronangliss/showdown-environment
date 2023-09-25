@@ -19,14 +19,16 @@ class Model(nn.Module):
     __alpha: float
     __epsilon: float
     __gamma: float
+    __memory_length: int
     __layers: nn.Sequential
 
-    def __init__(self, alpha: float, epsilon: float, gamma: float, hidden_layer_sizes: list[int]):
+    def __init__(self, alpha: float, epsilon: float, gamma: float, memory_length: int, hidden_layer_sizes: list[int]):
         super().__init__()  # type: ignore
         self.__alpha = alpha
         self.__epsilon = epsilon
         self.__gamma = gamma
-        self.memory = Memory([], maxlen=3 * 10**4)
+        self.__memory_length = memory_length
+        self.memory = Memory([], maxlen=memory_length)
         layer_sizes = [1504, *hidden_layer_sizes, 26]
         layers: list[nn.Module] = []
         for i in range(len(layer_sizes) - 1):
@@ -100,6 +102,9 @@ class Model(nn.Module):
         time = datetime.now().strftime("%H:%M:%S")
         for i in range(num_episodes):
             new_experiences, winner = await self.__run_episode(alt_model, env, "gen4randombattle", min_win_rate is None)
+            if len(experiences) + len(new_experiences) > self.__memory_length:
+                print("Maximum memory reached! Gathering finished early.")
+                break
             experiences += new_experiences
             if winner is None:
                 num_wins += 0.5
@@ -135,21 +140,22 @@ class Model(nn.Module):
                     action1,
                     action2,
                 )
-                experience1 = Experience(
-                    encode_battle(state1).to(self.device),
-                    action1,
-                    encode_battle(next_state1).to(self.device),
-                    reward1,
-                    done,
-                )
-                experience2 = Experience(
-                    encode_battle(state2).to(self.device),
-                    action2,
-                    encode_battle(next_state2).to(self.device),
-                    reward2,
-                    done,
-                )
-                experiences += [experience1, experience2]
+                if exploring:
+                    experience1 = Experience(
+                        encode_battle(state1).to(self.device),
+                        action1,
+                        encode_battle(next_state1).to(self.device),
+                        reward1,
+                        done,
+                    )
+                    experience2 = Experience(
+                        encode_battle(state2).to(self.device),
+                        action2,
+                        encode_battle(next_state2).to(self.device),
+                        reward2,
+                        done,
+                    )
+                    experiences += [experience1, experience2]
                 state1, state2 = next_state1, next_state2
             try:
                 winner_id = state1.protocol.index("win")
