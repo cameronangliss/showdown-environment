@@ -77,8 +77,8 @@ class Model(nn.Module):
             batch = self.memory.sample(round(len(self.memory) / 100))
             for exp in batch:
                 self.__update(exp)
-            print(f"Progress: {(i + 1) / 10}%", end="\x1b[1K\r")
-        print("Done!")
+            print(f"Progress: {(i + 1) / 10}%", end="\r")
+        print("Done!                         ")
         # evaluating
         print("Evaluating improved model...")
         _, num_wins = await self.__run_episodes(duplicate_model, 100, min_win_rate=0.55)
