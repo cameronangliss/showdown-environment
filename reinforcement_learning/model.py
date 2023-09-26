@@ -77,7 +77,7 @@ class Model(nn.Module):
             batch = self.memory.sample(round(len(self.memory) / 100))
             for exp in batch:
                 self.__update(exp)
-            print(f"Progress: {(i + 1) / 10}%", end="\r")
+            print(f"Progress: {(i + 1) / 10}%", end="\x1b[1K\r")
         print("Done!")
         # evaluating
         print("Evaluating improved model...")
