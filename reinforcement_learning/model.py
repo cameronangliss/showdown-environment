@@ -60,12 +60,12 @@ class Model(nn.Module):
     # Training methods
 
     async def improve(self):
+        duplicate_model = deepcopy(self)
         num_wins = 0
         while num_wins < 55:
-            num_wins = await self.attempt_improve()
+            num_wins = await self.attempt_improve(duplicate_model)
 
-    async def attempt_improve(self) -> float:
-        duplicate_model = deepcopy(self)
+    async def attempt_improve(self, duplicate_model: Model) -> float:
         # gathering data
         print("Gathering experiences...")
         new_experiences, _ = await self.__run_episodes(duplicate_model, 100)
