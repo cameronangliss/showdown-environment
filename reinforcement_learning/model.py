@@ -32,9 +32,9 @@ class Model(nn.Module):
         layer_sizes = [1504, *hidden_layer_sizes, 26]
         layers: list[nn.Module] = []
         for i in range(len(layer_sizes) - 1):
-            layers += [nn.Linear(layer_sizes[i], layer_sizes[i + 1]), nn.ReLU()]
-        self.__layers = nn.Sequential(*layers[:-1])
-        self.optimizer = torch.optim.SGD(self.parameters(), lr=self.__alpha, momentum=0.9)
+            layers += [nn.Linear(layer_sizes[i], layer_sizes[i + 1]), nn.ReLU(), nn.Dropout()]
+        self.__layers = nn.Sequential(*layers[:-2])
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=self.__alpha, momentum=0.9, weight_decay=1e-4)
         # Move the model to GPU if available
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(self.device)
