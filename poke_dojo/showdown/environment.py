@@ -63,7 +63,11 @@ class Environment:
                     await self.agent.cancel(self.__alt_agent)
                 except PopupError as e2:
                     self.logger.warning(e2)
-                await asyncio.sleep(10)
+                if "Due to spam from your internet provider, you can't challenge others right now." in str(e1):
+                    self.logger.info("Waiting for 5 hours to be allowed back in...")
+                    await asyncio.sleep(5 * 60 * 60)
+                else:
+                    await asyncio.sleep(5)
         await self.agent.join(room)
         await self.__alt_agent.join(room)
         await self.agent.timer_on()
