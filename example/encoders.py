@@ -4,11 +4,11 @@ import torch
 
 sys.path.append(".")
 
-from env.data.dex import movedex, typedex
-from env.state.battle import Battle
-from env.state.move import Move
-from env.state.pokemon import Pokemon
-from env.state.team import Team
+from showdown_environment.data.dex import movedex, typedex
+from showdown_environment.state.battle import Battle
+from showdown_environment.state.move import Move
+from showdown_environment.state.pokemon import Pokemon
+from showdown_environment.state.team import Team
 
 
 def encode_battle(battle: Battle) -> torch.Tensor:

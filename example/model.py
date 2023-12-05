@@ -11,8 +11,8 @@ from memory import Experience, Memory
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
-from env.showdown.environment import Environment
-from env.state.battle import Battle
+from showdown_environment.showdown.environment import Environment
+from showdown_environment.state.battle import Battle
 
 
 class Model(nn.Module):
