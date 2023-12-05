@@ -11,8 +11,8 @@ from memory import Experience, Memory
 from torch import Tensor
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
-from poke_dojo.showdown.environment import Environment
-from poke_dojo.state.battle import Battle
+from env.showdown.environment import Environment
+from env.state.battle import Battle
 
 
 class Model(nn.Module):

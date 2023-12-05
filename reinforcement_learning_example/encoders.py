@@ -4,11 +4,11 @@ import torch
 
 sys.path.append(".")
 
-from poke_dojo.data.dex import movedex, typedex
-from poke_dojo.state.battle import Battle
-from poke_dojo.state.move import Move
-from poke_dojo.state.pokemon import Pokemon
-from poke_dojo.state.team import Team
+from env.data.dex import movedex, typedex
+from env.state.battle import Battle
+from env.state.move import Move
+from env.state.pokemon import Pokemon
+from env.state.team import Team
 
 
 def encode_battle(battle: Battle) -> torch.Tensor:
