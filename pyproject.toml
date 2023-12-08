@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "poke_dojo"
+name = "showdown_environment"
 version = "0.1.0"
 authors = [{ name = "Cameron Angliss", email = "cameronangliss99@gmail.com" }]
 
@@ -16,8 +16,8 @@ line_length = 120
 multi_line_output = 3
 
 [tool.pyright]
-include = ["src"]
+include = ["showdown_environment"]
 pythonVersion = "3.11"
 
 [tool.setuptools.package-data]
-poke_dojo = ["data/json/**"]
+showdown_environment = ["data/json/**"]
