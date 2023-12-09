@@ -1,5 +1,9 @@
 # showdown-environment
 
+## Description
+
+This is a python client-side API for interacting with the [Pokemon Showdown](https://pokemonshowdown.com) website. Those who are interested in trying to make a bot or conduct research in AI techniques applied to the game of Pokemon will find this repository particularly helpful. Please feel free to use/modify the code for your specific needs.
+
 ## Running example code
 
 1. Clone the repo.
