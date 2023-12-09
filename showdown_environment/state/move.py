@@ -2,7 +2,7 @@ import json
 import re
 from typing import Any
 
-from poke_dojo.data.dex import movedex
+from showdown_environment.data.dex import movedex
 
 
 class Move:

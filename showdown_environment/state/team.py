@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from poke_dojo.state.pokemon import Pokemon
+from showdown_environment.state.pokemon import Pokemon
 
 
 class Team:

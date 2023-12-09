@@ -7,7 +7,7 @@ typedex: dict[str, dict[str, Any]] = {}
 abilitydex: dict[str, dict[str, Any]] = {}
 itemdex: dict[str, dict[str, Any]] = {}
 
-json_path = "poke_dojo/data/json"
+json_path = "showdown_environment/data/json"
 
 for i in range(1, 10):
     pokedex[f"gen{i}"] = json.load(open(f"{json_path}/gen{i}/pokedex.json"))

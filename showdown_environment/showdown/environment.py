@@ -3,9 +3,9 @@ import json
 import logging
 import random
 
-from poke_dojo.showdown.client import PopupError
-from poke_dojo.showdown.player import Player
-from poke_dojo.state.battle import Battle
+from showdown_environment.showdown.client import PopupError
+from showdown_environment.showdown.player import Player
+from showdown_environment.state.battle import Battle
 
 
 class Environment:

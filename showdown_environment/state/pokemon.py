@@ -5,8 +5,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from poke_dojo.data.dex import abilitydex, itemdex, movedex, pokedex
-from poke_dojo.state.move import Move
+from showdown_environment.data.dex import abilitydex, itemdex, movedex, pokedex
+from showdown_environment.state.move import Move
 
 
 @dataclass
