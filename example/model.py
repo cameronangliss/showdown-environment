@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import random
 from copy import deepcopy
 from datetime import datetime
@@ -86,7 +87,9 @@ class Model(nn.Module):
     async def __run_episodes(
         self, alt_model: Model, num_episodes: int, min_win_rate: float | None = None
     ) -> tuple[list[Experience], float]:
-        env = Environment()
+        with open("config.json") as f:
+            config = json.load(f)
+        env = Environment(config["username"], config["password"], config["alt_username"], config["alt_password"])
         await env.setup()
         experiences: list[Experience] = []
         num_wins = 0

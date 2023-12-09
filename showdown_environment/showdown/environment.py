@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import random
 
@@ -13,7 +12,7 @@ class Environment:
     __alt_agent: Player
     logger: logging.Logger
 
-    def __init__(self):
+    def __init__(self, username: str, password: str, alt_username: str, alt_password: str):
         # building logger
         logging.basicConfig(
             filename="debug.log",
@@ -24,10 +23,8 @@ class Environment:
         self.logger = logging.getLogger("Environment")
 
         # construct players
-        with open("config.json") as f:
-            config = json.load(f)
-        self.agent = Player(config["username"], config["password"])
-        self.__alt_agent = Player(config["alt_username"], config["alt_password"])
+        self.agent = Player(username, password)
+        self.__alt_agent = Player(alt_username, alt_password)
 
     ###################################################################################################################
     # OpenAI Gym-style methods
