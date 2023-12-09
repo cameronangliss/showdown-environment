@@ -1,5 +1,6 @@
 .vscode
 saves
+package-lock.json
 scripts/node_modules
 __pycache__
 config.json
