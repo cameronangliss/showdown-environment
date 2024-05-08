@@ -1,7 +1,7 @@
-black==23.7.0
-isort==5.12.0
+black==24.4.2
+isort==5.13.2
 numpy
-pyright==1.1.323
+pyright==1.1.362
 requests
 torch
 websockets
