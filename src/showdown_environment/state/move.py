@@ -115,7 +115,9 @@ class Move:
         if item in ["choiceband", "choicescarf", "choicespecs"]:
             self.__item_disabled = not (maxed or self.just_used)
 
-    def update_item(self, old_item: str | None, new_item: str, tricking: bool = False, maxed: bool = False):
+    def update_item(
+        self, old_item: str | None, new_item: str, tricking: bool = False, maxed: bool = False
+    ):
         choice_items = ["choiceband", "choicescarf", "choicespecs"]
         if not (old_item in choice_items and new_item in choice_items):
             if old_item is not None:
@@ -125,7 +127,9 @@ class Move:
     ###################################################################################################################
     # Consistency checking
 
-    def check_consistency(self, move_info: Any, zmove_pp_needs_update: Any, maxed: bool, just_unmaxed: bool):
+    def check_consistency(
+        self, move_info: Any, zmove_pp_needs_update: Any, maxed: bool, just_unmaxed: bool
+    ):
         if "move" in move_info:
             identifier = self.get_identifier(move_info["move"])
             assert self.identifier == identifier, f"{self.identifier} != {identifier}"
@@ -133,11 +137,17 @@ class Move:
             if zmove_pp_needs_update or maxed or just_unmaxed or self.gen <= 3:
                 self.pp = move_info["pp"]
             else:
-                assert self.pp == move_info["pp"], f"{self.identifier}: {self.pp} != {move_info['pp']}"
+                assert (
+                    self.pp == move_info["pp"]
+                ), f"{self.identifier}: {self.pp} != {move_info['pp']}"
         if "maxpp" in move_info:
-            assert self.maxpp == move_info["maxpp"], f"{self.identifier}: {self.maxpp} != {move_info['maxpp']}"
+            assert (
+                self.maxpp == move_info["maxpp"]
+            ), f"{self.identifier}: {self.maxpp} != {move_info['maxpp']}"
         if "target" in move_info:
-            assert self.__target == move_info["target"], f"{self.identifier}: {self.__target} != {move_info['target']}"
+            assert (
+                self.__target == move_info["target"]
+            ), f"{self.identifier}: {self.__target} != {move_info['target']}"
         if "disabled" in move_info:
             assert (
                 self.is_disabled() == move_info["disabled"]

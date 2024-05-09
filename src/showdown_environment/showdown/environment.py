@@ -26,7 +26,11 @@ class Environment:
         self.logger = logging.getLogger("Environment")
 
     async def run_episodes(
-        self, player: BasePlayer, num_episodes: int, min_win_rate: float | None = None, memory_length: int | None = None
+        self,
+        player: BasePlayer,
+        num_episodes: int,
+        min_win_rate: float | None = None,
+        memory_length: int | None = None,
     ) -> tuple[list[Experience], float]:
         await self.setup(player)
         experiences: list[Experience] = []
@@ -35,7 +39,10 @@ class Environment:
         time = datetime.now().strftime("%H:%M:%S")
         for i in range(num_episodes):
             new_experiences, winner = await self.__run_episode(player, "gen4randombattle")
-            if memory_length is not None and len(experiences) + len(new_experiences) > memory_length:
+            if (
+                memory_length is not None
+                and len(experiences) + len(new_experiences) > memory_length
+            ):
                 break
             experiences += new_experiences
             if winner is None:
@@ -54,7 +61,9 @@ class Environment:
         await self.close(player)
         return experiences, num_wins
 
-    async def __run_episode(self, player: BasePlayer, format_str: str) -> tuple[list[Experience], str | None]:
+    async def __run_episode(
+        self, player: BasePlayer, format_str: str
+    ) -> tuple[list[Experience], str | None]:
         experiences: list[Experience] = []
         try:
             state1, state2 = await self.reset(player, format_str)
@@ -93,7 +102,9 @@ class Environment:
                 winner = None
             else:
                 winner = state1.protocol[winner_id + 1].strip()
-            meaningful_experiences = list(filter(lambda experience: experience.action is not None, experiences))
+            meaningful_experiences = list(
+                filter(lambda experience: experience.action is not None, experiences)
+            )
             return meaningful_experiences, winner
         except (ConnectionClosedError, ConnectionClosedOK):
             self.logger.error("Connection closed unexpectedly")
@@ -134,7 +145,10 @@ class Environment:
                     await player.cancel(self.player)
                 except PopupError as e2:
                     self.logger.warning(e2)
-                if "Due to spam from your internet provider, you can't challenge others right now." in str(e1):
+                if (
+                    "Due to spam from your internet provider, you can't challenge others right now."
+                    in str(e1)
+                ):
                     self.logger.info("Waiting for 5 hours to be allowed back in...")
                     await asyncio.sleep(5 * 60 * 60)
                 else:

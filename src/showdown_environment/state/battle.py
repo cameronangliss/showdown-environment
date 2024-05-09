@@ -63,24 +63,47 @@ class Battle:
             ]
             active_pokemon = self.team.get_active()
             if active_pokemon:
-                valid_mega_ids = [i + 4 for i in valid_move_ids] if "canMegaEvo" in self.request["active"][0] else []
+                valid_mega_ids = (
+                    [i + 4 for i in valid_move_ids]
+                    if "canMegaEvo" in self.request["active"][0]
+                    else []
+                )
                 valid_zmove_ids = (
-                    [i + 6 + 8 for i, move in enumerate(self.request["active"][0]["canZMove"]) if move is not None]
+                    [
+                        i + 6 + 8
+                        for i, move in enumerate(self.request["active"][0]["canZMove"])
+                        if move is not None
+                    ]
                     if "canZMove" in self.request["active"][0]
                     else (
-                        [i + 6 + 8 for i, move in self.request["active"][0]["moves"] if move["move"] == "Photon Geyser"]
+                        [
+                            i + 6 + 8
+                            for i, move in self.request["active"][0]["moves"]
+                            if move["move"] == "Photon Geyser"
+                        ]
                         if "canUltraBurst" in self.request["active"][0]
                         else []
                     )
                 )
-                valid_max_ids = [i + 12 for i in valid_move_ids] if "canDynamax" in self.request["active"][0] else []
-                valid_tera_ids = (
-                    [i + 16 for i in valid_move_ids] if "canTerastallize" in self.request["active"][0] else []
+                valid_max_ids = (
+                    [i + 12 for i in valid_move_ids]
+                    if "canDynamax" in self.request["active"][0]
+                    else []
                 )
-                valid_special_ids = valid_mega_ids + valid_zmove_ids + valid_max_ids + valid_tera_ids
+                valid_tera_ids = (
+                    [i + 16 for i in valid_move_ids]
+                    if "canTerastallize" in self.request["active"][0]
+                    else []
+                )
+                valid_special_ids = (
+                    valid_mega_ids + valid_zmove_ids + valid_max_ids + valid_tera_ids
+                )
             else:
                 valid_special_ids = []
-            if "trapped" in self.request["active"][0] or "maybeTrapped" in self.request["active"][0]:
+            if (
+                "trapped" in self.request["active"][0]
+                or "maybeTrapped" in self.request["active"][0]
+            ):
                 valid_action_ids = valid_move_ids + valid_special_ids
             else:
                 valid_action_ids = valid_switch_ids + valid_move_ids + valid_special_ids

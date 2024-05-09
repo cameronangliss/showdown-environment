@@ -37,7 +37,9 @@ async def train():
         print(f"mk{model_version}_{file_name}.pt has been initialized.")
     # train model
     while True:
-        env_player = Player(config["env_player_username"], config["env_player_password"], deepcopy(player.model))
+        env_player = Player(
+            config["env_player_username"], config["env_player_password"], deepcopy(player.model)
+        )
         env = Environment(env_player)
         await player.improve(env, num_episodes=100, min_win_rate=0.55)
         model_version += 1

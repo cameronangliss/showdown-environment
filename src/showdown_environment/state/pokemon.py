@@ -126,7 +126,9 @@ class Pokemon:
             if self.from_opponent:
                 return "Hidden Power"
             else:
-                return [move.name for move in self.get_moves() if move.name[:12] == "Hidden Power"][0]
+                return [move.name for move in self.get_moves() if move.name[:12] == "Hidden Power"][
+                    0
+                ]
         elif part_name[:2] == "Z-":
             return part_name[2:]
         else:
@@ -181,7 +183,8 @@ class Pokemon:
             {
                 "name": self.name,
                 "id": self.identifier,
-                "condition": f"{self.hp}/{self.max_hp}" + (f" {self.status}" if self.status else ""),
+                "condition": f"{self.hp}/{self.max_hp}"
+                + (f" {self.status}" if self.status else ""),
                 "active": self.active,
                 "stats": self.get_stats(),
                 "moves": [json.loads(move.get_json_str()) for move in self.get_moves()],
@@ -214,7 +217,9 @@ class Pokemon:
         if len(moves) == 1:
             return moves[0]
         else:
-            raise RuntimeError(f"Pokemon {self.name} cannot have move just used = {[move.name for move in moves]}")
+            raise RuntimeError(
+                f"Pokemon {self.name} cannot have move just used = {[move.name for move in moves]}"
+            )
 
     def __get_ability(self) -> str | None:
         return self.alt_ability or self.ability
@@ -263,7 +268,11 @@ class Pokemon:
 
     def switch_out(self):
         current_ability = self.__get_ability()
-        if current_ability is not None and current_ability == "regenerator" and self.status != "fnt":
+        if (
+            current_ability is not None
+            and current_ability == "regenerator"
+            and self.status != "fnt"
+        ):
             self.hp = min(int(self.hp + self.max_hp / 3), self.max_hp)
         self.active = False
         for move in self.moves:
@@ -337,7 +346,9 @@ class Pokemon:
         if not (info and info[0] == "[from] ability: Frisk"):
             new_item_identifier = Pokemon.__get_item_identifier(new_item)
             for move in self.get_moves():
-                move.update_item(self.__get_item(), new_item_identifier, tricking=self.tricking, maxed=self.maxed)
+                move.update_item(
+                    self.__get_item(), new_item_identifier, tricking=self.tricking, maxed=self.maxed
+                )
             self.tricking = False
             self.item = new_item_identifier
             self.item_off = False
@@ -354,16 +365,27 @@ class Pokemon:
 
     def transform(self, name: str, request: Any | None):
         self.transformed = True
-        self.alt_types = [t.lower() for t in pokedex[f"gen{self.gen}"][Pokemon.get_identifier(name)]["types"]]
+        self.alt_types = [
+            t.lower() for t in pokedex[f"gen{self.gen}"][Pokemon.get_identifier(name)]["types"]
+        ]
         if request is not None:
-            new_self_info = [pokemon for pokemon in request["side"]["pokemon"] if pokemon["ident"][4:] == self.name][0]
+            new_self_info = [
+                pokemon
+                for pokemon in request["side"]["pokemon"]
+                if pokemon["ident"][4:] == self.name
+            ][0]
             self.alt_moves = [
-                Move(move_name, self.gen, "ghost" in self.get_types()) for move_name in new_self_info["moves"]
+                Move(move_name, self.gen, "ghost" in self.get_types())
+                for move_name in new_self_info["moves"]
             ]
             for move in self.alt_moves:
                 move.pp = 5
             self.alt_stats = new_self_info["stats"]
-            self.alt_ability = new_self_info["ability"] if "ability" in new_self_info else new_self_info["baseAbility"]
+            self.alt_ability = (
+                new_self_info["ability"]
+                if "ability" in new_self_info
+                else new_self_info["baseAbility"]
+            )
 
     def primal_reversion(self):
         if self.name == "Groudon":
@@ -393,7 +415,11 @@ class Pokemon:
                     if move.name != "Bide":
                         move.bide_disabled = True
             case "Disable":
-                move = [move for move in self.get_moves() if move.name == self.__get_full_move_name(info[1])][0]
+                move = [
+                    move
+                    for move in self.get_moves()
+                    if move.name == self.__get_full_move_name(info[1])
+                ][0]
                 move.disable_disabled = True
             case "Encore":
                 last_used_move = self.__get_last_used()
@@ -450,12 +476,18 @@ class Pokemon:
     # Consistency checking
 
     def check_consistency(
-        self, pokemon_info: Any, active_info: Any | None, zmove_pp_needs_update: bool, just_unmaxed: bool
+        self,
+        pokemon_info: Any,
+        active_info: Any | None,
+        zmove_pp_needs_update: bool,
+        just_unmaxed: bool,
     ):
         hp, status = Pokemon.parse_condition(pokemon_info["condition"])
         assert self.hp == hp, f"{self.hp} != {hp}"
         assert self.status == status, f"{self.status} != {status}"
-        assert self.get_stats() == pokemon_info["stats"], f"{self.get_stats()} != {pokemon_info['stats']}"
+        assert (
+            self.get_stats() == pokemon_info["stats"]
+        ), f"{self.get_stats()} != {pokemon_info['stats']}"
         assert len(self.get_moves()) <= 4, f"{len(self.get_moves())} > 4"
         if self.active and active_info is not None:
             if (
@@ -463,7 +495,9 @@ class Pokemon:
                 and active_info[0]["moves"][0]["move"] != "Struggle"
             ):
                 for move, move_info in zip(self.get_moves(), active_info[0]["moves"]):
-                    move.check_consistency(move_info, zmove_pp_needs_update, self.maxed, just_unmaxed)
+                    move.check_consistency(
+                        move_info, zmove_pp_needs_update, self.maxed, just_unmaxed
+                    )
             assert self.can_mega == (
                 "canMegaEvo" in active_info[0]
             ), f"{self.can_mega} != {'canMegaEvo' in active_info[0]}"
@@ -479,7 +513,13 @@ class Pokemon:
             assert self.can_tera == (
                 "canTerastallize" in active_info[0]
             ), f"{self.can_tera} != {'canTerastallize' in active_info[0]}"
-        assert self.ability == pokemon_info["baseAbility"], f"{self.ability} != {pokemon_info['baseAbility']}"
+        assert (
+            self.ability == pokemon_info["baseAbility"]
+        ), f"{self.ability} != {pokemon_info['baseAbility']}"
         if "ability" in pokemon_info:
-            assert self.__get_ability() == pokemon_info["ability"], f"{self.__get_ability} != {pokemon_info['ability']}"
-        assert self.item == (pokemon_info["item"] or None), f"{self.item} != {pokemon_info['item'] or None}"
+            assert (
+                self.__get_ability() == pokemon_info["ability"]
+            ), f"{self.__get_ability} != {pokemon_info['ability']}"
+        assert self.item == (
+            pokemon_info["item"] or None
+        ), f"{self.item} != {pokemon_info['item'] or None}"

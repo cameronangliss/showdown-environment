@@ -88,7 +88,9 @@ class Team:
                 self.__switch(split_line[2][5:], split_line[3], hp, status)
             case "faint":
                 fainted_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
-                fainted_pokemon = [pokemon for pokemon in self.team if pokemon.name == fainted_pokemon_name][0]
+                fainted_pokemon = [
+                    pokemon for pokemon in self.team if pokemon.name == fainted_pokemon_name
+                ][0]
                 fainted_pokemon.update_condition(0, "fnt")
             case "move":
                 if not active_pokemon.preparing:
@@ -109,7 +111,11 @@ class Team:
                         self.max_used = True
                         for pokemon in self.team:
                             pokemon.update_special_options(
-                                self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                                self.mega_used,
+                                self.zmove_used,
+                                self.burst_used,
+                                self.max_used,
+                                self.tera_used,
                             )
                 active_pokemon.start(split_line[3:])
             case "-anim":
@@ -118,11 +124,17 @@ class Team:
                 self.burst_used = True
                 for pokemon in self.team:
                     pokemon.update_special_options(
-                        self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                        self.mega_used,
+                        self.zmove_used,
+                        self.burst_used,
+                        self.max_used,
+                        self.tera_used,
                     )
             case "-curestatus":
                 cured_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
-                cured_pokemon = [pokemon for pokemon in self.team if pokemon.name == cured_pokemon_name][0]
+                cured_pokemon = [
+                    pokemon for pokemon in self.team if pokemon.name == cured_pokemon_name
+                ][0]
                 cured_pokemon.update_condition(cured_pokemon.hp, None)
             case "-cureteam":
                 for pokemon in self.team:
@@ -137,11 +149,15 @@ class Team:
                 active_pokemon.end_item(split_line[3], split_line[4:])
             case "-formechange":
                 if request is not None:
-                    new_pokemon_info = [pokemon for pokemon in request["side"]["pokemon"] if pokemon["active"]][0]
+                    new_pokemon_info = [
+                        pokemon for pokemon in request["side"]["pokemon"] if pokemon["active"]
+                    ][0]
                     active_pokemon.alt_stats = new_pokemon_info["stats"]
             case "-heal":
                 healed_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
-                healed_pokemon = [pokemon for pokemon in self.team if pokemon.name == healed_pokemon_name][0]
+                healed_pokemon = [
+                    pokemon for pokemon in self.team if pokemon.name == healed_pokemon_name
+                ][0]
                 hp, status = Pokemon.parse_condition(split_line[3])
                 healed_pokemon.update_condition(hp, status)
             case "-item":
@@ -150,7 +166,11 @@ class Team:
                 self.mega_used = True
                 for pokemon in self.team:
                     pokemon.update_special_options(
-                        self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                        self.mega_used,
+                        self.zmove_used,
+                        self.burst_used,
+                        self.max_used,
+                        self.tera_used,
                     )
                 active_pokemon.mega_evolve(split_line[4] or None)
             case "-prepare":
@@ -165,7 +185,11 @@ class Team:
                     self.max_used = True
                     for pokemon in self.team:
                         pokemon.update_special_options(
-                            self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                            self.mega_used,
+                            self.zmove_used,
+                            self.burst_used,
+                            self.max_used,
+                            self.tera_used,
                         )
                 active_pokemon.start(split_line[3:])
             case "-status":
@@ -174,7 +198,11 @@ class Team:
                 self.tera_used = True
                 for pokemon in self.team:
                     pokemon.update_special_options(
-                        self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                        self.mega_used,
+                        self.zmove_used,
+                        self.burst_used,
+                        self.max_used,
+                        self.tera_used,
                     )
             case "-transform":
                 copied_pokemon_name = split_line[3][split_line[3].index(" ") + 1 :]
@@ -183,7 +211,11 @@ class Team:
                 self.zmove_used = True
                 for pokemon in self.team:
                     pokemon.update_special_options(
-                        self.mega_used, self.zmove_used, self.burst_used, self.max_used, self.tera_used
+                        self.mega_used,
+                        self.zmove_used,
+                        self.burst_used,
+                        self.max_used,
+                        self.tera_used,
                     )
             case _:
                 pass
@@ -209,7 +241,10 @@ class Team:
                 if len(split_line) > 3 and split_line[3] == "ability: Mummy":
                     active_pokemon.alt_ability = "mummy"
             case "-item":
-                if len(split_line) > 4 and split_line[4] in ["[from] move: Thief", "[from] ability: Magician"]:
+                if len(split_line) > 4 and split_line[4] in [
+                    "[from] move: Thief",
+                    "[from] ability: Magician",
+                ]:
                     active_pokemon.end_item(split_line[3], split_line[4:])
             case _:
                 pass
@@ -217,10 +252,14 @@ class Team:
     def __switch(self, incoming_pokemon_name: str, details: str, hp: int, status: str | None):
         # get incoming pokemon
         if incoming_pokemon_name in [pokemon.name for pokemon in self.team]:
-            incoming_pokemon = [pokemon for pokemon in self.team if pokemon.name == incoming_pokemon_name][0]
+            incoming_pokemon = [
+                pokemon for pokemon in self.team if pokemon.name == incoming_pokemon_name
+            ][0]
             incoming_index = self.team.index(incoming_pokemon)
         else:
-            incoming_pokemon = Pokemon.from_protocol(incoming_pokemon_name, details, self.__gen, self.__ident)
+            incoming_pokemon = Pokemon.from_protocol(
+                incoming_pokemon_name, details, self.__gen, self.__ident
+            )
             incoming_index = None
         # get outgoing pokemon
         outgoing_pokemon = self.get_active()
@@ -264,6 +303,8 @@ class Team:
         for pokemon, pokemon_info in zip(self.team, team_info):
             zmove_pp_needs_update = self.zmove_used and not self.__zmove_pp_updated
             active_info = request["active"] if "active" in request else None
-            pokemon.check_consistency(pokemon_info, active_info, zmove_pp_needs_update, just_unmaxed)
+            pokemon.check_consistency(
+                pokemon_info, active_info, zmove_pp_needs_update, just_unmaxed
+            )
             if zmove_pp_needs_update:
                 self.__zmove_pp_updated = True

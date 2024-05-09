@@ -23,7 +23,9 @@ class Player(BasePlayer):
 
     async def improve(self, env: Environment, num_episodes: int, min_win_rate: float):
         print("Generating experiences...")
-        experiences, _ = await env.run_episodes(self, num_episodes, memory_length=self.model.memory_length)
+        experiences, _ = await env.run_episodes(
+            self, num_episodes, memory_length=self.model.memory_length
+        )
         self.model.memory.extend(experiences)
         while True:
             print(f"Training on {len(self.model.memory)} experiences...")
@@ -34,7 +36,10 @@ class Player(BasePlayer):
                 print(f"Progress: {(i + 1) / 10}%", end="\r")
             print("Evaluating model...           ")
             experiences, num_wins = await env.run_episodes(
-                self, num_episodes, min_win_rate=min_win_rate, memory_length=self.model.memory_length
+                self,
+                num_episodes,
+                min_win_rate=min_win_rate,
+                memory_length=self.model.memory_length,
             )
             if num_wins < min_win_rate * num_episodes:
                 print("Improvement failed.")
@@ -78,7 +83,9 @@ class Player(BasePlayer):
             weather = battle.protocol[battle.protocol.index("-weather") + 1]
         else:
             weather = None
-        weather_features = torch.tensor([float(weather == weather_type) for weather_type in weather_types])
+        weather_features = torch.tensor(
+            [float(weather == weather_type) for weather_type in weather_types]
+        )
         features = torch.cat([team_features, opponent_features, gen_features, weather_features])
         return features.to(self.model.device)
 
@@ -103,7 +110,11 @@ class Player(BasePlayer):
         gender_features = torch.tensor(
             [
                 float(gender_bool)
-                for gender_bool in [pokemon.gender == "M", pokemon.gender == "F", pokemon.gender == None]
+                for gender_bool in [
+                    pokemon.gender == "M",
+                    pokemon.gender == "F",
+                    pokemon.gender == None,
+                ]
             ]
         )
         all_types = typedex[f"gen{pokemon.gen}"].keys()
@@ -120,11 +131,16 @@ class Player(BasePlayer):
             [float(pokemon.status == status_condition) for status_condition in status_conditions]
         )
         stats = torch.tensor(
-            [stat / 255 if pokemon.from_opponent else stat / 1000 for stat in pokemon.get_stats().values()]
+            [
+                stat / 255 if pokemon.from_opponent else stat / 1000
+                for stat in pokemon.get_stats().values()
+            ]
         )
         encoded_moves = [self.__encode_move(move) for move in pokemon.get_moves()]
         encoded_moves += [torch.zeros(22)] * (4 - len(encoded_moves))
-        return torch.cat([gender_features, hp_features, status_features, stats, type_features, *encoded_moves])
+        return torch.cat(
+            [gender_features, hp_features, status_features, stats, type_features, *encoded_moves]
+        )
 
     def __encode_move(self, move: Move) -> torch.Tensor:
         pp_frac_feature = move.pp / move.maxpp
@@ -135,4 +151,6 @@ class Player(BasePlayer):
         all_types = typedex[f"gen{move.gen}"].keys()
         move_type = details["type"].lower()
         type_features = [float(t == move_type) for t in all_types]
-        return torch.tensor([pp_frac_feature, disabled_feature, power_feature, accuracy_feature, *type_features])
+        return torch.tensor(
+            [pp_frac_feature, disabled_feature, power_feature, accuracy_feature, *type_features]
+        )

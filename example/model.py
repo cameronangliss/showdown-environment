@@ -11,7 +11,14 @@ class Model(nn.Module):
     memory_length: int
     __layers: nn.Sequential
 
-    def __init__(self, alpha: float, epsilon: float, gamma: float, memory_length: int, hidden_layer_sizes: list[int]):
+    def __init__(
+        self,
+        alpha: float,
+        epsilon: float,
+        gamma: float,
+        memory_length: int,
+        hidden_layer_sizes: list[int],
+    ):
         super().__init__()  # type: ignore
         self.__alpha = alpha
         self.epsilon = epsilon
@@ -23,7 +30,9 @@ class Model(nn.Module):
         for i in range(len(layer_sizes) - 1):
             layers += [nn.Linear(layer_sizes[i], layer_sizes[i + 1]), nn.ReLU()]
         self.__layers = nn.Sequential(*layers[:-1])
-        self.optimizer = torch.optim.SGD(self.parameters(), lr=self.__alpha, momentum=0.9, weight_decay=1e-4)
+        self.optimizer = torch.optim.SGD(
+            self.parameters(), lr=self.__alpha, momentum=0.9, weight_decay=1e-4
+        )
         # Move the model to GPU if available
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(self.device)

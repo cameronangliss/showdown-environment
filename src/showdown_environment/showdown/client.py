@@ -91,7 +91,10 @@ class Client:
                             in split_message[4]
                         ):
                             raise PopupError(split_message[4])
-                        elif split_message[2] == f" {self.username}" and "wants to battle!" in split_message[4]:
+                        elif (
+                            split_message[2] == f" {self.username}"
+                            and "wants to battle!" in split_message[4]
+                        ):
                             return split_message
                 case MessageType.CANCEL:
                     if split_message[1] == "popup":
@@ -117,5 +120,9 @@ class Client:
                     if is_request or is_protocol:
                         return split_message
                 case MessageType.LEAVE:
-                    if self.room is not None and self.room in split_message[0] and split_message[1] == "deinit":
+                    if (
+                        self.room is not None
+                        and self.room in split_message[0]
+                        and split_message[1] == "deinit"
+                    ):
                         return split_message
