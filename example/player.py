@@ -41,7 +41,7 @@ class Player(BasePlayer):
                 min_win_rate=min_win_rate,
                 memory_length=self.model.memory_length,
             )
-            if num_wins < min_win_rate * num_episodes:
+            if num_wins < round(min_win_rate * num_episodes, 5):
                 print("Improvement failed.")
                 self.model.memory.extend(experiences)
             else:
