@@ -49,7 +49,6 @@ async def improve(player: Player, env: Environment):
     print("Generating experiences...")
     experiences, _ = await env.run_episodes(player, 100, memory_length=player.model.memory_length)
     player.model.memory.extend(experiences)
-    print("Done!")
     while True:
         print(f"Training on {len(player.model.memory)} experiences...")
         for i in range(1000):
@@ -57,8 +56,7 @@ async def improve(player: Player, env: Environment):
             for exp in batch:
                 player.model.update(exp)
             print(f"Progress: {(i + 1) / 10}%", end="\r")
-        print("Done!                         ")
-        print("Evaluating model...")
+        print("Evaluating model...           ")
         experiences, num_wins = await env.run_episodes(
             player, 100, min_win_rate=0.55, memory_length=player.model.memory_length
         )
