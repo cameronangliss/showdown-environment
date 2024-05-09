@@ -17,6 +17,7 @@ Please feel free to use/modify the code for your specific needs.
 
 1. Clone the repo.
 1. Open a Python virtual environment if necessary, and run `pip install -r requirements.txt` to install dependencies.
+1. Run `pip install -e .` to install the `showdown_environment` package contained in the repo.
 1. Run `cp config_example.json config.json`.
 1. Fill in `config.json`. Inspect code in `example/` to see how `config.json` is used.
 1. Run `python3 example/main.py` to see the example code in action.
