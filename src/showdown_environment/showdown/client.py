@@ -36,7 +36,7 @@ class Client:
     async def connect(self):
         while True:
             try:
-                self.websocket = await ws.connect("wss://sim3.psim.us/showdown/websocket")
+                self.websocket = await ws.connect("ws://localhost:8000/showdown/websocket")
                 break
             except (ConnectionRefusedError, TimeoutError):
                 self.logger.error("Connection attempt failed, retrying now")

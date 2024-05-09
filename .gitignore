@@ -1,7 +1,9 @@
 .vscode
+build
 saves
 scripts/node_modules
 scripts/package-lock.json
 __pycache__
 config.json
 debug.log
+*.egg-info

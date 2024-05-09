@@ -16,8 +16,8 @@ line_length = 120
 multi_line_output = 3
 
 [tool.pyright]
-include = ["showdown_environment"]
+include = ["src"]
 pythonVersion = "3.11"
 
 [tool.setuptools.package-data]
-showdown_environment = ["data/json/**"]
+src = ["showdown_environment/data/json/**"]

@@ -1,15 +1,7 @@
 import random
-from typing import Deque, NamedTuple
+from typing import Deque
 
-from torch import Tensor
-
-
-class Experience(NamedTuple):
-    state_tensor: Tensor
-    action: int | None
-    next_state_tensor: Tensor
-    reward: int
-    done: bool
+from showdown_environment.showdown.experience import Experience
 
 
 class Memory(Deque[Experience]):

@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+from abc import abstractmethod
 from logging import Logger
 
 import requests
+from torch import Tensor
 
 from showdown_environment.showdown.client import Client, MessageType
 from showdown_environment.state.battle import Battle
 
 
-class Player(Client):
+class BasePlayer(Client):
     username: str
     password: str
     logger: Logger
@@ -19,6 +21,14 @@ class Player(Client):
     def __init__(self, username: str, password: str):
         super().__init__(username)
         self.password = password
+
+    @abstractmethod
+    def get_action(self, state: Battle) -> int | None:
+        pass
+
+    @abstractmethod
+    def encode_battle(self, battle: Battle) -> Tensor:
+        pass
 
     ###################################################################################################################
     # OpenAI Gym-style methods
@@ -74,18 +84,18 @@ class Player(Client):
     async def set_avatar(self, avatar: str):
         await self.send_message(f"/avatar {avatar}")
 
-    async def challenge(self, opponent: Player, battle_format: str, team: str | None = None):
+    async def challenge(self, opponent: BasePlayer, battle_format: str, team: str | None = None):
         await self.send_message(f"/utm {team}")
         await self.send_message(f"/challenge {opponent.username}, {battle_format}")
         # Waiting for confirmation that challenge was sent
         await self.find_message(MessageType.CHALLENGE)
 
-    async def cancel(self, opponent: Player):
+    async def cancel(self, opponent: BasePlayer):
         await self.send_message(f"/cancelchallenge {opponent.username}")
         # Waiting for confirmation that challenge was cancelled
         await self.find_message(MessageType.CANCEL)
 
-    async def accept(self, opponent: Player, team: str | None = None) -> str:
+    async def accept(self, opponent: BasePlayer, team: str | None = None) -> str:
         # Waiting for confirmation that challenge was received
         await self.find_message(MessageType.ACCEPT)
         await self.send_message(f"/utm {team}")
