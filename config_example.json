@@ -1,8 +1,8 @@
 {
-    "username": "",
-    "password": "",
-    "alt_username": "",
-    "alt_password": "",
+    "player_username": "",
+    "player_password": "",
+    "env_player_username": "",
+    "env_player_password": "",
     "alpha": "",
     "epsilon": "",
     "gamma": "",

@@ -21,7 +21,7 @@ async def train():
     memory_length = int(float(config["memory_length"]))
     hidden_layer_sizes = json.loads(config["hidden_layer_sizes"])
     model = Model(alpha, epsilon, gamma, memory_length, hidden_layer_sizes)
-    player = Player(config["username"], config["password"], model)
+    player = Player(config["player_username"], config["player_password"], model)
     # load saved model with the same settings as `model` if one exists
     file_name = f"{alpha}_{epsilon}_{gamma}_{memory_length:.0e}_{hidden_layer_sizes}"
     if not os.path.exists("saves"):
@@ -37,7 +37,7 @@ async def train():
         print(f"mk{model_version}_{file_name}.pt has been initialized.")
     # train model
     while True:
-        env_player = Player(config["opp_username"], config["opp_password"], deepcopy(player.model))
+        env_player = Player(config["env_player_username"], config["env_player_password"], deepcopy(player.model))
         env = Environment(env_player)
         await improve(player, env)
         model_version += 1
