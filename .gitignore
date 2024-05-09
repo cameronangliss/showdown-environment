@@ -1,5 +1,4 @@
 .vscode
-build
 saves
 scripts/node_modules
 scripts/package-lock.json
