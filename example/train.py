@@ -18,7 +18,7 @@ async def train():
     alpha = float(config["alpha"])
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
-    memory_length = int(float(config["memory_length"]))
+    memory_length = int(config["memory_length"])
     hidden_layer_sizes = json.loads(config["hidden_layer_sizes"])
     model = Model(alpha, epsilon, gamma, memory_length, hidden_layer_sizes)
     player = Player(config["player_username"], config["player_password"], model)
