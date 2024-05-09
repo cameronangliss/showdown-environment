@@ -11,10 +11,9 @@ from showdown_environment.showdown.environment import Environment
 
 
 async def train():
-    # load configuration
+    # construct player
     with open("config.json") as f:
         config = json.load(f)
-    # construct player
     alpha = float(config["alpha"])
     epsilon = float(config["epsilon"])
     gamma = float(config["gamma"])
