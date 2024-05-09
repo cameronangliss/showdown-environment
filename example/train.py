@@ -39,34 +39,10 @@ async def train():
     while True:
         env_player = Player(config["env_player_username"], config["env_player_password"], deepcopy(player.model))
         env = Environment(env_player)
-        await improve(player, env)
+        await player.improve(env, num_episodes=100, min_win_rate=0.55)
         model_version += 1
         print(f"Model has been upgraded to mk{model_version}!")
         torch.save(player.model.state_dict(), f"saves/mk{model_version}_{file_name}.pt")  # type: ignore
-
-
-async def improve(player: Player, env: Environment):
-    print("Generating experiences...")
-    experiences, _ = await env.run_episodes(player, 100, memory_length=player.model.memory_length)
-    player.model.memory.extend(experiences)
-    while True:
-        print(f"Training on {len(player.model.memory)} experiences...")
-        for i in range(1000):
-            batch = player.model.memory.sample(round(len(player.model.memory) / 100))
-            for exp in batch:
-                player.model.update(exp)
-            print(f"Progress: {(i + 1) / 10}%", end="\r")
-        print("Evaluating model...           ")
-        experiences, num_wins = await env.run_episodes(
-            player, 100, min_win_rate=0.55, memory_length=player.model.memory_length
-        )
-        if num_wins < 55:
-            print("Improvement failed.")
-            player.model.memory.extend(experiences)
-        else:
-            print("Improvement succeeded!")
-            player.model.memory.clear()
-            break
 
 
 if __name__ == "__main__":

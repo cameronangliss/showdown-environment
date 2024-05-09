@@ -5,6 +5,7 @@ from model import Model
 
 from showdown_environment.data.dex import movedex, typedex
 from showdown_environment.showdown.base_player import BasePlayer
+from showdown_environment.showdown.environment import Environment
 from showdown_environment.state.battle import Battle
 from showdown_environment.state.move import Move
 from showdown_environment.state.pokemon import Pokemon
@@ -19,6 +20,29 @@ class Player(BasePlayer):
     def __init__(self, username: str, password: str, model: Model):
         super().__init__(username, password)
         self.model = model
+
+    async def improve(self, env: Environment, num_episodes: int, min_win_rate: float):
+        print("Generating experiences...")
+        experiences, _ = await env.run_episodes(self, num_episodes, memory_length=self.model.memory_length)
+        self.model.memory.extend(experiences)
+        while True:
+            print(f"Training on {len(self.model.memory)} experiences...")
+            for i in range(1000):
+                batch = self.model.memory.sample(round(len(self.model.memory) / 100))
+                for exp in batch:
+                    self.model.update(exp)
+                print(f"Progress: {(i + 1) / 10}%", end="\r")
+            print("Evaluating model...           ")
+            experiences, num_wins = await env.run_episodes(
+                self, num_episodes, min_win_rate=min_win_rate, memory_length=self.model.memory_length
+            )
+            if num_wins < min_win_rate * num_episodes:
+                print("Improvement failed.")
+                self.model.memory.extend(experiences)
+            else:
+                print("Improvement succeeded!")
+                self.model.memory.clear()
+                break
 
     def get_action(self, state: Battle) -> int | None:
         action_space = state.get_valid_action_ids()
