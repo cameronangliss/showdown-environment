@@ -46,7 +46,8 @@ class Environment:
             print(f"{time}: Win rate = {num_wins}/{i + 1}", end="\r")
             num_iters += 1
             if min_win_rate is not None and (
-                num_wins >= min_win_rate * num_episodes or i - num_wins > (1 - min_win_rate) * num_episodes
+                num_wins >= round(min_win_rate * num_episodes, 5)
+                or num_iters - num_wins > round((1 - min_win_rate) * num_episodes, 5)
             ):
                 break
         print(f"{time}: Win rate = {num_wins}/{num_iters}")
