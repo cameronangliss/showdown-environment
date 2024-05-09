@@ -3,9 +3,9 @@
     "player_password": "",
     "env_player_username": "",
     "env_player_password": "",
-    "alpha": "",
-    "epsilon": "",
-    "gamma": "",
-    "memory_length": "",
-    "hidden_layer_sizes": ""
+    "alpha": "1e-4",
+    "epsilon": "0.1",
+    "gamma": "0.99",
+    "memory_length": "50_000",
+    "hidden_layer_sizes": "[1000,1000,1000]"
 }
