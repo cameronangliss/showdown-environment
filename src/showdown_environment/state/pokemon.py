@@ -224,7 +224,7 @@ class Pokemon:
     def __get_ability(self) -> str | None:
         return self.alt_ability or self.ability
 
-    def __get_item(self) -> str | None:
+    def get_item(self) -> str | None:
         return None if self.item_off else self.item
 
     ###################################################################################################################
@@ -261,7 +261,7 @@ class Pokemon:
             self.hp = hp
             self.status = status
             self.active = True
-            item = self.__get_item()
+            item = self.get_item()
             if item is not None:
                 for move in self.get_moves():
                     move.add_item(item)
@@ -323,7 +323,7 @@ class Pokemon:
         # other updates
         self.__update_last_used(move_used.name)
         for move in self.get_moves():
-            move.keep_item(self.__get_item())
+            move.keep_item(self.get_item())
             if move.name == "Gigaton Hammer":
                 move.self_disabled = move_used.name == "Gigaton Hammer"
 
@@ -347,7 +347,7 @@ class Pokemon:
             new_item_identifier = Pokemon.__get_item_identifier(new_item)
             for move in self.get_moves():
                 move.update_item(
-                    self.__get_item(), new_item_identifier, tricking=self.tricking, maxed=self.maxed
+                    self.get_item(), new_item_identifier, tricking=self.tricking, maxed=self.maxed
                 )
             self.tricking = False
             self.item = new_item_identifier
@@ -355,7 +355,7 @@ class Pokemon:
 
     def end_item(self, item: str, info: list[str]):
         item_identifier = Pokemon.__get_item_identifier(item)
-        if self.__get_item() == item_identifier:
+        if self.get_item() == item_identifier:
             for move in self.get_moves():
                 move.remove_item()
             if info and info[0] == "[from] move: Knock Off" and self.gen in [3, 4]:
@@ -446,7 +446,7 @@ class Pokemon:
             case "Dynamax":
                 self.maxed = True
                 for move in self.get_moves():
-                    move.keep_item(self.__get_item(), maxed=True)
+                    move.keep_item(self.get_item(), maxed=True)
             case _:
                 pass
 
@@ -468,7 +468,7 @@ class Pokemon:
             case "Dynamax":
                 self.maxed = False
                 for move in self.get_moves():
-                    move.keep_item(self.__get_item())
+                    move.keep_item(self.get_item())
             case _:
                 pass
 
