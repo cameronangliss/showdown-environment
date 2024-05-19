@@ -7,7 +7,7 @@ from showdown_environment.state.battle import Battle
 
 
 class Model:
-    def predict(self, state: Battle, action: str, opp_action: str) -> Battle:
+    def predict(self, state: Battle, action: int, opp_action: int) -> Battle:
         active_pokemon = state.team.get_active()
         opp_active_pokemon = state.opponent_team.get_active()
         assert active_pokemon is not None
@@ -41,7 +41,7 @@ class Model:
             else (active_pokemon, action)
         )
         protocol: list[str] = []
-        if "move " in action and "move " in opp_action:
+        if first_action in range(6, 10) and second_action in range(6, 10):
             first_damage_rolls = self.__calc_damage(
                 gen=state.gen,
                 attacker=first_mon.name,
@@ -58,7 +58,7 @@ class Model:
                     "stats": second_mon.get_stats(),
                     "boosts": {},
                 },
-                move=first_mon.moves[int(action[-1]) - 1].name,
+                move=first_mon.moves[first_action - 6].name,
             )
             second_damage_rolls = self.__calc_damage(
                 gen=state.gen,
@@ -76,18 +76,18 @@ class Model:
                     "stats": first_mon.get_stats(),
                     "boosts": {},
                 },
-                move=second_mon.moves[int(opp_action[-1]) - 1].name,
+                move=second_mon.moves[second_action - 6].name,
             )
             protocol += [
-                f"move | {first_mon.name} | {first_mon.moves[int(first_action[-1]) - 1]}",
+                f"move | {first_mon.name} | {first_mon.moves[first_action - 6]}",
                 f"damage | {second_mon.name} | {first_damage_rolls}"
-                f"move | {second_mon.name} | {second_mon.moves[int(second_action[-1]) - 1]}",
+                f"move | {second_mon.name} | {second_mon.moves[second_action - 6]}",
                 f"damage | {first_mon.name} | {second_damage_rolls}",
             ]
-        elif "switch " in action and "switch " in opp_action:
+        elif first_action in range(6) and second_action in range(6):
             protocol += [
-                f"switch | {state.team.team[int(first_action[-1]) - 1].name}",
-                f"switch | {state.opponent_team.team[int(second_action[-1]) - 1].name}",
+                f"switch | {state.team.team[first_action].name}",
+                f"switch | {state.opponent_team.team[second_action].name}",
             ]
         else:
             pass
