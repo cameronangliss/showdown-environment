@@ -1,6 +1,8 @@
 import json
 from typing import Any
 
+from showdown_environment.data.dex import gen4setdex, movedex
+from showdown_environment.state.move import Move
 from showdown_environment.state.team import Team
 
 
@@ -19,7 +21,30 @@ class Battle:
         self.team = Team(ident, self.gen, protocol, request)
         self.opponent_team = Team(opponent_ident, self.gen, protocol)
 
-    ###################################################################################################################
+    def update(self, protocol: list[str], request: Any | None):
+        self.protocol = protocol
+        self.request = request
+        self.team.update(protocol, request)
+        self.opponent_team.update(protocol)
+
+    def infer_opponent_sets(self):
+        for pokemon in self.opponent_team.team:
+            roles = gen4setdex[pokemon.name]["roles"].values()
+            move_names = [move.name for move in pokemon.get_moves()]
+            matching_role_index = [
+                all([move in role["moves"] for move in move_names]) for role in roles
+            ].index(True)
+            matching_role = roles[matching_role_index]
+            pokemon.ability = matching_role["abilities"][0]
+            pokemon.item = matching_role["items"][0]
+            new_moves = [
+                Move(move_name, self.gen, "ghost" in movedex[move_name]["types"])
+                for move_name in matching_role["moves"]
+                if move_name not in pokemon.get_moves()
+            ][: 4 - len(pokemon.get_moves())]
+            pokemon.moves.extend(new_moves)
+
+    ###############################################################################################
     # Getter methods
 
     def __get_gen(self) -> int:
@@ -108,12 +133,3 @@ class Battle:
             else:
                 valid_action_ids = valid_switch_ids + valid_move_ids + valid_special_ids
         return valid_action_ids
-
-    ###################################################################################################################
-    # Self-updating methods used when reading through the lines of the protocol and the request
-
-    def update(self, protocol: list[str], request: Any | None):
-        self.protocol = protocol
-        self.request = request
-        self.team.update(protocol, request)
-        self.opponent_team.update(protocol)

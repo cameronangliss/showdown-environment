@@ -70,19 +70,21 @@ class Player(BasePlayer):
         mask = torch.full((10,), float("-inf")).to(self.actor.device)
         mask[action_space] = 0
         if action_space:
-            current_score = self.critic.forward(self.encode_battle(state)).item()
+            inferred_state = deepcopy(state)
+            inferred_state.infer_opponent_sets()
+            current_score = self.critic.forward(self.encode_battle(inferred_state)).item()
             count_matrix = torch.zeros(10, 10)
             avg_TD_matrix = torch.zeros(10, 10)
             for _ in range(10):
                 # get action
-                features = self.encode_battle(state).to(self.actor.device)
+                features = self.encode_battle(inferred_state).to(self.actor.device)
                 outputs = self.actor.forward(features)
                 probs = torch.softmax(outputs + mask, dim=0)
                 action = int(torch.multinomial(probs, num_samples=1).item())
                 # get opponent's action
                 opp_action = 6  # TODO: make an actual decision process for this
                 # predict future with model
-                new_state = self.model.predict(deepcopy(state), action, opp_action)
+                new_state = self.model.predict(deepcopy(inferred_state), action, opp_action)
                 # compare future state with current to see if there was improvement
                 score = self.critic.forward(self.encode_battle(new_state)).item()
                 td = score - current_score
