@@ -48,9 +48,8 @@ class Pokemon:
 
     @classmethod
     def from_request(cls, pokemon_json: Any, gen: int, owner: str) -> Pokemon:
-        name = pokemon_json["ident"][4:]
-        identifier = Pokemon.get_identifier(name)
-        level, gender = Pokemon.__parse_details(pokemon_json["details"])
+        alias, level, gender = Pokemon.__parse_details(pokemon_json["details"])
+        identifier = Pokemon.get_identifier(alias)
         types = [t.lower() for t in pokedex[identifier]["types"]]
         split_condition = pokemon_json["condition"].split()
         split_hp_frac = split_condition[0].split("/")
@@ -62,11 +61,11 @@ class Pokemon:
         can_mega = (
             item is not None
             and "megaEvolves" in itemdex[item]
-            and itemdex[item]["megaEvolves"] == name
-        ) or (name == "Rayquaza" and "dragonascent" in pokemon_json["moves"] and gen in [6, 7])
-        can_burst = name == "Necrozma" and item is not None and item == "ultranecroziumz"
+            and itemdex[item]["megaEvolves"] == alias
+        ) or (alias == "Rayquaza" and "dragonascent" in pokemon_json["moves"] and gen in [6, 7])
+        can_burst = alias == "Necrozma" and item is not None and item == "ultranecroziumz"
         return cls(
-            name=name,
+            name=alias,
             identifier=identifier,
             gen=gen,
             owner=owner,
@@ -86,20 +85,20 @@ class Pokemon:
             can_mega=can_mega,
             can_zmove=not can_burst and item is not None and "zMove" in itemdex[item],
             can_burst=can_burst,
-            can_max=gen == 8 and name not in ["Eternatus", "Zacian", "Zamazenta"],
+            can_max=gen == 8 and alias not in ["Eternatus", "Zacian", "Zamazenta"],
             can_tera=gen == 9,
         )
 
     @classmethod
-    def from_protocol(cls, name: str, details: str, gen: int, owner: str) -> Pokemon:
-        identifier = Pokemon.get_identifier(name)
-        level, gender = Pokemon.__parse_details(details)
+    def from_protocol(cls, details: str, gen: int, owner: str) -> Pokemon:
+        alias, level, gender = Pokemon.__parse_details(details)
+        identifier = Pokemon.get_identifier(alias)
         types = [t.lower() for t in pokedex[identifier]["types"]]
         stats = pokedex[identifier]["baseStats"]
         abilities = pokedex[identifier]["abilities"].values()
         ability_identifiers = [Pokemon.__get_ability_identifier(ability) for ability in abilities]
         return cls(
-            name=name,
+            name=alias,
             identifier=identifier,
             gen=gen,
             owner=owner,
@@ -139,10 +138,11 @@ class Pokemon:
         return re.sub(r"[\s\-\.\:\’]+", "", name).lower()
 
     @staticmethod
-    def __parse_details(details: str) -> tuple[int, str | None]:
+    def __parse_details(details: str) -> tuple[str, int, str | None]:
         # split_details format: "<alias>, <maybe level>, <maybe gender>, <maybe shiny>"
         # examples: "Castform, M, shiny", "Moltres, L84", "Raichu, L88, M"
         split_details = details.split(", ")
+        alias = split_details[0]
         if "tera:" in split_details[-1]:
             split_details = split_details[:-1]
         if split_details[-1] == "shiny":
@@ -160,7 +160,7 @@ class Pokemon:
         else:
             level = int(split_details[1][1:])
             gender = split_details[2]
-        return level, gender
+        return alias, level, gender
 
     @staticmethod
     def parse_condition(condition: str) -> tuple[int, str | None]:
