@@ -1,6 +1,7 @@
-import re
-import requests
 import os
+import re
+
+import requests
 
 
 def update_json_file(url: str, filename: str, file_ending: str):

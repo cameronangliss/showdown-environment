@@ -365,9 +365,7 @@ class Pokemon:
 
     def transform(self, name: str, request: Any | None):
         self.transformed = True
-        self.alt_types = [
-            t.lower() for t in pokedex[Pokemon.get_identifier(name)]["types"]
-        ]
+        self.alt_types = [t.lower() for t in pokedex[Pokemon.get_identifier(name)]["types"]]
         if request is not None:
             new_self_info = [
                 pokemon
