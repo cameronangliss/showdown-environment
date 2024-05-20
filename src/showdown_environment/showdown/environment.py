@@ -112,7 +112,7 @@ class Environment:
             winner = None
             return [], winner
 
-    ###################################################################################################################
+    ###############################################################################################
     # OpenAI Gym-style methods
 
     async def setup(self, player: BasePlayer):
@@ -184,7 +184,7 @@ class Environment:
         for handler in logging.getLogger().handlers:
             logging.getLogger().removeHandler(handler)
 
-    ###################################################################################################################
+    ###############################################################################################
     # Helper methods
 
     def __get_rewards(self, state: Battle) -> tuple[int, int]:

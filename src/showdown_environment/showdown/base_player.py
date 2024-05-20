@@ -30,7 +30,7 @@ class BasePlayer(Client):
     def encode_battle(self, battle: Battle) -> Tensor:
         pass
 
-    ###################################################################################################################
+    ###############################################################################################
     # OpenAI Gym-style methods
 
     async def setup(self):
@@ -43,7 +43,7 @@ class BasePlayer(Client):
         await self.leave()
         await self.logout()
 
-    ###################################################################################################################
+    ###############################################################################################
     # Commands to be used by Player when communicating with PokemonShowdown website
 
     async def login(self):

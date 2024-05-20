@@ -29,7 +29,7 @@ class Team:
         )
         self.update(protocol, request)
 
-    ###################################################################################################################
+    ###############################################################################################
     # Getter methods
 
     def get_active(self) -> Pokemon | None:
@@ -44,7 +44,7 @@ class Team:
     def get_json_str(self) -> str:
         return json.dumps([json.loads(pokemon.get_json_str()) for pokemon in self.team])
 
-    ###################################################################################################################
+    ###############################################################################################
     # Self-updating methods used when reading through the lines of the protocol and the request
 
     def update(self, protocol: list[str], request: Any | None = None):
@@ -292,7 +292,7 @@ class Team:
         else:
             raise RuntimeError("Cannot replace pokemon if there are no active pokemon.")
 
-    ###################################################################################################################
+    ###############################################################################################
     # Consistency checking
 
     def check_consistency(self, request: Any, protocol_lines: list[str]):
