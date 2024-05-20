@@ -257,7 +257,9 @@ class Team:
             ][0]
             incoming_index = self.team.index(incoming_pokemon)
         else:
-            incoming_pokemon = Pokemon.from_protocol(incoming_pokemon_name, details, self.__gen, self.__ident)
+            incoming_pokemon = Pokemon.from_protocol(
+                incoming_pokemon_name, details, self.__gen, self.__ident
+            )
             incoming_index = None
         # get outgoing pokemon
         outgoing_pokemon = self.get_active()

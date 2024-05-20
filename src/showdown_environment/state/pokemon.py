@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from showdown_environment.data.dex import abilitydex, itemdex, movedex, pokedex
+from showdown_environment.data.dex import abilitydex, gen4setdex, itemdex, movedex, pokedex
 from showdown_environment.state.move import Move
 
 
@@ -199,6 +199,22 @@ class Pokemon:
 
     ###############################################################################################
     # Getter methods
+
+    def get_matching_role(self) -> Any:
+        roles = list(gen4setdex[self.alias]["roles"].values())
+        move_names = [move.name for move in self.get_moves()]
+        print(roles, move_names)
+        matching_role_index = [
+            all([self.__low_specified_move_in_list(role["moves"], move) for move in move_names])
+            for role in roles
+        ].index(True)
+        return roles[matching_role_index]
+
+    def __low_specified_move_in_list(self, moves: list[str], move: str) -> bool:
+        if move != "Hidden Power":
+            return move in moves
+        else:
+            return any([m[:12] == "Hidden Power" for m in moves])
 
     def get_types(self) -> list[str]:
         return self.types if self.alt_types is None else self.alt_types
