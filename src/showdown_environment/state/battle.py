@@ -41,7 +41,7 @@ class Battle:
                 Move(
                     move_name,
                     self.gen,
-                    "ghost" in movedex[Move.get_identifier(move_name)]["types"],
+                    "ghost" in movedex[Move.get_identifier(move_name)]["type"],
                 )
                 for move_name in matching_role["moves"]
                 if move_name not in pokemon.get_moves()
