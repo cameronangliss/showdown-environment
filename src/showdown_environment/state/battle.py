@@ -62,7 +62,7 @@ class Battle:
                 if not ("disabled" in move and move["disabled"])
             ]
             active_pokemon = self.team.get_active()
-            if active_pokemon:
+            if active_pokemon and self.gen >= 6:
                 valid_mega_ids = (
                     [i + 4 for i in valid_move_ids]
                     if "canMegaEvo" in self.request["active"][0]
