@@ -22,7 +22,7 @@ class Move:
 
     def __init__(self, name: str, gen: int, is_ghost: bool, from_mimic: bool = False):
         self.identifier = Move.get_identifier(name)
-        details = movedex[f"gen{gen}"][self.identifier]
+        details = movedex[self.identifier]
         self.name = details["name"]
         self.gen = gen
         if from_mimic and gen > 2:

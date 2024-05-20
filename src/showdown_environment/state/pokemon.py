@@ -51,7 +51,7 @@ class Pokemon:
         name = pokemon_json["ident"][4:]
         identifier = Pokemon.get_identifier(name)
         level, gender = Pokemon.__parse_details(pokemon_json["details"])
-        types = [t.lower() for t in pokedex[f"gen{gen}"][identifier]["types"]]
+        types = [t.lower() for t in pokedex[identifier]["types"]]
         split_condition = pokemon_json["condition"].split()
         split_hp_frac = split_condition[0].split("/")
         hp = int(split_hp_frac[0])
@@ -61,8 +61,8 @@ class Pokemon:
         item = pokemon_json["item"] if pokemon_json["item"] != "" else None
         can_mega = (
             item is not None
-            and "megaEvolves" in itemdex[f"gen{gen}"][item]
-            and itemdex[f"gen{gen}"][item]["megaEvolves"] == name
+            and "megaEvolves" in itemdex[item]
+            and itemdex[item]["megaEvolves"] == name
         ) or (name == "Rayquaza" and "dragonascent" in pokemon_json["moves"] and gen in [6, 7])
         can_burst = name == "Necrozma" and item is not None and item == "ultranecroziumz"
         return cls(
@@ -84,7 +84,7 @@ class Pokemon:
             item=item,
             from_opponent=False,
             can_mega=can_mega,
-            can_zmove=not can_burst and item is not None and "zMove" in itemdex[f"gen{gen}"][item],
+            can_zmove=not can_burst and item is not None and "zMove" in itemdex[item],
             can_burst=can_burst,
             can_max=gen == 8 and name not in ["Eternatus", "Zacian", "Zamazenta"],
             can_tera=gen == 9,
@@ -94,9 +94,9 @@ class Pokemon:
     def from_protocol(cls, name: str, details: str, gen: int, owner: str) -> Pokemon:
         identifier = Pokemon.get_identifier(name)
         level, gender = Pokemon.__parse_details(details)
-        types = [t.lower() for t in pokedex[f"gen{gen}"][identifier]["types"]]
-        stats = pokedex[f"gen{gen}"][identifier]["baseStats"]
-        abilities = pokedex[f"gen{gen}"][identifier]["abilities"].values()
+        types = [t.lower() for t in pokedex[identifier]["types"]]
+        stats = pokedex[identifier]["baseStats"]
+        abilities = pokedex[identifier]["abilities"].values()
         ability_identifiers = [Pokemon.__get_ability_identifier(ability) for ability in abilities]
         return cls(
             name=name,
