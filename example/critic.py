@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
-from memory import Experience, Memory
 from torch import Tensor
 
+from showdown_environment.showdown.experience import Experience
 
-class Model(nn.Module):
+
+class Critic(nn.Module):
     __alpha: float
     epsilon: float
     __gamma: float
-    memory_length: int
     __layers: nn.Sequential
 
     def __init__(
@@ -16,16 +16,13 @@ class Model(nn.Module):
         alpha: float,
         epsilon: float,
         gamma: float,
-        memory_length: int,
         hidden_layer_sizes: list[int],
     ):
         super().__init__()  # type: ignore
         self.__alpha = alpha
         self.epsilon = epsilon
         self.__gamma = gamma
-        self.memory_length = memory_length
-        self.memory = Memory([], maxlen=memory_length)
-        layer_sizes = [1504, *hidden_layer_sizes, 26]
+        layer_sizes = [1504, *hidden_layer_sizes, 1]
         layers: list[nn.Module] = []
         for i in range(len(layer_sizes) - 1):
             layers += [nn.Linear(layer_sizes[i], layer_sizes[i + 1]), nn.ReLU()]

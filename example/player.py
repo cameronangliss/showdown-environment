@@ -1,11 +1,14 @@
-import random
+from copy import deepcopy
 
 import torch
-from model import Model
+from actor import Actor
+from critic import Critic
+from memory import Memory
 
 from showdown_environment.data.dex import movedex, typedex
 from showdown_environment.showdown.base_player import BasePlayer
 from showdown_environment.showdown.environment import Environment
+from showdown_environment.showdown.model import Model
 from showdown_environment.state.battle import Battle
 from showdown_environment.state.move import Move
 from showdown_environment.state.pokemon import Pokemon
@@ -15,53 +18,84 @@ from showdown_environment.state.team import Team
 class Player(BasePlayer):
     username: str
     password: str
+    actor: Actor
+    critic: Critic
     model: Model
+    memory: Memory
 
-    def __init__(self, username: str, password: str, model: Model):
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        actor: Actor,
+        critic: Critic,
+        memory_length: int | None = None,
+    ):
         super().__init__(username, password)
-        self.model = model
+        self.actor = actor
+        self.critic = critic
+        self.model = Model()
+        self.memory = Memory([], maxlen=memory_length)
 
     async def improve(self, env: Environment, num_episodes: int, min_win_rate: float):
         print("Generating experiences...")
         experiences, _ = await env.run_episodes(
-            self, num_episodes, memory_length=self.model.memory_length
+            self, num_episodes, memory_length=self.memory.maxlen
         )
-        self.model.memory.extend(experiences)
+        self.memory.extend(experiences)
         while True:
-            print(f"Training on {len(self.model.memory)} experiences...")
+            print(f"Training on {len(self.memory)} experiences...")
             for i in range(1000):
-                batch = self.model.memory.sample(round(len(self.model.memory) / 100))
+                batch = self.memory.sample(round(len(self.memory) / 100))
                 for exp in batch:
-                    self.model.update(exp)
+                    self.actor.update(exp)
                 print(f"Progress: {(i + 1) / 10}%", end="\r")
             print("Evaluating model...           ")
             experiences, num_wins = await env.run_episodes(
                 self,
                 num_episodes,
                 min_win_rate=min_win_rate,
-                memory_length=self.model.memory_length,
+                memory_length=self.memory.maxlen,
             )
             if num_wins < round(min_win_rate * num_episodes, 5):
                 print("Improvement failed.")
-                self.model.memory.extend(experiences)
+                self.memory.extend(experiences)
             else:
                 print("Improvement succeeded!")
-                self.model.memory.clear()
+                self.memory.clear()
                 break
 
     def get_action(self, state: Battle) -> int | None:
         action_space = state.get_valid_action_ids()
+        mask = torch.full((10,), float("-inf")).to(self.actor.device)
+        mask[action_space] = 0
         if action_space:
-            if random.random() < self.model.epsilon:
-                action = random.choice(action_space)
-            else:
-                features = self.encode_battle(state).to(self.model.device)
-                outputs = self.model.forward(features)
-                valid_outputs = torch.index_select(
-                    outputs, dim=0, index=torch.tensor(action_space).to(self.model.device)
-                )
-                max_output_id = int(torch.argmax(valid_outputs).item())
-                action = action_space[max_output_id]
+            current_score = self.critic.forward(self.encode_battle(state)).item()
+            count_matrix = torch.zeros(10, 10)
+            avg_TD_matrix = torch.zeros(10, 10)
+            for _ in range(10):
+                # get action
+                features = self.encode_battle(state).to(self.actor.device)
+                outputs = self.actor.forward(features)
+                probs = torch.softmax(outputs + mask, dim=0)
+                action = int(torch.multinomial(probs, num_samples=1).item())
+                # get opponent's action
+                opp_action = 6  # TODO: make an actual decision process for this
+                # predict future with model
+                new_state = self.model.predict(deepcopy(state), action, opp_action)
+                # compare future state with current to see if there was improvement
+                score = self.critic.forward(self.encode_battle(new_state)).item()
+                td = score - current_score
+                # record findings into TD matrix
+                count_matrix[action][opp_action] += 1
+                avg_TD_matrix[action][opp_action] += (
+                    td - avg_TD_matrix[action][opp_action]
+                ) / count_matrix[action][opp_action]
+            avg_TD_per_action = torch.sum(count_matrix * avg_TD_matrix, dim=1) / torch.sum(
+                count_matrix, dim=1
+            )
+            final_probs = torch.softmax(avg_TD_per_action + mask, dim=0)
+            action = int(torch.multinomial(final_probs, num_samples=1).item())
             return action
 
     def encode_battle(self, battle: Battle) -> torch.Tensor:
@@ -87,7 +121,7 @@ class Player(BasePlayer):
             [float(weather == weather_type) for weather_type in weather_types]
         )
         features = torch.cat([team_features, opponent_features, gen_features, weather_features])
-        return features.to(self.model.device)
+        return features.to(self.actor.device)
 
     def __encode_team(self, team: Team) -> torch.Tensor:
         encoded_team = [self.__encode_pokemon(pokemon) for pokemon in team.team]
