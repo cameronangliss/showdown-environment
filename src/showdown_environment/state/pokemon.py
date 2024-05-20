@@ -297,7 +297,7 @@ class Pokemon:
         # avoiding edge cases
         if (
             full_name == "Struggle"
-            or movedex[Move.get_identifier(full_name)]["isZ"]
+            or "isZ" in movedex[Move.get_identifier(full_name)]
             or full_name.split()[0] in ["Max", "G-Max"]
         ):
             return
