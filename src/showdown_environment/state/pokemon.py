@@ -203,7 +203,6 @@ class Pokemon:
     def get_matching_role(self) -> Any:
         roles = list(gen4setdex[self.alias]["roles"].values())
         move_names = [move.name for move in self.get_moves()]
-        print(roles, move_names)
         matching_role_index = [
             all([self.__low_specified_move_in_list(role["moves"], move) for move in move_names])
             for role in roles
