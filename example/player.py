@@ -151,7 +151,7 @@ class Player(BasePlayer):
                 ]
             ]
         )
-        all_types = typedex[f"gen{pokemon.gen}"].keys()
+        all_types = typedex.keys()
         type_features = torch.tensor([float(t in pokemon.get_types()) for t in all_types])
         hp_features = torch.tensor(
             (
@@ -179,10 +179,10 @@ class Player(BasePlayer):
     def __encode_move(self, move: Move) -> torch.Tensor:
         pp_frac_feature = move.pp / move.maxpp
         disabled_feature = float(move.is_disabled())
-        details = movedex[f"gen{move.gen}"][move.identifier]
+        details = movedex[move.identifier]
         power_feature = details["basePower"] / 250
         accuracy_feature = 1.0 if details["accuracy"] == True else details["accuracy"] / 100
-        all_types = typedex[f"gen{move.gen}"].keys()
+        all_types = typedex.keys()
         move_type = details["type"].lower()
         type_features = [float(t == move_type) for t in all_types]
         return torch.tensor(

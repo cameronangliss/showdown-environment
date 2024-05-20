@@ -63,7 +63,7 @@ class Move:
         )
 
     def __get_category(self) -> str:
-        return movedex[f"gen{self.gen}"][self.identifier]["category"]
+        return movedex[self.identifier]["category"]
 
     def get_json_str(self) -> str:
         return json.dumps(
