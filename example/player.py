@@ -123,11 +123,18 @@ class Player(BasePlayer):
             [float(weather == weather_type) for weather_type in weather_types]
         )
         features = torch.cat([team_features, opponent_features, gen_features, weather_features])
+        # print(
+        #     "Battle:",
+        #     [
+        #         len(item)
+        #         for item in [team_features, opponent_features, gen_features, weather_features]
+        #     ],
+        # )
         return features.to(self.actor.device)
 
     def __encode_team(self, team: Team) -> torch.Tensor:
         encoded_team = [self.__encode_pokemon(pokemon) for pokemon in team.team]
-        encoded_team += [torch.zeros(123)] * (6 - len(encoded_team))
+        encoded_team += [torch.zeros(128)] * (6 - len(encoded_team))
         special_used_features = torch.tensor(
             [
                 float(attribute)
@@ -140,6 +147,7 @@ class Player(BasePlayer):
                 ]
             ]
         )
+        # print("Team:", [len(item) for item in [*encoded_team, special_used_features]])
         return torch.cat([*encoded_team, special_used_features])
 
     def __encode_pokemon(self, pokemon: Pokemon) -> torch.Tensor:
@@ -173,7 +181,21 @@ class Player(BasePlayer):
             ]
         )
         encoded_moves = [self.__encode_move(move) for move in pokemon.get_moves()]
-        encoded_moves += [torch.zeros(22)] * (4 - len(encoded_moves))
+        encoded_moves += [torch.zeros(23)] * (4 - len(encoded_moves))
+        # print(
+        #     "Pokemon:",
+        #     [
+        #         len(item)
+        #         for item in [
+        #             gender_features,
+        #             hp_features,
+        #             status_features,
+        #             stats,
+        #             type_features,
+        #             *encoded_moves,
+        #         ]
+        #     ],
+        # )
         return torch.cat(
             [gender_features, hp_features, status_features, stats, type_features, *encoded_moves]
         )
