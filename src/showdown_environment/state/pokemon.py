@@ -297,7 +297,7 @@ class Pokemon:
         # avoiding edge cases
         if (
             full_name == "Struggle"
-            or movedex[f"gen{self.gen}"][Move.get_identifier(full_name)]["isZ"]
+            or movedex[Move.get_identifier(full_name)]["isZ"]
             or full_name.split()[0] in ["Max", "G-Max"]
         ):
             return
@@ -338,7 +338,7 @@ class Pokemon:
         if ability is None:
             self.alt_ability = Pokemon.__get_ability_identifier(new_ability)
         else:
-            ability_info = abilitydex[f"gen{self.gen}"][ability]
+            ability_info = abilitydex[ability]
             if not ("isPermanent" in ability_info and ability_info["isPermanent"]):
                 self.alt_ability = Pokemon.__get_ability_identifier(new_ability)
 
@@ -366,7 +366,7 @@ class Pokemon:
     def transform(self, name: str, request: Any | None):
         self.transformed = True
         self.alt_types = [
-            t.lower() for t in pokedex[f"gen{self.gen}"][Pokemon.get_identifier(name)]["types"]
+            t.lower() for t in pokedex[Pokemon.get_identifier(name)]["types"]
         ]
         if request is not None:
             new_self_info = [
@@ -401,9 +401,9 @@ class Pokemon:
         else:
             mega_stone_identifier = Pokemon.__get_item_identifier(mega_stone)
             mega_pokemon_identifier = Pokemon.get_identifier(
-                itemdex[f"gen{self.gen}"][mega_stone_identifier]["megaStone"]
+                itemdex[mega_stone_identifier]["megaStone"]
             )
-        mega_ability = pokedex[f"gen{self.gen}"][mega_pokemon_identifier]["abilities"]["0"]
+        mega_ability = pokedex[mega_pokemon_identifier]["abilities"]["0"]
         self.ability = self.__get_ability_identifier(mega_ability)
         self.alt_ability = None
 
@@ -436,7 +436,7 @@ class Pokemon:
                     self.alt_moves.append(new_move)
             case "Taunt":
                 for move in self.get_moves():
-                    if movedex[f"gen{self.gen}"][move.identifier]["category"] == "Status":
+                    if movedex[move.identifier]["category"] == "Status":
                         move.taunt_disabled = True
             case "Trick":
                 self.tricking = True
