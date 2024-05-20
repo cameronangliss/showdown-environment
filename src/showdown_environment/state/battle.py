@@ -38,7 +38,11 @@ class Battle:
             pokemon.ability = matching_role["abilities"][0]
             pokemon.item = matching_role["items"][0]
             new_moves = [
-                Move(move_name, self.gen, "ghost" in movedex[move_name]["types"])
+                Move(
+                    move_name,
+                    self.gen,
+                    "ghost" in movedex[Move.get_identifier(move_name)]["types"],
+                )
                 for move_name in matching_role["moves"]
                 if move_name not in pokemon.get_moves()
             ][: 4 - len(pokemon.get_moves())]
