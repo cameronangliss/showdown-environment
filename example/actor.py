@@ -22,7 +22,7 @@ class Actor(nn.Module):
         self.__alpha = alpha
         self.epsilon = epsilon
         self.__gamma = gamma
-        layer_sizes = [1535, *hidden_layer_sizes, 10]
+        layer_sizes = [1539, *hidden_layer_sizes, 10]
         layers: list[nn.Module] = []
         for i in range(len(layer_sizes) - 1):
             layers += [nn.Linear(layer_sizes[i], layer_sizes[i + 1]), nn.ReLU()]

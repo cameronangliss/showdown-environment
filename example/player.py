@@ -73,8 +73,8 @@ class Player(BasePlayer):
             inferred_state = deepcopy(state)
             inferred_state.infer_opponent_sets()
             current_score = self.critic.forward(self.encode_battle(inferred_state)).item()
-            count_matrix = torch.zeros(10, 10)
-            avg_TD_matrix = torch.zeros(10, 10)
+            count_matrix = torch.zeros(10, 10).to(self.actor.device)
+            avg_TD_matrix = torch.zeros(10, 10).to(self.actor.device)
             for _ in range(10):
                 # get action
                 features = self.encode_battle(inferred_state).to(self.actor.device)
@@ -93,8 +93,8 @@ class Player(BasePlayer):
                 avg_TD_matrix[action][opp_action] += (
                     td - avg_TD_matrix[action][opp_action]
                 ) / count_matrix[action][opp_action]
-            avg_TD_per_action = torch.sum(count_matrix * avg_TD_matrix, dim=1) / torch.sum(
-                count_matrix, dim=1
+            avg_TD_per_action = torch.sum(count_matrix * avg_TD_matrix, dim=1) / torch.max(
+                torch.sum(count_matrix, dim=1), torch.tensor(1)
             )
             final_probs = torch.softmax(avg_TD_per_action + mask, dim=0)
             action = int(torch.multinomial(final_probs, num_samples=1).item())
