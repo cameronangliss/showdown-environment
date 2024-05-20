@@ -124,7 +124,7 @@ class Pokemon:
     ###############################################################################################
     # Parsing/String Manipulation
 
-    def __get_full_move_name(self, part_name: str) -> str:
+    def get_full_move_name(self, part_name: str) -> str:
         if part_name == "Hidden Power":
             if self.from_opponent:
                 return "Hidden Power"
@@ -297,7 +297,7 @@ class Pokemon:
             self.alt_stats = None
 
     def use_move(self, name: str, info: list[str], pressure: bool):
-        full_name = self.__get_full_move_name(name)
+        full_name = self.get_full_move_name(name)
         # avoiding edge cases
         if (
             full_name == "Struggle"
@@ -420,7 +420,7 @@ class Pokemon:
                 move = [
                     move
                     for move in self.get_moves()
-                    if move.name == self.__get_full_move_name(info[1])
+                    if move.name == self.get_full_move_name(info[1])
                 ][0]
                 move.disable_disabled = True
             case "Encore":

@@ -30,7 +30,7 @@ class Battle:
     def infer_opponent_sets(self):
         for pokemon in self.opponent_team.team:
             roles = list(gen4setdex[pokemon.alias]["roles"].values())
-            move_names = [move.name for move in pokemon.get_moves()]
+            move_names = [pokemon.get_full_move_name(move.name) for move in pokemon.get_moves()]
             print(roles, move_names)
             matching_role_index = [
                 all([move in role["moves"] for move in move_names]) for role in roles
