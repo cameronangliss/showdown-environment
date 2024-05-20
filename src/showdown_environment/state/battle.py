@@ -31,6 +31,7 @@ class Battle:
         for pokemon in self.opponent_team.team:
             roles = list(gen4setdex[pokemon.name]["roles"].values())
             move_names = [move.name for move in pokemon.get_moves()]
+            print(roles, move_names)
             matching_role_index = [
                 all([move in role["moves"] for move in move_names]) for role in roles
             ].index(True)
