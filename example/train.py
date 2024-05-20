@@ -39,11 +39,11 @@ async def train():
     if player_version > 0:
         player.actor.load_state_dict(torch.load(f"saves/actor_v{player_version}_{file_name}.pt"))  # type: ignore
         player.critic.load_state_dict(torch.load(f"saves/critic_v{player_version}_{file_name}.pt"))  # type: ignore
-        print(f"{player.username} version {player_version} has been loaded.")
+        print(f"{player.username} v{player_version} has been loaded.")
     else:
         torch.save(player.actor.state_dict(), f"saves/actor_v{player_version}_{file_name}.pt")  # type: ignore
         torch.save(player.critic.state_dict(), f"saves/critic_v{player_version}_{file_name}.pt")  # type: ignore
-        print(f"{player.username} version {player_version} has been initialized.")
+        print(f"{player.username} v{player_version} has been initialized.")
     # train actor
     while True:
         env_player = Player(
