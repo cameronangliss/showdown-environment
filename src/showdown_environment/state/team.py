@@ -257,7 +257,7 @@ class Team:
             ][0]
             incoming_index = self.team.index(incoming_pokemon)
         else:
-            incoming_pokemon = Pokemon.from_protocol(details, self.__gen, self.__ident)
+            incoming_pokemon = Pokemon.from_protocol(incoming_pokemon_name, details, self.__gen, self.__ident)
             incoming_index = None
         # get outgoing pokemon
         outgoing_pokemon = self.get_active()
@@ -284,7 +284,7 @@ class Team:
         if active_pokemon is not None:
             # If the player didn't know about the illusion before it was revealed, corrections need to be made.
             if not active_pokemon.illusion:
-                actual_pokemon = Pokemon.from_protocol(details, self.__gen, self.__ident)
+                actual_pokemon = Pokemon.from_protocol(pokemon, details, self.__gen, self.__ident)
                 actual_pokemon.switch_in(active_pokemon.hp, active_pokemon.status)
                 active_pokemon = actual_pokemon
         else:
