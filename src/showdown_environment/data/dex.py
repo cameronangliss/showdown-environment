@@ -1,17 +1,9 @@
 import json
-from typing import Any
-
-pokedex: dict[str, dict[str, Any]] = {}
-movedex: dict[str, dict[str, Any]] = {}
-typedex: dict[str, dict[str, Any]] = {}
-abilitydex: dict[str, dict[str, Any]] = {}
-itemdex: dict[str, dict[str, Any]] = {}
 
 json_path = "src/showdown_environment/data/json"
 
-for i in range(1, 10):
-    pokedex[f"gen{i}"] = json.load(open(f"{json_path}/gen{i}/pokedex.json"))
-    movedex[f"gen{i}"] = json.load(open(f"{json_path}/gen{i}/movedex.json"))
-    typedex[f"gen{i}"] = json.load(open(f"{json_path}/gen{i}/typedex.json"))
-    abilitydex[f"gen{i}"] = json.load(open(f"{json_path}/gen{i}/abilitydex.json"))
-    itemdex[f"gen{i}"] = json.load(open(f"{json_path}/gen{i}/itemdex.json"))
+pokedex = json.load(open(f"{json_path}/pokedex.json"))
+movedex = json.load(open(f"{json_path}/movedex.json"))
+typedex = json.load(open(f"{json_path}/typedex.json"))
+abilitydex = json.load(open(f"{json_path}/abilitydex.json"))
+itemdex = json.load(open(f"{json_path}/itemdex.json"))

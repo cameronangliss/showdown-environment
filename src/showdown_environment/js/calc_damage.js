@@ -1,4 +1,4 @@
-const { calculate, Pokemon, Move } = require('@smogon/calc')
+import { calculate, Pokemon, Move } from '@smogon/calc'
 
 var input = ''
 process.stdin.on('data', (chunk) => input += chunk)

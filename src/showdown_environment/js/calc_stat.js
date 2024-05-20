@@ -1,4 +1,4 @@
-const { calcStat } = require('@smogon/calc')
+import { calcStat } from '@smogon/calc'
 
 var input = ''
 process.stdin.on('data', (chunk) => input += chunk)
