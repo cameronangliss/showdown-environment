@@ -147,6 +147,8 @@ class Pokemon:
         # examples: "Castform, M, shiny", "Moltres, L84", "Raichu, L88, M"
         split_details = details.split(", ")
         alias = split_details[0]
+        if alias[:-2] == "Unown":
+            alias = "Unown"
         if "tera:" in split_details[-1]:
             split_details = split_details[:-1]
         if split_details[-1] == "shiny":
