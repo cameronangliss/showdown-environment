@@ -176,6 +176,7 @@ class Player(BasePlayer):
             ]
         )
         encoded_moves = [self.__encode_move(move) for move in pokemon.get_moves()]
+        encoded_moves += [torch.zeros(23)] * (4 - len(encoded_moves))
         features = [
             gender_features,
             hp_features,
@@ -184,7 +185,6 @@ class Player(BasePlayer):
             type_features,
             *encoded_moves,
         ]
-        encoded_moves += [torch.zeros(23)] * (4 - len(encoded_moves))
         # print("Pokemon:", [len(item) for item in features])
         return torch.cat(features)
 
@@ -204,5 +204,4 @@ class Player(BasePlayer):
             accuracy_feature,
             *type_features,
         ]
-        # print("Move:", [len(item) for item in features])
         return torch.tensor(features)
