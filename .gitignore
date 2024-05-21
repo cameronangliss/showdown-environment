@@ -5,5 +5,6 @@ pokemon-showdown
 saves
 config.json
 debug.log
+output.stats
 package-lock.json
 *.egg-info
