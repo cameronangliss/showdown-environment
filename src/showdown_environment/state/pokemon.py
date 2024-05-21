@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from showdown_environment.data.dex import abilitydex, gen4setdex, itemdex, movedex, pokedex
+from showdown_environment.data.dex import abilitydex, itemdex, movedex, pokedex, setdex
 from showdown_environment.state.move import Move
 
 
@@ -201,7 +201,7 @@ class Pokemon:
     # Getter methods
 
     def get_matching_role(self) -> Any:
-        roles = list(gen4setdex[self.alias]["roles"].values())
+        roles = list(setdex[self.alias]["roles"].values())
         move_names = [move.name for move in self.get_moves()]
         matching_role_index = [
             all([self.__low_specified_move_in_list(role["moves"], move) for move in move_names])
