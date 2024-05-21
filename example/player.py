@@ -128,7 +128,7 @@ class Player(BasePlayer):
 
     def __encode_team(self, team: Team) -> torch.Tensor:
         encoded_team = [self.__encode_pokemon(pokemon) for pokemon in team.team]
-        encoded_team += [torch.zeros(128)] * (6 - len(encoded_team))
+        encoded_team += [torch.zeros(123)] * (6 - len(encoded_team))
         special_used_features = torch.tensor(
             [
                 float(attribute)
@@ -176,7 +176,7 @@ class Player(BasePlayer):
             ]
         )
         encoded_moves = [self.__encode_move(move) for move in pokemon.get_moves()]
-        encoded_moves += [torch.zeros(23)] * (4 - len(encoded_moves))
+        encoded_moves += [torch.zeros(22)] * (4 - len(encoded_moves))
         features = [
             gender_features,
             hp_features,
