@@ -1,5 +1,6 @@
 import json
 import random
+from math import floor
 from subprocess import PIPE, run
 from typing import Any
 
@@ -14,13 +15,7 @@ class Model:
         assert opp_active_pokemon is not None
         speed = active_pokemon.stats["spd"]
         opp_speed = self.__calc_stat(
-            gen=state.gen,
-            stat_id="spd",
-            base=opp_active_pokemon.stats["spd"],
-            iv=31,
-            ev=0,
-            level=opp_active_pokemon.level,
-            nature=None,
+            base=opp_active_pokemon.stats["spd"], iv=31, ev=0, level=opp_active_pokemon.level
         )
         first_mon, first_action = (
             (active_pokemon, action)
@@ -120,22 +115,5 @@ class Model:
         return json.loads(result.stdout.decode("utf8"))
 
     @staticmethod
-    def __calc_stat(
-        gen: int, stat_id: str, base: int, iv: int, ev: int, level: int, nature: str | None
-    ):
-        json_obj = {
-            "gen": gen,
-            "id": stat_id,
-            "base": base,
-            "iv": iv,
-            "ev": ev,
-            "level": level,
-            "nature": nature,
-        }
-        stdin = json.dumps(json_obj)
-        result = run(
-            args=["node", "src/showdown_environment/js/calc_stat.js"],
-            input=stdin.encode("utf8"),
-            stdout=PIPE,
-        )
-        return json.loads(result.stdout.decode("utf8"))
+    def __calc_stat(base: int, iv: int, ev: int, level: int) -> int:
+        return floor(floor((2 * base + iv + floor(ev / 4)) * level / 100) + 5)
