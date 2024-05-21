@@ -1,7 +1,6 @@
 .vscode
 __pycache__
 node_modules
-pokemon-showdown
 saves
 config.json
 debug.log
