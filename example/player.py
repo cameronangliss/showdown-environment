@@ -8,7 +8,6 @@ from memory import Memory
 from showdown_environment.data.dex import movedex, typedex
 from showdown_environment.showdown.base_player import BasePlayer
 from showdown_environment.showdown.environment import Environment
-from showdown_environment.showdown.model import Model
 from showdown_environment.state.battle import Battle
 from showdown_environment.state.move import Move
 from showdown_environment.state.pokemon import Pokemon
@@ -20,7 +19,6 @@ class Player(BasePlayer):
     password: str
     actor: Actor
     critic: Critic
-    model: Model
     memory: Memory
 
     def __init__(
@@ -34,7 +32,6 @@ class Player(BasePlayer):
         super().__init__(username, password)
         self.actor = actor
         self.critic = critic
-        self.model = Model()
         self.memory = Memory([], maxlen=memory_length)
 
     async def improve(self, env: Environment, num_episodes: int, min_win_rate: float):
@@ -84,7 +81,8 @@ class Player(BasePlayer):
                 # get opponent's action
                 opp_action = 6  # TODO: make an actual decision process for this
                 # predict future with model
-                new_state = self.model.predict(deepcopy(inferred_state), action, opp_action)
+                new_state = deepcopy(inferred_state)
+                new_state.update_in_simulation(action, opp_action)
                 # compare future state with current to see if there was improvement
                 score = self.critic.forward(self.encode_battle(new_state)).item()
                 td = score - current_score

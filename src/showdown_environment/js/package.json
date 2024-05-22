@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "@smogon/calc": "^0.9.0"
-  },
-  "type": "module"
-}

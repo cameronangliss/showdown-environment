@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from typing import Any
 
@@ -26,6 +28,42 @@ class Battle:
         self.request = request
         self.team.update(protocol, request)
         self.opponent_team.update(protocol)
+
+    def update_in_simulation(self, action: int, opp_action: int):
+        team = [
+            ps_sim.Pokemon(
+                p.name,
+                p.level,
+                [m.name for m in p.get_moves()],
+                p.gender or "",
+                ability=p.ability,
+                cur_hp=p.hp,
+                stats_actual=p.stats,
+                item=p.get_item() or "",
+                status=p.status or "",
+            )
+            for p in self.team.team
+        ]
+        opp_team = [
+            ps_sim.Pokemon(
+                p.name,
+                p.level,
+                [m.name for m in p.get_moves()],
+                p.gender or "",
+                ability=p.ability,
+                cur_hp=p.hp,
+                stats_actual=p.stats,
+                item=p.get_item() or "",
+                status=p.status or "",
+            )
+            for p in self.opponent_team.team
+        ]
+        me = ps_sim.Trainer("p1", team)
+        opp = ps_sim.Trainer("p2", opp_team)
+        battle = ps_sim.Battle(t1=me, t2=opp)
+        battle.start()
+        action_space = [["other", p.name] for p in self.team.team]
+        battle.turn([], [])
 
     def infer_opponent_sets(self):
         for pokemon in self.opponent_team.team:
