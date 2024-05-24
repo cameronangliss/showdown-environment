@@ -2,3 +2,7 @@
 	path = pokemon-showdown
 	url = git@github.com:smogon/pokemon-showdown.git
 	branch = master
+[submodule "PyKMN"]
+	path = PyKMN
+	url = git@github.com:AnnikaCodes/PyKMN.git
+	branch = main
