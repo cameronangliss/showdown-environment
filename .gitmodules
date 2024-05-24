@@ -4,5 +4,5 @@
 	branch = master
 [submodule "PyKMN"]
 	path = PyKMN
-	url = git@github.com:cameronangliss/PyKMN.git
+	url = git@github.com:AnnikaCodes/PyKMN.git
 	branch = main
