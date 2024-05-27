@@ -29,6 +29,7 @@ class Environment:
         self,
         player: BasePlayer,
         num_episodes: int,
+        format_str: str,
         min_win_rate: float | None = None,
         memory_length: int | None = None,
     ) -> tuple[list[Experience], float]:
@@ -38,7 +39,7 @@ class Environment:
         num_iters = 0
         time = datetime.now().strftime("%H:%M:%S")
         for i in range(num_episodes):
-            new_experiences, winner = await self.__run_episode(player, "gen4randombattle")
+            new_experiences, winner = await self.__run_episode(player, format_str)
             if (
                 memory_length is not None
                 and len(experiences) + len(new_experiences) > memory_length

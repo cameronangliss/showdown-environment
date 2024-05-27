@@ -37,7 +37,7 @@ class Player(BasePlayer):
     async def improve(self, env: Environment, num_episodes: int, min_win_rate: float):
         print("Generating experiences...")
         experiences, _ = await env.run_episodes(
-            self, num_episodes, memory_length=self.memory.maxlen
+            self, num_episodes, "gen1randombattle", memory_length=self.memory.maxlen
         )
         self.memory.extend(experiences)
         while True:
@@ -51,6 +51,7 @@ class Player(BasePlayer):
             experiences, num_wins = await env.run_episodes(
                 self,
                 num_episodes,
+                "gen1randombattle",
                 min_win_rate=min_win_rate,
                 memory_length=self.memory.maxlen,
             )
