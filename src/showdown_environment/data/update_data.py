@@ -26,9 +26,9 @@ if __name__ == "__main__":
     if not os.path.exists("src/showdown_environment/data/json"):
         os.mkdir("src/showdown_environment/data/json")
     poke_env_url = "https://raw.githubusercontent.com/hsahovic/poke-env/master/src/poke_env"
-    update_json_file(f"{poke_env_url}/data/static/pokedex", "gen4pokedex.json")
-    update_json_file(f"{poke_env_url}/data/static/moves", "gen4moves.json")
+    update_json_file(f"{poke_env_url}/data/static/pokedex", "gen1pokedex.json")
+    update_json_file(f"{poke_env_url}/data/static/moves", "gen1moves.json")
     update_json_file("https://play.pokemonshowdown.com/data", "items.js")
     update_json_file("https://play.pokemonshowdown.com/data", "abilities.js")
-    update_json_file(f"{poke_env_url}/data/static/typechart", "gen4typechart.json")
-    update_json_file("https://data.pkmn.cc/randbats", "gen4randombattle.json")
+    update_json_file(f"{poke_env_url}/data/static/typechart", "gen1typechart.json")
+    update_json_file("https://data.pkmn.cc/randbats", "gen1randombattle.json")

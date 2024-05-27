@@ -11,10 +11,8 @@
         },
         "damageTaken": {
             "Bug": 0,
-            "Dark": 0,
             "Dragon": 0,
             "Electric": 0,
-            "Fairy": 0,
             "Fighting": 2,
             "Fire": 1,
             "Flying": 1,
@@ -23,10 +21,9 @@
             "Ground": 2,
             "Ice": 0,
             "Normal": 0,
-            "Poison": 0,
+            "Poison": 1,
             "Psychic": 0,
             "Rock": 1,
-            "Steel": 0,
             "Water": 0
         }
     },
@@ -51,7 +48,8 @@
             "Rock": 0,
             "Steel": 0,
             "Water": 0
-        }
+        },
+        "isNonstandard": "Future"
     },
     "dragon": {
         "HPdvs": {
@@ -175,24 +173,20 @@
         },
         "damageTaken": {
             "Bug": 2,
-            "Dark": 0,
             "Dragon": 0,
             "Electric": 0,
-            "Fairy": 2,
             "Fighting": 0,
             "Fire": 2,
             "Flying": 0,
             "Ghost": 0,
             "Grass": 2,
             "Ground": 1,
-            "Ice": 2,
+            "Ice": 0,
             "Normal": 0,
             "Poison": 0,
             "Psychic": 0,
             "Rock": 1,
-            "Steel": 2,
-            "Water": 1,
-            "brn": 3
+            "Water": 1
         }
     },
     "flying": {
@@ -239,7 +233,6 @@
         },
         "damageTaken": {
             "Bug": 2,
-            "Dark": 1,
             "Dragon": 0,
             "Electric": 0,
             "Fighting": 3,
@@ -253,7 +246,6 @@
             "Poison": 2,
             "Psychic": 0,
             "Rock": 0,
-            "Steel": 0,
             "Water": 0
         }
     },
@@ -342,9 +334,7 @@
             "Psychic": 0,
             "Rock": 1,
             "Steel": 1,
-            "Water": 0,
-            "frz": 3,
-            "hail": 3
+            "Water": 0
         }
     },
     "normal": {
@@ -380,11 +370,9 @@
             "spd": 30
         },
         "damageTaken": {
-            "Bug": 2,
-            "Dark": 0,
+            "Bug": 1,
             "Dragon": 0,
             "Electric": 0,
-            "Fairy": 2,
             "Fighting": 2,
             "Fire": 0,
             "Flying": 0,
@@ -396,7 +384,6 @@
             "Poison": 2,
             "Psychic": 1,
             "Rock": 0,
-            "Steel": 0,
             "Water": 0,
             "psn": 3,
             "tox": 3
@@ -412,14 +399,12 @@
         },
         "damageTaken": {
             "Bug": 1,
-            "Dark": 1,
             "Dragon": 0,
             "Electric": 0,
-            "Fairy": 0,
             "Fighting": 2,
             "Fire": 0,
             "Flying": 0,
-            "Ghost": 1,
+            "Ghost": 3,
             "Grass": 0,
             "Ground": 0,
             "Ice": 0,
@@ -427,7 +412,6 @@
             "Poison": 0,
             "Psychic": 2,
             "Rock": 0,
-            "Steel": 0,
             "Water": 0
         }
     },
@@ -475,6 +459,7 @@
             "Dark": 2,
             "Dragon": 2,
             "Electric": 0,
+            "Fairy": 2,
             "Fighting": 1,
             "Fire": 1,
             "Flying": 2,
@@ -488,10 +473,9 @@
             "Rock": 2,
             "Steel": 2,
             "Water": 0,
-            "psn": 3,
-            "sandstorm": 3,
-            "tox": 3
-        }
+            "sandstorm": 3
+        },
+        "isNonstandard": "Future"
     },
     "water": {
         "HPdvs": {
