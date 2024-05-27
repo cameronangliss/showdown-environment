@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pykmn.engine.gen1 import Battle, Pokemon, Player, Slot
+from pykmn.engine.gen1 import Battle, Pokemon, Player, Slot, Status
 
 from showdown_environment.data.dex import movedex
 from showdown_environment.state.move import Move_
@@ -36,7 +36,11 @@ class Battle_:
             Pokemon(
                 mon.name,
                 [move.name for move in mon.get_moves()],
-                extra={"hp": mon.hp, "status": mon.status, "level": mon.level},
+                extra={
+                    "hp": mon.hp,
+                    "status": self.__get_status_enum(mon.status),
+                    "level": mon.level,
+                },
             )
             for mon in self.team.team
         ]
@@ -44,7 +48,11 @@ class Battle_:
             Pokemon(
                 mon.name,
                 [move.name for move in mon.get_moves()],
-                extra={"hp": mon.hp, "status": mon.status, "level": mon.level},
+                extra={
+                    "hp": mon.hp,
+                    "status": self.__get_status_enum(mon.status),
+                    "level": mon.level,
+                },
             )
             for mon in self.opponent_team.team
         ]
@@ -58,6 +66,21 @@ class Battle_:
             # HP
             active_mon.hp = battle.current_hp(Player(0), Slot(s))
             opp_active_mon.hp = battle.current_hp(Player(1), Slot(s))
+
+    @staticmethod
+    def __get_status_enum(status: str | None) -> Status:
+        if status is None:
+            return Status.HEALTHY()
+        elif status == "par":
+            return Status.PARALYZED()
+        elif status == "slp":
+            return Status.SLEEP(0)
+        elif status == "brn":
+            return Status.BURNED()
+        elif status == "frz":
+            return Status.FROZEN()
+        else:
+            raise Exception("WE GOT A STATUS WEIRD THINGY HAPPENING")
 
     def infer_opponent_sets(self):
         for pokemon in self.opponent_team.team:
