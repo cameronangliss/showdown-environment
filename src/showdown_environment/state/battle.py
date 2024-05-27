@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pykmn.engine.gen1 import Battle, Pokemon
+from pykmn.engine.gen1 import Battle, Pokemon, Player, Slot
 
 from showdown_environment.data.dex import movedex
 from showdown_environment.state.move import Move_
@@ -41,6 +41,14 @@ class Battle_:
         ]
         battle = Battle(p1_team, p2_team)
         battle.update_raw(action, opp_action)
+        active_mon = self.team.get_active()
+        opp_active_mon = self.opponent_team.get_active()
+        assert active_mon is not None
+        assert opp_active_mon is not None
+        for s in range(1, 7):
+            # HP
+            active_mon.hp = battle.current_hp(Player(1), Slot(s))
+            opp_active_mon.hp = battle.current_hp(Player(2), Slot(s))
 
     def infer_opponent_sets(self):
         for pokemon in self.opponent_team.team:
