@@ -69,8 +69,10 @@ class Battle_:
 
     @staticmethod
     def __get_status_enum(status: str | None) -> Status:
-        if status is None:
+        if status is None or status == "fnt":
             return Status.HEALTHY()
+        elif status == "psn":
+            return Status.POISONED()
         elif status == "par":
             return Status.PARALYZED()
         elif status == "slp":
@@ -80,7 +82,7 @@ class Battle_:
         elif status == "frz":
             return Status.FROZEN()
         else:
-            raise Exception("WE GOT A STATUS WEIRD THINGY HAPPENING")
+            raise Exception("WE GOT A STATUS WEIRD THINGY HAPPENING " + status)
 
     def infer_opponent_sets(self):
         for pokemon in self.opponent_team.team:
