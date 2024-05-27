@@ -18,6 +18,7 @@ multi_line_output = 3
 [tool.pyright]
 include = ["src"]
 pythonVersion = "3.11"
+reportMissingTypeStubs = false
 
 [tool.setuptools.package-data]
 src = ["showdown_environment/data/json/**"]
