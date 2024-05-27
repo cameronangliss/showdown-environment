@@ -321,6 +321,7 @@ class Pokemon_:
         # avoiding edge cases
         if (
             full_name == "Struggle"
+            or (info and info[0] == "[from]Mirror Move")
             or "isZ" in movedex[Move_.get_identifier(full_name)]
             or full_name.split()[0] in ["Max", "G-Max"]
         ):
