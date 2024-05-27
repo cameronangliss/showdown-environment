@@ -33,30 +33,116 @@ class Battle_:
 
     def update_in_simulation(self, action: int, opp_action: int):
         p1_team = [
-            Pokemon(species="Starmie", moves=("Psychic", "Blizzard", "Thunder Wave", "Recover")),
             Pokemon(
-                species="Exeggutor", moves=("Sleep Powder", "Psychic", "Double-Edge", "Explosion")
+                species="Starmie",
+                moves=(
+                    "Psychic",
+                    "Blizzard",
+                    "Thunder Wave",
+                    "Recover",
+                ),
             ),
             Pokemon(
-                species="Alakazam", moves=("Psychic", "Seismic Toss", "Thunder Wave", "Recover")
+                species="Exeggutor",
+                moves=(
+                    "Sleep Powder",
+                    "Psychic",
+                    "Double-Edge",
+                    "Explosion",
+                ),
             ),
             Pokemon(
-                species="Chansey", moves=("Ice Beam", "Thunderbolt", "Thunder Wave", "Soft-Boiled")
+                species="Alakazam",
+                moves=(
+                    "Psychic",
+                    "Seismic Toss",
+                    "Thunder Wave",
+                    "Recover",
+                ),
             ),
-            Pokemon(species="Snorlax", moves=("Body Slam", "Reflect", "Earthquake", "Rest")),
-            Pokemon(species="Tauros", moves=("Body Slam", "Hyper Beam", "Blizzard", "Earthquake")),
+            Pokemon(
+                species="Chansey",
+                moves=(
+                    "Ice Beam",
+                    "Thunderbolt",
+                    "Thunder Wave",
+                    "Soft-Boiled",
+                ),
+            ),
+            Pokemon(
+                species="Snorlax",
+                moves=(
+                    "Body Slam",
+                    "Reflect",
+                    "Earthquake",
+                    "Rest",
+                ),
+            ),
+            Pokemon(
+                species="Tauros",
+                moves=(
+                    "Body Slam",
+                    "Hyper Beam",
+                    "Blizzard",
+                    "Earthquake",
+                ),
+            ),
         ]
         p2_team = [
-            Pokemon(species="Jynx", moves=("Lovely Kiss", "Blizzard", "Psychic", "Rest")),
-            Pokemon(species="Starmie", moves=("Psychic", "Thunderbolt", "Thunder Wave", "Recover")),
             Pokemon(
-                species="Alakazam", moves=("Psychic", "Seismic Toss", "Thunder Wave", "Recover")
+                species="Jynx",
+                moves=(
+                    "Lovely Kiss",
+                    "Blizzard",
+                    "Psychic",
+                    "Rest",
+                ),
             ),
             Pokemon(
-                species="Chansey", moves=("Seismic Toss", "Reflect", "Thunder Wave", "Soft-Boiled")
+                species="Starmie",
+                moves=(
+                    "Psychic",
+                    "Thunderbolt",
+                    "Thunder Wave",
+                    "Recover",
+                ),
             ),
-            Pokemon(species="Snorlax", moves=("Body Slam", "Reflect", "Self-Destruct", "Rest")),
-            Pokemon(species="Tauros", moves=("Body Slam", "Hyper Beam", "Blizzard", "Earthquake")),
+            Pokemon(
+                species="Alakazam",
+                moves=(
+                    "Psychic",
+                    "Seismic Toss",
+                    "Thunder Wave",
+                    "Recover",
+                ),
+            ),
+            Pokemon(
+                species="Chansey",
+                moves=(
+                    "Seismic Toss",
+                    "Reflect",
+                    "Thunder Wave",
+                    "Soft-Boiled",
+                ),
+            ),
+            Pokemon(
+                species="Snorlax",
+                moves=(
+                    "Body Slam",
+                    "Reflect",
+                    "Self-Destruct",
+                    "Rest",
+                ),
+            ),
+            Pokemon(
+                species="Tauros",
+                moves=(
+                    "Body Slam",
+                    "Hyper Beam",
+                    "Blizzard",
+                    "Earthquake",
+                ),
+            ),
         ]
         battle = Battle(p1_team, p2_team)
         battle.update_raw(action, opp_action)
