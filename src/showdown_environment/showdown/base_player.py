@@ -9,7 +9,7 @@ import requests
 from torch import Tensor
 
 from showdown_environment.showdown.client import Client, MessageType
-from showdown_environment.state.battle import Battle
+from showdown_environment.state.battle import Battle_
 
 
 class BasePlayer(Client):
@@ -23,11 +23,11 @@ class BasePlayer(Client):
         self.password = password
 
     @abstractmethod
-    def get_action(self, state: Battle) -> int | None:
+    def get_action(self, state: Battle_) -> int | None:
         pass
 
     @abstractmethod
-    def encode_battle(self, battle: Battle) -> Tensor:
+    def encode_battle(self, battle: Battle_) -> Tensor:
         pass
 
     ###############################################################################################
@@ -116,7 +116,7 @@ class BasePlayer(Client):
     async def timer_on(self):
         await self.send_message("/timer on")
 
-    async def observe(self, state: Battle | None = None) -> Battle:
+    async def observe(self, state: Battle_ | None = None) -> Battle_:
         split_message = await self.find_message(MessageType.OBSERVE)
         if split_message[1] == "request":
             request = json.loads(split_message[2])
@@ -127,7 +127,7 @@ class BasePlayer(Client):
         if state:
             state.update(protocol, request)
         else:
-            state = Battle(protocol, request)
+            state = Battle_(protocol, request)
         self.logger.info(state.get_json_str())
         return state
 

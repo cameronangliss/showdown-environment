@@ -8,7 +8,7 @@ from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 from showdown_environment.showdown.base_player import BasePlayer
 from showdown_environment.showdown.client import PopupError
 from showdown_environment.showdown.experience import Experience
-from showdown_environment.state.battle import Battle
+from showdown_environment.state.battle import Battle_
 
 
 class Environment:
@@ -119,7 +119,7 @@ class Environment:
         await player.setup()
         await self.player.setup()
 
-    async def reset(self, player: BasePlayer, format_str: str) -> tuple[Battle, Battle]:
+    async def reset(self, player: BasePlayer, format_str: str) -> tuple[Battle_, Battle_]:
         await self.player.leave()
         cynthia_avatars = [
             "cynthia-anime",
@@ -163,11 +163,11 @@ class Environment:
     async def step(
         self,
         player: BasePlayer,
-        state1: Battle,
-        state2: Battle,
+        state1: Battle_,
+        state2: Battle_,
         action1: int | None,
         action2: int | None,
-    ) -> tuple[Battle, Battle, int, int, bool]:
+    ) -> tuple[Battle_, Battle_, int, int, bool]:
         await player.choose(action1, state1.request["rqid"])
         await self.player.choose(action2, state2.request["rqid"])
         next_state1 = await player.observe(state1)
@@ -187,7 +187,7 @@ class Environment:
     ###############################################################################################
     # Helper methods
 
-    def __get_rewards(self, state: Battle) -> tuple[int, int]:
+    def __get_rewards(self, state: Battle_) -> tuple[int, int]:
         if "win" in state.protocol:
             i = state.protocol.index("win")
             winner = state.protocol[i + 1].strip()

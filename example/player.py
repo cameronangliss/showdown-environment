@@ -8,10 +8,10 @@ from memory import Memory
 from showdown_environment.data.dex import movedex, typedex
 from showdown_environment.showdown.base_player import BasePlayer
 from showdown_environment.showdown.environment import Environment
-from showdown_environment.state.battle import Battle
-from showdown_environment.state.move import Move
-from showdown_environment.state.pokemon import Pokemon
-from showdown_environment.state.team import Team
+from showdown_environment.state.battle import Battle_
+from showdown_environment.state.move import Move_
+from showdown_environment.state.pokemon import Pokemon_
+from showdown_environment.state.team import Team_
 
 
 class Player(BasePlayer):
@@ -62,7 +62,7 @@ class Player(BasePlayer):
                 self.memory.clear()
                 break
 
-    def get_action(self, state: Battle) -> int | None:
+    def get_action(self, state: Battle_) -> int | None:
         action_space = state.get_valid_action_ids()
         mask = torch.full((10,), float("-inf")).to(self.actor.device)
         mask[action_space] = 0
@@ -98,7 +98,7 @@ class Player(BasePlayer):
             action = int(torch.multinomial(final_probs, num_samples=1).item())
             return action
 
-    def encode_battle(self, battle: Battle) -> torch.Tensor:
+    def encode_battle(self, battle: Battle_) -> torch.Tensor:
         team_features = self.__encode_team(battle.team)
         opponent_features = self.__encode_team(battle.opponent_team)
         gen_features = torch.tensor([float(n == battle.gen) for n in range(1, 10)])
@@ -124,7 +124,7 @@ class Player(BasePlayer):
         # print("Battle:", [len(item) for item in features])
         return torch.cat(features).to(self.actor.device)
 
-    def __encode_team(self, team: Team) -> torch.Tensor:
+    def __encode_team(self, team: Team_) -> torch.Tensor:
         encoded_team = [self.__encode_pokemon(pokemon) for pokemon in team.team]
         encoded_team += [torch.zeros(123)] * (6 - len(encoded_team))
         special_used_features = torch.tensor(
@@ -143,7 +143,7 @@ class Player(BasePlayer):
         # print("Team:", [len(item) for item in features])
         return torch.cat(features)
 
-    def __encode_pokemon(self, pokemon: Pokemon) -> torch.Tensor:
+    def __encode_pokemon(self, pokemon: Pokemon_) -> torch.Tensor:
         gender_features = torch.tensor(
             [
                 float(gender_bool)
@@ -186,7 +186,7 @@ class Player(BasePlayer):
         # print("Pokemon:", [len(item) for item in features])
         return torch.cat(features)
 
-    def __encode_move(self, move: Move) -> torch.Tensor:
+    def __encode_move(self, move: Move_) -> torch.Tensor:
         pp_frac_feature = move.pp / move.maxpp
         disabled_feature = float(move.is_disabled())
         details = movedex[move.identifier]
