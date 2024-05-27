@@ -45,8 +45,9 @@ class Battle_:
     def infer_opponent_sets(self):
         for pokemon in self.opponent_team.team:
             matching_role = pokemon.get_matching_role()
-            pokemon.ability = matching_role["abilities"][0]
-            pokemon.item = matching_role["items"][0]
+            if self.gen >= 2:
+                pokemon.ability = matching_role["abilities"][0]
+                pokemon.item = matching_role["items"][0]
             new_moves = [
                 Move_(
                     move_name,
