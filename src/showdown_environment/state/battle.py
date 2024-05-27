@@ -3,25 +3,27 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from pykmn.engine.gen1 import Battle, Pokemon
+
 from showdown_environment.data.dex import movedex
-from showdown_environment.state.move import Move
-from showdown_environment.state.team import Team
+from showdown_environment.state.move import Move_
+from showdown_environment.state.team import Team_
 
 
-class Battle:
+class Battle_:
     request: Any
     protocol: list[str]
     gen: int
-    team: Team
-    opponent_team: Team
+    team: Team_
+    opponent_team: Team_
 
     def __init__(self, protocol: list[str], request: Any):
         self.protocol = protocol
         self.request = request
         ident, opponent_ident = ("p1", "p2") if request["side"]["id"] == "p1" else ("p2", "p1")
         self.gen = self.__get_gen()
-        self.team = Team(ident, self.gen, protocol, request)
-        self.opponent_team = Team(opponent_ident, self.gen, protocol)
+        self.team = Team_(ident, self.gen, protocol, request)
+        self.opponent_team = Team_(opponent_ident, self.gen, protocol)
 
     def update(self, protocol: list[str], request: Any | None):
         self.protocol = protocol
@@ -30,40 +32,35 @@ class Battle:
         self.opponent_team.update(protocol)
 
     def update_in_simulation(self, action: int, opp_action: int):
-        team = [
-            ps_sim.Pokemon(
-                p.name,
-                p.level,
-                [m.name for m in p.get_moves()],
-                p.gender or "",
-                ability=p.ability,
-                cur_hp=p.hp,
-                stats_actual=p.stats,
-                item=p.get_item() or "",
-                status=p.status or "",
-            )
-            for p in self.team.team
+        p1_team = [
+            Pokemon(species="Starmie", moves=("Psychic", "Blizzard", "Thunder Wave", "Recover")),
+            Pokemon(
+                species="Exeggutor", moves=("Sleep Powder", "Psychic", "Double-Edge", "Explosion")
+            ),
+            Pokemon(
+                species="Alakazam", moves=("Psychic", "Seismic Toss", "Thunder Wave", "Recover")
+            ),
+            Pokemon(
+                species="Chansey", moves=("Ice Beam", "Thunderbolt", "Thunder Wave", "Soft-Boiled")
+            ),
+            Pokemon(species="Snorlax", moves=("Body Slam", "Reflect", "Earthquake", "Rest")),
+            Pokemon(species="Tauros", moves=("Body Slam", "Hyper Beam", "Blizzard", "Earthquake")),
         ]
-        opp_team = [
-            ps_sim.Pokemon(
-                p.name,
-                p.level,
-                [m.name for m in p.get_moves()],
-                p.gender or "",
-                ability=p.ability,
-                cur_hp=p.hp,
-                stats_actual=p.stats,
-                item=p.get_item() or "",
-                status=p.status or "",
-            )
-            for p in self.opponent_team.team
+        p2_team = [
+            Pokemon(species="Jynx", moves=("Lovely Kiss", "Blizzard", "Psychic", "Rest")),
+            Pokemon(species="Starmie", moves=("Psychic", "Thunderbolt", "Thunder Wave", "Recover")),
+            Pokemon(
+                species="Alakazam", moves=("Psychic", "Seismic Toss", "Thunder Wave", "Recover")
+            ),
+            Pokemon(
+                species="Chansey", moves=("Seismic Toss", "Reflect", "Thunder Wave", "Soft-Boiled")
+            ),
+            Pokemon(species="Snorlax", moves=("Body Slam", "Reflect", "Self-Destruct", "Rest")),
+            Pokemon(species="Tauros", moves=("Body Slam", "Hyper Beam", "Blizzard", "Earthquake")),
         ]
-        me = ps_sim.Trainer("p1", team)
-        opp = ps_sim.Trainer("p2", opp_team)
-        battle = ps_sim.Battle(t1=me, t2=opp)
-        battle.start()
-        action_space = [["other", p.name] for p in self.team.team]
-        battle.turn([], [])
+        battle = Battle(p1_team, p2_team)
+        battle.update_raw(action, opp_action)
+        print(battle)
 
     def infer_opponent_sets(self):
         for pokemon in self.opponent_team.team:
@@ -71,10 +68,10 @@ class Battle:
             pokemon.ability = matching_role["abilities"][0]
             pokemon.item = matching_role["items"][0]
             new_moves = [
-                Move(
+                Move_(
                     move_name,
                     self.gen,
-                    "ghost" in movedex[Move.get_identifier(move_name)]["type"],
+                    "ghost" in movedex[Move_.get_identifier(move_name)]["type"],
                 )
                 for move_name in matching_role["moves"]
                 if move_name not in pokemon.get_moves()

@@ -5,7 +5,7 @@ from typing import Any
 from showdown_environment.data.dex import movedex
 
 
-class Move:
+class Move_:
     name: str
     identifier: str
     gen: int
@@ -21,7 +21,7 @@ class Move:
     self_disabled: bool = False
 
     def __init__(self, name: str, gen: int, is_ghost: bool, from_mimic: bool = False):
-        self.identifier = Move.get_identifier(name)
+        self.identifier = Move_.get_identifier(name)
         details = movedex[self.identifier]
         self.name = details["name"]
         self.gen = gen

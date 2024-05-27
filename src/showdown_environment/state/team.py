@@ -1,13 +1,13 @@
 import json
 from typing import Any
 
-from showdown_environment.state.pokemon import Pokemon
+from showdown_environment.state.pokemon import Pokemon_
 
 
-class Team:
+class Team_:
     __ident: str
     __gen: int
-    team: list[Pokemon]
+    team: list[Pokemon_]
     __pressure: bool = False
     mega_used: bool = False
     zmove_used: bool = False
@@ -21,7 +21,7 @@ class Team:
         self.__gen = gen
         self.team = (
             [
-                Pokemon.from_request(pokemon_json, self.__gen, self.__ident)
+                Pokemon_.from_request(pokemon_json, self.__gen, self.__ident)
                 for pokemon_json in request["side"]["pokemon"]
             ]
             if request
@@ -32,7 +32,7 @@ class Team:
     ###############################################################################################
     # Getter methods
 
-    def get_active(self) -> Pokemon | None:
+    def get_active(self) -> Pokemon_ | None:
         actives = [mon for mon in self.team if mon.active]
         if len(actives) == 0:
             return None
@@ -62,7 +62,7 @@ class Team:
             for pokemon, pokemon_info in zip(self.team, team_info):
                 # If active has been mistracked, we assume that the active pokemon is using an illusion.
                 if pokemon.active != pokemon_info["active"]:
-                    hp, status = Pokemon.parse_condition(pokemon_info["condition"])
+                    hp, status = Pokemon_.parse_condition(pokemon_info["condition"])
                     pokemon.hp = hp
                     pokemon.status = status
                     pokemon.active = pokemon_info["active"]
@@ -77,14 +77,14 @@ class Team:
         active_pokemon = self.get_active()
         if active_pokemon is None:
             if split_line[1] == "switch" and split_line[2][:2] == self.__ident:
-                hp, status = Pokemon.parse_condition(split_line[4])
+                hp, status = Pokemon_.parse_condition(split_line[4])
                 self.__switch(split_line[2][5:], split_line[3], hp, status)
             return
         match split_line[1]:
             case "cant":
                 active_pokemon.preparing = False
             case "drag":
-                hp, status = Pokemon.parse_condition(split_line[4])
+                hp, status = Pokemon_.parse_condition(split_line[4])
                 self.__switch(split_line[2][5:], split_line[3], hp, status)
             case "faint":
                 fainted_pokemon_name = split_line[2][split_line[2].index(" ") + 1 :]
@@ -99,7 +99,7 @@ class Team:
             case "replace":
                 self.__replace(split_line[2][5:], split_line[3])
             case "switch":
-                hp, status = Pokemon.parse_condition(split_line[4])
+                hp, status = Pokemon_.parse_condition(split_line[4])
                 self.__switch(split_line[2][5:], split_line[3], hp, status)
             case "-ability":
                 active_pokemon.update_ability(split_line[3])
@@ -141,7 +141,7 @@ class Team:
                     if pokemon.status != "fnt":
                         pokemon.update_condition(pokemon.hp, None)
             case "-damage":
-                hp, status = Pokemon.parse_condition(split_line[3])
+                hp, status = Pokemon_.parse_condition(split_line[3])
                 active_pokemon.update_condition(hp, status)
             case "-end":
                 active_pokemon.end(split_line[3:])
@@ -158,7 +158,7 @@ class Team:
                 healed_pokemon = [
                     pokemon for pokemon in self.team if pokemon.name == healed_pokemon_name
                 ][0]
-                hp, status = Pokemon.parse_condition(split_line[3])
+                hp, status = Pokemon_.parse_condition(split_line[3])
                 healed_pokemon.update_condition(hp, status)
             case "-item":
                 active_pokemon.update_item(split_line[3], split_line[4:])
@@ -178,7 +178,7 @@ class Team:
             case "-primal":
                 active_pokemon.primal_reversion()
             case "-sethp":
-                hp, status = Pokemon.parse_condition(split_line[3])
+                hp, status = Pokemon_.parse_condition(split_line[3])
                 active_pokemon.update_condition(hp, status)
             case "-start":
                 if len(split_line) > 3 and split_line[3] == "Dynamax":
@@ -257,7 +257,7 @@ class Team:
             ][0]
             incoming_index = self.team.index(incoming_pokemon)
         else:
-            incoming_pokemon = Pokemon.from_protocol(
+            incoming_pokemon = Pokemon_.from_protocol(
                 incoming_pokemon_name, details, self.__gen, self.__ident
             )
             incoming_index = None
@@ -286,7 +286,7 @@ class Team:
         if active_pokemon is not None:
             # If the player didn't know about the illusion before it was revealed, corrections need to be made.
             if not active_pokemon.illusion:
-                actual_pokemon = Pokemon.from_protocol(pokemon, details, self.__gen, self.__ident)
+                actual_pokemon = Pokemon_.from_protocol(pokemon, details, self.__gen, self.__ident)
                 actual_pokemon.switch_in(active_pokemon.hp, active_pokemon.status)
                 active_pokemon = actual_pokemon
         else:

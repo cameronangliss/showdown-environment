@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from showdown_environment.data.dex import abilitydex, itemdex, movedex, pokedex, setdex
-from showdown_environment.state.move import Move
+from showdown_environment.state.move import Move_
 
 
 @dataclass
-class Pokemon:
+class Pokemon_:
     name: str
     alias: str
     identifier: str
@@ -24,8 +24,8 @@ class Pokemon:
     status: str | None
     active: bool
     stats: dict[str, int]
-    moves: list[Move]
-    alt_moves: list[Move]
+    moves: list[Move_]
+    alt_moves: list[Move_]
     ability: str | None
     item: str | None
     from_opponent: bool
@@ -48,17 +48,17 @@ class Pokemon:
     # Constructors
 
     @classmethod
-    def from_request(cls, pokemon_json: Any, gen: int, owner: str) -> Pokemon:
+    def from_request(cls, pokemon_json: Any, gen: int, owner: str) -> Pokemon_:
         name = pokemon_json["ident"][4:]
-        alias, level, gender = Pokemon.__parse_details(pokemon_json["details"])
-        identifier = Pokemon.get_identifier(name)
+        alias, level, gender = Pokemon_.__parse_details(pokemon_json["details"])
+        identifier = Pokemon_.get_identifier(name)
         types = [t.lower() for t in pokedex[identifier]["types"]]
         split_condition = pokemon_json["condition"].split()
         split_hp_frac = split_condition[0].split("/")
         hp = int(split_hp_frac[0])
         max_hp = int(split_hp_frac[1]) if pokemon_json["condition"] != "0 fnt" else 100
         status = split_condition[1] if len(split_condition) == 2 else None
-        moves = [Move(name, gen, "ghost" in types) for name in pokemon_json["moves"]]
+        moves = [Move_(name, gen, "ghost" in types) for name in pokemon_json["moves"]]
         item = pokemon_json["item"] if pokemon_json["item"] != "" else None
         can_mega = (
             item is not None
@@ -93,13 +93,13 @@ class Pokemon:
         )
 
     @classmethod
-    def from_protocol(cls, name: str, details: str, gen: int, owner: str) -> Pokemon:
-        alias, level, gender = Pokemon.__parse_details(details)
-        identifier = Pokemon.get_identifier(name)
+    def from_protocol(cls, name: str, details: str, gen: int, owner: str) -> Pokemon_:
+        alias, level, gender = Pokemon_.__parse_details(details)
+        identifier = Pokemon_.get_identifier(name)
         types = [t.lower() for t in pokedex[identifier]["types"]]
         stats = pokedex[identifier]["baseStats"]
         abilities = pokedex[identifier]["abilities"].values()
-        ability_identifiers = [Pokemon.__get_ability_identifier(ability) for ability in abilities]
+        ability_identifiers = [Pokemon_.__get_ability_identifier(ability) for ability in abilities]
         return cls(
             name=name,
             alias=alias,
@@ -223,7 +223,7 @@ class Pokemon:
     def get_stats(self) -> dict[str, int]:
         return self.stats if self.alt_stats is None else self.alt_stats
 
-    def get_moves(self) -> list[Move]:
+    def get_moves(self) -> list[Move_]:
         if self.transformed:
             return self.alt_moves
         elif "Mimic" in [move.name for move in self.moves] and len(self.alt_moves) == 1:
@@ -231,7 +231,7 @@ class Pokemon:
         else:
             return self.moves
 
-    def __get_last_used(self) -> Move | None:
+    def __get_last_used(self) -> Move_ | None:
         moves = [move for move in self.get_moves() if move.just_used]
         if len(moves) == 0:
             return None
@@ -318,7 +318,7 @@ class Pokemon:
         # avoiding edge cases
         if (
             full_name == "Struggle"
-            or "isZ" in movedex[Move.get_identifier(full_name)]
+            or "isZ" in movedex[Move_.get_identifier(full_name)]
             or full_name.split()[0] in ["Max", "G-Max"]
         ):
             return
@@ -326,7 +326,7 @@ class Pokemon:
         if full_name in [move.name for move in self.get_moves()]:
             move_used = [move for move in self.get_moves() if move.name == full_name][0]
         else:
-            move_used = Move(full_name, self.gen, "ghost" in self.get_types())
+            move_used = Move_(full_name, self.gen, "ghost" in self.get_types())
             if self.transformed:
                 self.alt_moves.append(move_used)
             else:
@@ -357,15 +357,15 @@ class Pokemon:
     def update_ability(self, new_ability: str):
         ability = self.__get_ability()
         if ability is None:
-            self.alt_ability = Pokemon.__get_ability_identifier(new_ability)
+            self.alt_ability = Pokemon_.__get_ability_identifier(new_ability)
         else:
             ability_info = abilitydex[ability]
             if not ("isPermanent" in ability_info and ability_info["isPermanent"]):
-                self.alt_ability = Pokemon.__get_ability_identifier(new_ability)
+                self.alt_ability = Pokemon_.__get_ability_identifier(new_ability)
 
     def update_item(self, new_item: str, info: list[str]):
         if not (info and info[0] == "[from] ability: Frisk"):
-            new_item_identifier = Pokemon.__get_item_identifier(new_item)
+            new_item_identifier = Pokemon_.__get_item_identifier(new_item)
             for move in self.get_moves():
                 move.update_item(
                     self.get_item(), new_item_identifier, tricking=self.tricking, maxed=self.maxed
@@ -375,7 +375,7 @@ class Pokemon:
             self.item_off = False
 
     def end_item(self, item: str, info: list[str]):
-        item_identifier = Pokemon.__get_item_identifier(item)
+        item_identifier = Pokemon_.__get_item_identifier(item)
         if self.get_item() == item_identifier:
             for move in self.get_moves():
                 move.remove_item()
@@ -386,7 +386,7 @@ class Pokemon:
 
     def transform(self, name: str, request: Any | None):
         self.transformed = True
-        self.alt_types = [t.lower() for t in pokedex[Pokemon.get_identifier(name)]["types"]]
+        self.alt_types = [t.lower() for t in pokedex[Pokemon_.get_identifier(name)]["types"]]
         if request is not None:
             new_self_info = [
                 pokemon
@@ -394,7 +394,7 @@ class Pokemon:
                 if pokemon["ident"][4:] == self.name
             ][0]
             self.alt_moves = [
-                Move(move_name, self.gen, "ghost" in self.get_types())
+                Move_(move_name, self.gen, "ghost" in self.get_types())
                 for move_name in new_self_info["moves"]
             ]
             for move in self.alt_moves:
@@ -418,8 +418,8 @@ class Pokemon:
         if mega_stone is None:
             mega_pokemon_identifier = "rayquazamega"
         else:
-            mega_stone_identifier = Pokemon.__get_item_identifier(mega_stone)
-            mega_pokemon_identifier = Pokemon.get_identifier(
+            mega_stone_identifier = Pokemon_.__get_item_identifier(mega_stone)
+            mega_pokemon_identifier = Pokemon_.get_identifier(
                 itemdex[mega_stone_identifier]["megaStone"]
             )
         mega_ability = pokedex[mega_pokemon_identifier]["abilities"]["0"]
@@ -447,7 +447,7 @@ class Pokemon:
                         move.encore_disabled = True
             case "Mimic":
                 mimic_move = [move for move in self.get_moves() if move.name == "Mimic"][0]
-                new_move = Move(info[1], self.gen, "ghost" in self.get_types(), from_mimic=True)
+                new_move = Move_(info[1], self.gen, "ghost" in self.get_types(), from_mimic=True)
                 if self.transformed:
                     mimic_move = new_move
                 else:
@@ -501,7 +501,7 @@ class Pokemon:
         zmove_pp_needs_update: bool,
         just_unmaxed: bool,
     ):
-        hp, status = Pokemon.parse_condition(pokemon_info["condition"])
+        hp, status = Pokemon_.parse_condition(pokemon_info["condition"])
         assert self.hp == hp, f"{self.hp} != {hp}"
         assert self.status == status, f"{self.status} != {status}"
         assert (
