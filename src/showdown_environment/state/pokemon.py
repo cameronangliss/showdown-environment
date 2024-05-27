@@ -203,13 +203,16 @@ class Pokemon_:
     # Getter methods
 
     def get_matching_role(self) -> Any:
-        roles = list(setdex[self.alias]["roles"].values())
-        move_names = [move.name for move in self.get_moves()]
-        matching_role_index = [
-            all([self.__low_specified_move_in_list(role["moves"], move) for move in move_names])
-            for role in roles
-        ].index(True)
-        return roles[matching_role_index]
+        if "roles" not in setdex[self.alias]:
+            return setdex[self.alias]
+        else:
+            roles = list(setdex[self.alias]["roles"].values())
+            move_names = [move.name for move in self.get_moves()]
+            matching_role_index = [
+                all([self.__low_specified_move_in_list(role["moves"], move) for move in move_names])
+                for role in roles
+            ].index(True)
+            return roles[matching_role_index]
 
     def __low_specified_move_in_list(self, moves: list[str], move: str) -> bool:
         if move != "Hidden Power":
