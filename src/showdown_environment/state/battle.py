@@ -60,7 +60,6 @@ class Battle_:
         ]
         battle = Battle(p1_team, p2_team)
         battle.update_raw(action, opp_action)
-        print(battle.__dict__)
 
     def infer_opponent_sets(self):
         for pokemon in self.opponent_team.team:
