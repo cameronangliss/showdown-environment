@@ -47,8 +47,8 @@ class Battle_:
         assert opp_active_mon is not None
         for s in range(1, 7):
             # HP
-            active_mon.hp = battle.current_hp(Player(1), Slot(s))
-            opp_active_mon.hp = battle.current_hp(Player(2), Slot(s))
+            active_mon.hp = battle.current_hp(Player(0), Slot(s))
+            opp_active_mon.hp = battle.current_hp(Player(1), Slot(s))
 
     def infer_opponent_sets(self):
         for pokemon in self.opponent_team.team:
