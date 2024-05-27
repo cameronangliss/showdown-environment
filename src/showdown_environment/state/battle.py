@@ -33,10 +33,19 @@ class Battle_:
 
     def update_in_simulation(self, action: int, opp_action: int):
         p1_team = [
-            Pokemon(mon.name, [move.name for move in mon.get_moves()]) for mon in self.team.team
+            Pokemon(
+                mon.name,
+                [move.name for move in mon.get_moves()],
+                extra={"hp": mon.hp, "status": mon.status, "level": mon.level},
+            )
+            for mon in self.team.team
         ]
         p2_team = [
-            Pokemon(mon.name, [move.name for move in mon.get_moves()])
+            Pokemon(
+                mon.name,
+                [move.name for move in mon.get_moves()],
+                extra={"hp": mon.hp, "status": mon.status, "level": mon.level},
+            )
             for mon in self.opponent_team.team
         ]
         battle = Battle(p1_team, p2_team)
